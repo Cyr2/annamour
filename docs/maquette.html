@@ -387,6 +387,9 @@ button { cursor: pointer; border: 0; background: none; }
 .person-chip[aria-pressed="true"] { background: rgb(255 255 255 / .09); border-color: var(--edge-hi); }
 .person-chip .bubble { --size: 46px; font-size: 18px; box-shadow: none; }
 .person-chip .bubble.all { background: rgb(255 255 255 / .08); border: 1px solid var(--edge); color: var(--milk); font-size: 12px; font-weight: 800; }
+.person-chip small.fav { color: var(--peach); font-weight: 700; }
+.person-chip .heart-badge { width: 18px; height: 18px; right: -7px; bottom: -5px; }
+.person-chip .heart-badge svg { width: 10px; height: 10px; }
 .person-chip b { font-size: 13px; font-weight: 600; line-height: 1.2; }
 .person-chip small { font-size: 11px; color: var(--muted); line-height: 1.2; }
 .bestie { display: flex; align-items: center; gap: 16px; padding: 14px 18px; border-radius: 22px; background: linear-gradient(135deg, rgb(255 140 158 / .14), rgb(169 156 255 / .1)); border: 1px solid rgb(255 140 158 / .26); flex-wrap: wrap; }
@@ -984,39 +987,25 @@ button { cursor: pointer; border: 0; background: none; }
     const ids = Object.keys(PEOPLE).filter((id) => countWith(id) > 0).sort((a, b) => countWith(b) - countWith(a));
     const top = ids[0] && countWith(ids[0]) >= 2 ? ids[0] : null;
     const hoursWith = (id) => Math.max(1, Math.round(sessions.filter((s) => (s.with || []).includes(id)).reduce((t, s) => t + s.pos, 0) / 3600));
-    const max = Math.max(1, ...ids.map(countWith));
-    const node = (id) => {
-      const p = PEOPLE[id], n = countWith(id), size = Math.round(42 + 20 * (n / max));
-      const dim = circleFilter && circleFilter !== id ? " dim" : "";
-      const label = id === top ? `<small class="fav">Complice de canapé</small>` : `<small>${n} séance${n > 1 ? "s" : ""}</small>`;
-      const heart = id === top ? `<span class="heart-badge" aria-hidden="true"><svg><use href="#i-heart"/></svg></span>` : "";
-      return `<button class="c-node${dim}" data-person="${id}" data-count="${n}" aria-pressed="${circleFilter === id}" aria-label="${p.name}, ${n} séance${n > 1 ? "s" : ""} ensemble${id === top ? ", complice de canapé" : ""}. Afficher vos séances."><span class="bubble" style="--c:${p.c};--size:${size}px">${p.name[0]}${heart}</span><b>${p.name}</b>${label}</button>`;
+    // One simple row, most shared first; the first one wears the heart.
+    const chip = (id) => {
+      const p = PEOPLE[id], n = countWith(id), fav = id === top;
+      const heart = fav ? `<span class="heart-badge" aria-hidden="true"><svg><use href="#i-heart"/></svg></span>` : "";
+      const label = fav ? `<small class="fav">Complice de canapé</small>` : `<small>${n} séance${n > 1 ? "s" : ""}</small>`;
+      return `<button class="person-chip" data-person="${id}" aria-pressed="${circleFilter === id}" aria-label="${p.name}, ${n} séance${n > 1 ? "s" : ""} ensemble${fav ? ", complice de canapé" : ""}"><span class="bubble" style="--c:${p.c}">${p.name[0]}${heart}</span><b>${p.name}</b>${label}</button>`;
     };
     circle.innerHTML = `
-      <div class="circle-head">
-        <h2>Avec qui je regarde</h2>
-        ${circleFilter ? `<button class="filter-pill" data-person="">Avec ${PEOPLE[circleFilter].name}<svg><use href="#i-x"/></svg></button>` : `<span class="me-note">${ids.length} personne${ids.length > 1 ? "s" : ""}</span>`}
-      </div>
-      <div class="constellation" role="group" aria-label="Plus une personne est proche, plus vous avez regardé ensemble">
-        <svg class="c-threads" aria-hidden="true">${ids.map(() => "<path/>").join("")}</svg>
-        <button class="c-node me" data-person="" aria-pressed="${circleFilter === null}" aria-label="Toi. Afficher toutes tes séances."><span class="bubble" style="--c:${state.me.color};--size:56px">${(state.me.name[0] || "?").toUpperCase()}</span><b>Toi</b><small>${circleFilter ? "Tout afficher" : sessions.length + " séances"}</small></button>
-        ${ids.map(node).join("")}
-      </div>
-      <p>Plus vous regardez ensemble, plus le fil est court. Une séance peut réunir jusqu'à 8 personnes.</p>`;
+      <h2>Avec qui je regarde</h2>
+      <div class="people" role="group" aria-label="Filtrer par personne">
+        <button class="person-chip" data-person="" aria-pressed="${circleFilter === null}"><span class="bubble all">Tous</span><b>Tout le monde</b><small>${sessions.length} séances</small></button>
+        ${ids.map(chip).join("")}
+      </div>`;
     circle.addEventListener("click", (e) => {
       const b = e.target.closest("[data-person]"); if (!b) return;
       circleFilter = b.dataset.person || null; renderHistory();
     });
     box.append(circle);
-    constel.el = $(".constellation", circle);
-    constel.hover = null;
-    $$(".c-node", circle).forEach((n) => {
-      n.addEventListener("pointerenter", () => (constel.hover = n.dataset.person || null));
-      n.addEventListener("pointerleave", () => (constel.hover = null));
-      n.addEventListener("focus", () => (constel.hover = n.dataset.person || null));
-      n.addEventListener("blur", () => (constel.hover = null));
-    });
-    layoutConstellation();
+    constel.el = null;
     const list = circleFilter ? sessions.filter((s) => (s.with || []).includes(circleFilter)) : sessions;
     const head = document.createElement("div"); head.className = "history-head";
     head.innerHTML = `<h2>${circleFilter ? "Avec " + PEOPLE[circleFilter].name : "Mes séances"}</h2><span class="me-note">${list.length} séance${list.length > 1 ? "s" : ""}</span>`;
