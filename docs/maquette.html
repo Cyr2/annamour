@@ -297,6 +297,19 @@ button { cursor: pointer; border: 0; background: none; }
 .scrub-fill { position: absolute; inset: 0 auto 0 0; background: var(--milk); }
 .scrub-mark { position: absolute; top: -2px; width: 3px; height: 26px; border-radius: 2px; background: var(--lilac); translate: -1px 0; opacity: .9; }
 .controls-row { display: flex; align-items: center; gap: 6px; }
+.vol { display: flex; align-items: center; gap: 2px; }
+.vol input {
+  --v: 80%;
+  -webkit-appearance: none; appearance: none; width: 96px; height: 24px; background: transparent; cursor: pointer; margin: 0 6px 0 0;
+}
+.vol input::-webkit-slider-runnable-track { height: 5px; border-radius: 3px; background: linear-gradient(to right, var(--milk) var(--v), rgb(255 255 255 / .18) var(--v)); }
+.vol input::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -4.5px; border-radius: 50%; background: var(--milk); box-shadow: 0 2px 6px rgb(0 0 0 / .45); transition: transform .35s var(--spring); }
+.vol input:active::-webkit-slider-thumb { transform: scale(1.3); }
+.vol input::-moz-range-track { height: 5px; border-radius: 3px; background: rgb(255 255 255 / .18); }
+.vol input::-moz-range-progress { height: 5px; border-radius: 3px; background: var(--milk); }
+.vol input::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 50%; background: var(--milk); }
+.vol input:focus-visible { outline: 2px solid var(--peach); outline-offset: 2px; border-radius: 8px; }
+@media (max-width: 700px) { .vol input { display: none; } }
 .time { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; margin-left: 6px; }
 .controls-row .spacer { flex: 1; }
 
@@ -386,6 +399,24 @@ button { cursor: pointer; border: 0; background: none; }
 .heart-badge { position: absolute; right: -5px; bottom: -5px; width: 24px; height: 24px; border-radius: 50%; background: var(--peach); display: grid; place-items: center; box-shadow: 0 0 0 3px var(--ink), 0 4px 12px var(--thread-glow); animation: heartbeat 1.8s ease-in-out infinite; }
 .heart-badge svg { width: 13px; height: 13px; color: var(--on-color); }
 @keyframes heartbeat { 0%, 100% { transform: scale(1); } 14% { transform: scale(1.24); } 28% { transform: scale(1); } 42% { transform: scale(1.14); } 56% { transform: scale(1); } }
+/* constellation: one node per person, closeness = shared sessions */
+.circle-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.constellation { position: relative; height: 244px; margin: 0 -6px; }
+.c-threads { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.c-threads path { fill: none; stroke: var(--peach); stroke-linecap: round; transition: opacity .35s; }
+.c-node { position: absolute; display: grid; justify-items: center; gap: 4px; padding: 0; border-radius: 18px; transform: translateX(-50%); transition: transform .5s var(--spring), opacity .3s; z-index: 1; }
+.c-node .bubble { --size: 48px; font-size: calc(var(--size) * .4); transition: transform .5s var(--spring), box-shadow .3s; }
+.c-node:hover .bubble, .c-node:focus-visible .bubble { transform: scale(1.08); }
+.c-node:active .bubble { transform: scale(.94); transition-duration: .1s; }
+.c-node b { font-size: 13px; font-weight: 600; line-height: 1.15; white-space: nowrap; }
+.c-node small { font-size: 11px; color: var(--muted); line-height: 1.15; white-space: nowrap; }
+.c-node small.fav { color: var(--peach); font-weight: 700; }
+.c-node.dim { opacity: .38; }
+.c-node.above .bubble { order: 2; }
+.c-node[aria-pressed="true"] .bubble { box-shadow: 0 0 0 3px var(--night), 0 0 0 5px var(--c), 0 12px 30px -10px var(--c); }
+.c-node.me small { color: var(--subtle); }
+.filter-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 6px 0 12px; border-radius: var(--r-pill); background: rgb(255 255 255 / .08); border: 1px solid var(--edge); font-size: 13px; font-weight: 600; }
+.filter-pill svg { width: 14px; height: 14px; }
 .qr-big { width: 196px; height: 196px; border-radius: 22px; background: var(--milk); padding: 14px; justify-self: center; }
 .qr-big canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
 .word-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -466,7 +497,9 @@ button { cursor: pointer; border: 0; background: none; }
   <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m11.5 11.5 8-8M16.5 6.5l2.5 2.5M14.5 8.5l2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-face" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M9 9.5v1M15 9.5v1M12 9.5v3.5h-1M9.5 16a3.5 3.5 0 0 0 5 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
-  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.6 3.9 4.5 7.2 4.5c2 0 3.5 1.1 4.8 2.9 1.3-1.8 2.8-2.9 4.8-2.9 3.3 0 5.6 3.1 4.4 6.6-1.7 4.8-9.2 9.4-9.2 9.4Z" fill="currentColor"/></symbol>
+  <symbol id="i-vol" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5v14l-4.5-4.5H4z" fill="currentColor"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18.3 6.3a8 8 0 0 1 0 11.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-vol-off" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5v14l-4.5-4.5H4z" fill="currentColor"/><path d="m16 9.5 5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-heart"viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.6 3.9 4.5 7.2 4.5c2 0 3.5 1.1 4.8 2.9 1.3-1.8 2.8-2.9 4.8-2.9 3.3 0 5.6 3.1 4.4 6.6-1.7 4.8-9.2 9.4-9.2 9.4Z" fill="currentColor"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
   <symbol id="i-smile"viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="9" cy="10" r="1.2" fill="currentColor"/><circle cx="15" cy="10" r="1.2" fill="currentColor"/></symbol>
   <symbol id="i-copy"viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
@@ -593,6 +626,10 @@ button { cursor: pointer; border: 0; background: none; }
               <button class="icon-btn" id="playBtn" aria-label="Pause"><svg><use href="#i-pause"/></svg></button>
               <button class="icon-btn" id="back10" aria-label="Reculer de 10 secondes"><svg><use href="#i-back10"/></svg></button>
               <button class="icon-btn" id="fwd10" aria-label="Avancer de 10 secondes"><svg><use href="#i-fwd10"/></svg></button>
+              <div class="vol">
+                <button class="icon-btn" id="muteBtn" aria-label="Couper le son"><svg><use href="#i-vol"/></svg></button>
+                <input type="range" id="volume" min="0" max="100" value="80" aria-label="Volume">
+              </div>
               <span class="time" id="time">0:42:07 / 2:10:26</span>
               <span class="spacer"></span>
               <div class="react-wrap">
@@ -947,36 +984,40 @@ button { cursor: pointer; border: 0; background: none; }
     const ids = Object.keys(PEOPLE).filter((id) => countWith(id) > 0).sort((a, b) => countWith(b) - countWith(a));
     const top = ids[0] && countWith(ids[0]) >= 2 ? ids[0] : null;
     const hoursWith = (id) => Math.max(1, Math.round(sessions.filter((s) => (s.with || []).includes(id)).reduce((t, s) => t + s.pos, 0) / 3600));
-    const bestie = top ? `
-      <div class="bestie">
-        <div class="duo" data-thread="taut">
-          <svg class="thread" aria-hidden="true"><path/></svg>
-          <div class="person"><span class="bubble" style="--c:${state.me.color}">${(state.me.name[0] || "?").toUpperCase()}</span></div>
-          <div class="person"><span class="bubble" style="--c:${PEOPLE[top].c}">${PEOPLE[top].name[0]}<span class="heart-badge" aria-hidden="true"><svg><use href="#i-heart"/></svg></span></span></div>
-        </div>
-        <div class="bestie-text"><small>Complice de canapé</small><b>${PEOPLE[top].name}</b><span>${countWith(top)} séances ensemble · ${hoursWith(top)} h de films</span></div>
-      </div>` : "";
-    const chip = (id) => {
-      const p = PEOPLE[id], n = countWith(id);
-      return `<button class="person-chip" data-person="${id}" aria-pressed="${circleFilter === id}"><span class="bubble" style="--c:${p.c}">${p.name[0]}</span><b>${p.name}</b><small>${n} séance${n > 1 ? "s" : ""}</small></button>`;
+    const max = Math.max(1, ...ids.map(countWith));
+    const node = (id) => {
+      const p = PEOPLE[id], n = countWith(id), size = Math.round(42 + 20 * (n / max));
+      const dim = circleFilter && circleFilter !== id ? " dim" : "";
+      const label = id === top ? `<small class="fav">Complice de canapé</small>` : `<small>${n} séance${n > 1 ? "s" : ""}</small>`;
+      const heart = id === top ? `<span class="heart-badge" aria-hidden="true"><svg><use href="#i-heart"/></svg></span>` : "";
+      return `<button class="c-node${dim}" data-person="${id}" data-count="${n}" aria-pressed="${circleFilter === id}" aria-label="${p.name}, ${n} séance${n > 1 ? "s" : ""} ensemble${id === top ? ", complice de canapé" : ""}. Afficher vos séances."><span class="bubble" style="--c:${p.c};--size:${size}px">${p.name[0]}${heart}</span><b>${p.name}</b>${label}</button>`;
     };
     circle.innerHTML = `
-      <h2>Avec qui je regarde</h2>
-      ${bestie}
-      <div class="people" role="group" aria-label="Filtrer par personne">
-        <button class="person-chip" data-person="" aria-pressed="${circleFilter === null}"><span class="bubble all">Tous</span><b>Tout le monde</b><small>${sessions.length} séances</small></button>
-        ${ids.map(chip).join("")}
+      <div class="circle-head">
+        <h2>Avec qui je regarde</h2>
+        ${circleFilter ? `<button class="filter-pill" data-person="">Avec ${PEOPLE[circleFilter].name}<svg><use href="#i-x"/></svg></button>` : `<span class="me-note">${ids.length} personne${ids.length > 1 ? "s" : ""}</span>`}
       </div>
-      <p>Une séance peut réunir jusqu'à 8 personnes. Elle apparaît chez chacun, arrêtée au même endroit.</p>`;
+      <div class="constellation" role="group" aria-label="Plus une personne est proche, plus vous avez regardé ensemble">
+        <svg class="c-threads" aria-hidden="true">${ids.map(() => "<path/>").join("")}</svg>
+        <button class="c-node me" data-person="" aria-pressed="${circleFilter === null}" aria-label="Toi. Afficher toutes tes séances."><span class="bubble" style="--c:${state.me.color};--size:56px">${(state.me.name[0] || "?").toUpperCase()}</span><b>Toi</b><small>${circleFilter ? "Tout afficher" : sessions.length + " séances"}</small></button>
+        ${ids.map(node).join("")}
+      </div>
+      <p>Plus vous regardez ensemble, plus le fil est court. Une séance peut réunir jusqu'à 8 personnes.</p>`;
     circle.addEventListener("click", (e) => {
       const b = e.target.closest("[data-person]"); if (!b) return;
       circleFilter = b.dataset.person || null; renderHistory();
     });
     box.append(circle);
-    // Forget threads whose element was re-rendered away, then tie the new one.
-    threads.splice(0, threads.length, ...threads.filter((t) => document.contains(t.duo)));
-    if (top) initThread($(".bestie .duo", circle));
-    const list =circleFilter ? sessions.filter((s) => (s.with || []).includes(circleFilter)) : sessions;
+    constel.el = $(".constellation", circle);
+    constel.hover = null;
+    $$(".c-node", circle).forEach((n) => {
+      n.addEventListener("pointerenter", () => (constel.hover = n.dataset.person || null));
+      n.addEventListener("pointerleave", () => (constel.hover = null));
+      n.addEventListener("focus", () => (constel.hover = n.dataset.person || null));
+      n.addEventListener("blur", () => (constel.hover = null));
+    });
+    layoutConstellation();
+    const list = circleFilter ? sessions.filter((s) => (s.with || []).includes(circleFilter)) : sessions;
     const head = document.createElement("div"); head.className = "history-head";
     head.innerHTML = `<h2>${circleFilter ? "Avec " + PEOPLE[circleFilter].name : "Mes séances"}</h2><span class="me-note">${list.length} séance${list.length > 1 ? "s" : ""}</span>`;
     box.append(head);
@@ -985,6 +1026,59 @@ button { cursor: pointer; border: 0; background: none; }
     if (going.length) { const h = document.createElement("h3"); h.textContent = "En cours"; box.append(h); going.forEach((s) => box.append(sessionRow(s))); }
     if (done.length) { const h = document.createElement("h3"); h.textContent = "Terminées"; box.append(h); done.forEach((s) => box.append(sessionRow(s))); }
   }
+  /* constellation layout: you in the centre, people fanned around you.
+     Each person gets its own direction, so no thread crosses another bubble;
+     the more sessions shared, the closer they sit. */
+  const constel = { el: null, hover: null };
+  const ANGLES = [0, 180, -58, 238, 58, 122, -28, 208].map((d) => (d * Math.PI) / 180);
+  function layoutConstellation() {
+    const c = constel.el; if (!c || !c.isConnected || !c.clientWidth) return;
+    const W = c.clientWidth, H = c.clientHeight, cx = W / 2, cy = H * 0.56;
+    // Nodes above the centre get their label on top, so their thread never runs through it.
+    const put = (el, x, y) => {
+      el.classList.toggle("above", y < cy - 24);
+      const b = $(".bubble", el);
+      el.style.left = x + "px"; el.style.top = y - b.offsetTop - b.offsetHeight / 2 + "px";
+    };
+    put($(".c-node.me", c), cx, cy);
+    const others = $$(".c-node:not(.me)", c), n = others.length;
+    const minR = Math.min(W * 0.26, 150), maxR = Math.min(W * 0.42, 240);
+    others.forEach((el, k) => {
+      const r = n === 1 ? minR : minR + (maxR - minR) * (k / (n - 1));
+      const a = ANGLES[k % ANGLES.length];
+      const x = Math.min(W - 48, Math.max(48, cx + r * Math.cos(a)));
+      const y = Math.min(H - 64, Math.max(40, cy + r * Math.sin(a) * 0.62));
+      put(el, x, y);
+    });
+  }
+  addEventListener("resize", layoutConstellation);
+  function drawConstellation(time) {
+    const c = constel.el; if (!c || !c.isConnected || !c.offsetParent) return;
+    const box = c.getBoundingClientRect();
+    const center = (el) => { const r = $(".bubble", el).getBoundingClientRect(); return { x: r.left - box.left + r.width / 2, y: r.top - box.top + r.height / 2, r: $(".bubble", el).offsetWidth / 2 }; };
+    const me = center($(".c-node.me", c));
+    const nodes = $$(".c-node:not(.me)", c), paths = $$(".c-threads path", c);
+    const max = Math.max(1, ...nodes.map((n) => +n.dataset.count));
+    nodes.forEach((n, i) => {
+      const p = paths[i]; if (!p) return;
+      const id = n.dataset.person, b = center(n), w = +n.dataset.count / max;
+      const focused = circleFilter === id || constel.hover === id;
+      const faded = circleFilter && circleFilter !== id;
+      const dx = b.x - me.x, dy = b.y - me.y, len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len;
+      const s = { x: me.x + ux * me.r, y: me.y + uy * me.r }, e = { x: b.x - ux * b.r, y: b.y - uy * b.r };
+      // slack threads sway; the focused one pulls taut
+      const target = focused ? 0 : 10 + 6 * Math.sin((reduce ? 0 : time) / 900 + i * 1.7);
+      n._sag = (n._sag ?? target) + (target - (n._sag ?? target)) * 0.14;
+      // threads hang under their own weight, like a real thread
+      const mx = (s.x + e.x) / 2, my = (s.y + e.y) / 2 + Math.abs(n._sag);
+      p.setAttribute("d", `M${s.x.toFixed(1)} ${s.y.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${e.x.toFixed(1)} ${e.y.toFixed(1)}`);
+      p.setAttribute("stroke-width", (1.4 + 2.4 * w).toFixed(2));
+      p.style.opacity = faded ? 0.15 : focused ? 1 : 0.4 + 0.45 * w;
+      p.style.filter = focused ? "drop-shadow(0 0 6px var(--thread-glow))" : "none";
+    });
+  }
+  (function loop(t) { drawConstellation(t); requestAnimationFrame(loop); })(0);
+
   function renderResume() {
     const s = sessions.find((x) => !isDone(x) && x.pos > 0);
     const card = $("#resumeCard");
@@ -1200,6 +1294,23 @@ button { cursor: pointer; border: 0; background: none; }
   $("#back10").addEventListener("click", () => { state.pos = Math.max(0, state.pos - 10); wake(); });
   $("#fwd10").addEventListener("click", () => { state.pos = Math.min(DUR, state.pos + 10); wake(); });
   $("#tracksBtn").addEventListener("click", () => openSheet("tracks"));
+
+  /* volume: personal, never synced */
+  let vol = 80, muted = false;
+  const volInput = $("#volume"), muteBtn = $("#muteBtn");
+  function paintVol() {
+    const v = muted ? 0 : vol;
+    volInput.value = v; volInput.style.setProperty("--v", v + "%");
+    volInput.setAttribute("aria-valuetext", v === 0 ? "Son coupé" : v + " %");
+    muteBtn.innerHTML = `<svg><use href="#i-${v === 0 ? "vol-off" : "vol"}"/></svg>`;
+    muteBtn.setAttribute("aria-label", v === 0 ? "Remettre le son" : "Couper le son");
+  }
+  volInput.addEventListener("input", () => { vol = +volInput.value; muted = vol === 0; paintVol(); wake(); });
+  muteBtn.addEventListener("click", () => { if (muted && vol === 0) vol = 60; muted = !muted; paintVol(); wake(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() === "m" && $('[data-screen="lecteur"]').classList.contains("is-active") && !e.target.closest("input")) muteBtn.click();
+  });
+  paintVol();
   $("#scrub").addEventListener("click", (e) => { const r = e.currentTarget.getBoundingClientRect(); state.pos = ((e.clientX - r.left) / r.width) * DUR; wake(); });
   $("#scrub").addEventListener("keydown", (e) => { if (e.key === "ArrowRight") state.pos += 10; if (e.key === "ArrowLeft") state.pos -= 10; });
   film.addEventListener("click", () => setPlaying(!state.playing));
