@@ -80,6 +80,8 @@ describe("messages", () => {
     expect(parseClientMessage(JSON.stringify({ type: "seek", position: 42 }))).toEqual({ type: "seek", position: 42 });
     expect(parseClientMessage(JSON.stringify({ type: "seek", position: -1 }))).toBeNull();
     expect(parseClientMessage("{not json")).toBeNull();
+    expect(parseClientMessage(JSON.stringify({ type: "react", emoji: "🍿" }))).toEqual({ type: "react", emoji: "🍿" });
+    expect(parseClientMessage(JSON.stringify({ type: "react", emoji: "🍆" }))).toBeNull();
     expect(
       parseClientMessage(JSON.stringify({ type: "hello", clientId: "abcdefgh", name: "  ", color: "peach" })),
     ).toBeNull();
