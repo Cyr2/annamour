@@ -34,6 +34,28 @@ jobs:
       - name: Build
         run: pnpm build
 
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Google Chrome (H.264 support)
+        run: pnpm --filter @annamour/e2e exec playwright install --with-deps chrome
+      - name: Two browsers watch the same film
+        run: pnpm e2e
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-traces
+          path: e2e/test-results
+
   docker:
     name: docker
     runs-on: ubuntu-latest
