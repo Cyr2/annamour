@@ -25,6 +25,14 @@
   --color-line: var(--am-line);
   --color-line-strong: var(--am-line-strong);
   --color-thread: var(--am-thread);
+  --color-fill-soft: var(--am-fill-soft);
+  --color-fill-hover: var(--am-fill-hover);
+  --color-fill-strong: var(--am-fill-strong);
+  --color-scrim: var(--am-scrim);
+  --color-sheet: var(--am-sheet);
+  --color-screen: var(--am-screen);
+  --color-screen-shade: var(--am-screen-shade);
+  --color-waiting: var(--am-waiting);
   --color-bubble-peach: var(--am-bubble-peach);
   --color-bubble-lilac: var(--am-bubble-lilac);
   --color-bubble-mint: var(--am-bubble-mint);
@@ -81,6 +89,7 @@
 
   body {
     min-height: 100dvh;
+    background: var(--am-canvas-glow) no-repeat fixed;
     background-color: var(--am-canvas);
     overscroll-behavior-y: none;
   }

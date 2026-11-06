@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { exit, spring } from "../lib/motion.ts";
 import { bubbleColor } from "./colors.ts";
 import { Glass } from "./controls.tsx";
+import { cx } from "./cx.ts";
 import { type Toast, useToasts } from "./toast.ts";
 
 /** A glass pill that springs down from the top of the screen. */
@@ -18,9 +19,14 @@ function Capsule({ toast }: { toast: Toast }) {
         {toast.color ? (
           <span
             aria-hidden
-            className="size-2.5 shrink-0 rounded-full"
+            className={cx(
+              "grid shrink-0 place-items-center rounded-full font-rounded-tight text-[0.6875rem] font-black text-on-accent",
+              toast.name ? "-ml-1 size-6" : "size-2.5",
+            )}
             style={{ backgroundColor: bubbleColor(toast.color) }}
-          />
+          >
+            {toast.name?.trim().at(0)?.toLocaleUpperCase("fr")}
+          </span>
         ) : null}
         {toast.icon ? <span className="grid shrink-0 text-accent [&>svg]:size-[18px]">{toast.icon}</span> : null}
         <span>{toast.message}</span>

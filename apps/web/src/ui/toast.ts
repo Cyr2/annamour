@@ -7,8 +7,9 @@ export interface Toast {
   message: string;
   /** A lucide icon element, e.g. <Pause />. */
   icon?: ReactNode;
-  /** Ties the capsule to a person: shows a dot in their bubble colour. */
+  /** Ties the capsule to a person: shows a small bubble in their colour (with their initial when `name` is set). */
   color?: BubbleColor;
+  name?: string;
   /** ms before it leaves on its own. */
   duration: number;
 }
