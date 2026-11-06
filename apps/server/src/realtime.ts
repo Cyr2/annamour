@@ -1,17 +1,22 @@
 import type { Server as HttpServer } from "node:http";
 import type { Http2SecureServer, Http2Server } from "node:http2";
-import { parseClientMessage, type ServerMessage } from "@annamour/protocol";
+import { type ClientMessage, parseClientMessage, SESSION_COOKIE, type ServerMessage } from "@annamour/protocol";
+import { parse as parseCookies } from "hono/utils/cookie";
 import { type WebSocket, WebSocketServer } from "ws";
-import type { Connection, RoomStore } from "./rooms.ts";
+import type { Connection } from "./rooms.ts";
+import type { Services } from "./services/services.ts";
 
 const HELLO_TIMEOUT_MS = 5_000;
 const HEARTBEAT_MS = 25_000;
 const MAX_MESSAGE_BYTES = 4 * 1024;
 
-/** Attaches the sync WebSocket endpoint (/ws?room=ABCD) to the HTTP server. */
+/**
+ * Attaches the sync WebSocket endpoint (/ws?room=ABCD) to the HTTP server.
+ * Signed-in people (session cookie) get the session added to their history.
+ */
 export function attachRealtime(
   server: HttpServer | Http2Server | Http2SecureServer,
-  store: RoomStore,
+  { store, accounts, history }: Pick<Services, "store" | "accounts" | "history">,
 ): WebSocketServer {
   const wss = new WebSocketServer({ noServer: true, maxPayload: MAX_MESSAGE_BYTES });
   const alive = new WeakMap<WebSocket, boolean>();
@@ -22,10 +27,12 @@ export function attachRealtime(
       socket.destroy();
       return;
     }
-    wss.handleUpgrade(request, socket, head, (ws) => onConnection(ws, url.searchParams.get("room") ?? ""));
+    const token = parseCookies(request.headers.cookie ?? "", SESSION_COOKIE)[SESSION_COOKIE];
+    const accountId = accounts.accountFor(token)?.id;
+    wss.handleUpgrade(request, socket, head, (ws) => onConnection(ws, url.searchParams.get("room") ?? "", accountId));
   });
 
-  function onConnection(ws: WebSocket, code: string): void {
+  function onConnection(ws: WebSocket, code: string, accountId: string | undefined): void {
     alive.set(ws, true);
     ws.on("pong", () => alive.set(ws, true));
 
@@ -48,23 +55,27 @@ export function attachRealtime(
     let memberId: string | null = null;
     const helloTimer = setTimeout(() => ws.close(4001, "hello_timeout"), HELLO_TIMEOUT_MS);
 
+    const welcome = (hello: Extract<ClientMessage, { type: "hello" }>): string | null => {
+      clearTimeout(helloTimer);
+      const id = room.join(hello.clientId, hello.name, hello.color, connection, Date.now());
+      if (id === null) {
+        connection.send({ type: "error", code: "room_full", message: "La séance est complète." });
+        ws.close(4003, "room_full");
+      } else if (accountId !== undefined) {
+        history.recordParticipation(room.code, accountId);
+      }
+      return id;
+    };
+
     ws.on("message", (data) => {
       const message = parseClientMessage(data.toString());
       if (!message) {
         connection.send({ type: "error", code: "bad_message", message: "Message illisible." });
-        return;
+      } else if (memberId !== null) {
+        room.handle(memberId, message, Date.now());
+      } else if (message.type === "hello") {
+        memberId = welcome(message);
       }
-      if (memberId === null) {
-        if (message.type !== "hello") return;
-        clearTimeout(helloTimer);
-        memberId = room.join(message.clientId, message.name, message.color, connection, Date.now());
-        if (memberId === null) {
-          connection.send({ type: "error", code: "room_full", message: "La séance est complète." });
-          ws.close(4003, "room_full");
-        }
-        return;
-      }
-      room.handle(memberId, message, Date.now());
     });
 
     ws.on("close", () => {

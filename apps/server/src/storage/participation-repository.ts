@@ -1,0 +1,93 @@
+import type { DatabaseSync } from "node:sqlite";
+import { BubbleColor, type Participant } from "@annamour/protocol";
+import { z } from "zod";
+import { changedRows, parseRows } from "./rows.ts";
+
+export interface JoinedRoom {
+  code: string;
+  title: string;
+  duration: number | undefined;
+  position: number;
+  lastUsedAt: number;
+}
+
+const JoinedRoomRow = z.object({
+  code: z.string(),
+  title: z.string(),
+  duration: z.number().nullable(),
+  position: z.number(),
+  last_used_at: z.number(),
+});
+
+const CompanionRow = z.object({
+  room_code: z.string(),
+  account_id: z.string(),
+  name: z.string(),
+  color: BubbleColor,
+});
+
+/** Who took part in which room: the sessions history of each account. */
+export class ParticipationRepository {
+  private readonly db: DatabaseSync;
+
+  constructor(db: DatabaseSync) {
+    this.db = db;
+  }
+
+  /** Joining again brings a hidden session back. */
+  record(roomCode: string, accountId: string, now: number): void {
+    this.db
+      .prepare(
+        `INSERT INTO participations (room_code, account_id, last_seen_at, hidden) VALUES (?, ?, ?, 0)
+         ON CONFLICT (room_code, account_id) DO UPDATE SET last_seen_at = excluded.last_seen_at, hidden = 0`,
+      )
+      .run(roomCode, accountId, now);
+  }
+
+  /** Returns false when this account never was in that room. */
+  hide(roomCode: string, accountId: string): boolean {
+    const result = this.db
+      .prepare("UPDATE participations SET hidden = 1 WHERE room_code = ? AND account_id = ?")
+      .run(roomCode, accountId);
+    return changedRows(result) > 0;
+  }
+
+  /** Rooms this account joined and did not hide, most recently used first. */
+  visibleRooms(accountId: string): JoinedRoom[] {
+    const rows = this.db
+      .prepare(
+        `SELECT r.code, r.title, r.duration, r.position, r.last_used_at
+         FROM participations p JOIN rooms r ON r.code = p.room_code
+         WHERE p.account_id = ? AND p.hidden = 0
+         ORDER BY r.last_used_at DESC`,
+      )
+      .all(accountId);
+    return parseRows(JoinedRoomRow, rows).map((row) => ({
+      code: row.code,
+      title: row.title,
+      duration: row.duration ?? undefined,
+      position: row.position,
+      lastUsedAt: row.last_used_at,
+    }));
+  }
+
+  /** The other people of each visible room of this account, by room code, in joining order. */
+  companions(accountId: string): Map<string, Participant[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT p.room_code, a.id AS account_id, a.name, a.color
+         FROM participations p JOIN accounts a ON a.id = p.account_id
+         WHERE p.account_id <> ?
+           AND p.room_code IN (SELECT room_code FROM participations WHERE account_id = ? AND hidden = 0)
+         ORDER BY p.rowid`,
+      )
+      .all(accountId, accountId);
+    const byRoom = new Map<string, Participant[]>();
+    for (const row of parseRows(CompanionRow, rows)) {
+      const list = byRoom.get(row.room_code) ?? [];
+      list.push({ accountId: row.account_id, name: row.name, color: row.color });
+      byRoom.set(row.room_code, list);
+    }
+    return byRoom;
+  }
+}

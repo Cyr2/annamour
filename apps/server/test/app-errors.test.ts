@@ -3,8 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.ts";
-import { RoomStore } from "../src/rooms.ts";
 import { FetchError, type TextFetcher } from "../src/safe-fetch.ts";
+import { testApp, testServices } from "./helpers.ts";
 
 const MASTER = "https://cdn.example/movie/master.m3u8";
 const okFetch: TextFetcher = async (url) => {
@@ -28,7 +28,7 @@ async function errorOf(response: Response): Promise<string> {
 
 describe("creating a room: what the person is told", () => {
   it("rejects a body that is not JSON", async () => {
-    const app = createApp({ store: new RoomStore(), fetchText: okFetch });
+    const app = testApp({ fetchText: okFetch }).app;
     const response = await post(app, "{oops");
     expect(response.status).toBe(400);
     expect(await errorOf(response)).toMatch(/m3u8/);
@@ -39,17 +39,11 @@ describe("creating a room: what the person is told", () => {
       throw new FetchError("gone", 404);
     };
     const notHls: TextFetcher = async () => "<html>login</html>";
-    const unreachable = await post(
-      createApp({ store: new RoomStore(), fetchText: notFound }),
-      JSON.stringify({ url: MASTER }),
-    );
+    const unreachable = await post(testApp({ fetchText: notFound }).app, JSON.stringify({ url: MASTER }));
     expect(unreachable.status).toBe(422);
     expect(await errorOf(unreachable)).toBe("Impossible d'ouvrir ce lien.");
 
-    const notVideo = await post(
-      createApp({ store: new RoomStore(), fetchText: notHls }),
-      JSON.stringify({ url: MASTER }),
-    );
+    const notVideo = await post(testApp({ fetchText: notHls }).app, JSON.stringify({ url: MASTER }));
     expect(notVideo.status).toBe(422);
     expect(await errorOf(notVideo)).toBe("Ce lien ne mène pas à une vidéo lisible.");
   });
@@ -58,16 +52,13 @@ describe("creating a room: what the person is told", () => {
     const broken: TextFetcher = async () => {
       throw new TypeError("bug");
     };
-    const response = await post(
-      createApp({ store: new RoomStore(), fetchText: broken }),
-      JSON.stringify({ url: MASTER }),
-    );
+    const response = await post(testApp({ fetchText: broken }).app, JSON.stringify({ url: MASTER }));
     expect(response.status).toBe(500);
   });
 
   it("limits how many rooms one address can create per minute", async () => {
     let now = 0;
-    const app = createApp({ store: new RoomStore(), fetchText: okFetch, now: () => now });
+    const app = testApp({ fetchText: okFetch, now: () => now }).app;
     for (let i = 0; i < 10; i++) expect((await post(app, JSON.stringify({ url: MASTER }))).status).toBe(201);
     const limited = await post(app, JSON.stringify({ url: MASTER }));
     expect(limited.status).toBe(429);
@@ -79,7 +70,7 @@ describe("creating a room: what the person is told", () => {
 
 describe("room files", () => {
   it("serves subtitles and answers 404 for anything unknown", async () => {
-    const app = createApp({ store: new RoomStore(), fetchText: okFetch });
+    const app = testApp({ fetchText: okFetch }).app;
     const { code } = (await (await post(app, JSON.stringify({ url: MASTER }))).json()) as { code: string };
 
     const subs = await app.request(`/api/rooms/${code}/subs/subs_fre.vtt`);
@@ -106,7 +97,7 @@ describe("serving the built app", () => {
   afterAll(() => rm(dist, { recursive: true, force: true }));
 
   it("caches hashed assets forever and falls back to the app for client routes", async () => {
-    const app = createApp({ store: new RoomStore(), webDist: dist });
+    const app = createApp(testServices(), { webDist: dist });
 
     const asset = await app.request("/assets/app.js");
     expect(asset.status).toBe(200);

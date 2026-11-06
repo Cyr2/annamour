@@ -44,7 +44,7 @@ jobs:
         run: docker build -t annamour:ci .
       - name: Smoke test the container
         run: |
-          docker run -d --name annamour -p 8787:8787 annamour:ci
+          docker run -d --name annamour -p 8787:8787 -e KEY_PEPPER=ci-only-pepper -e NODE_ENV=production annamour:ci
           for i in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:8787/api/health; then exit 0; fi
             sleep 1
