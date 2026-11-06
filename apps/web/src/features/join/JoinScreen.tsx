@@ -39,10 +39,8 @@ export function JoinScreen() {
           }}
           noValidate
         >
-          <h1 className="font-rounded-tight text-[clamp(34px,4.6vw,52px)] leading-[1.05] font-extrabold text-fg">
-            Rejoindre la séance
-          </h1>
-          <p className="text-md text-fg-muted">Tape le code à 4 lettres qu'on t'a envoyé.</p>
+          <h1 className="type-title">Rejoindre la séance</h1>
+          <p className="type-lede">Tape le code à 4 lettres qu'on t'a envoyé.</p>
           <CodeInput
             label="Code de la séance"
             value={code}

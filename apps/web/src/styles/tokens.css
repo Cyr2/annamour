@@ -55,8 +55,27 @@
   --am-waiting: var(--am-bubble-butter);
   --am-mint-glow: rgb(127 227 193 / 0.7);
   --am-text-shadow: 0 2px 10px rgb(0 0 0 / 0.8);
-  /* Night gradient of the app background, lit from the top. */
-  --am-canvas-glow: radial-gradient(120% 90% at 50% -10%, #221b33 0%, var(--am-night) 55%);
+  /*
+   * "La salle obscure": the backdrop behind every screen. A warm projector
+   * glow from above, two soft pools in the palette, and a faint red thread
+   * the glass bends as it floats over it. Kept dim so muted text on glass
+   * stays above 4.5:1 wherever it lands.
+   */
+  --am-ambient-projector: radial-gradient(60% 55% at 50% -8%, rgb(255 222 170 / 0.13), transparent 70%);
+  --am-ambient-peach: radial-gradient(closest-side, rgb(255 140 158 / 0.16), transparent);
+  --am-ambient-lilac: radial-gradient(closest-side, rgb(169 156 255 / 0.13), transparent);
+  --am-ambient-vignette: radial-gradient(130% 100% at 50% 40%, transparent 55%, rgb(6 4 12 / 0.55) 100%);
+  --am-ambient-thread: rgb(255 140 158 / 0.34);
+  --am-ambient-thread-glow: rgb(255 140 158 / 0.5);
+  /* Film grain: fractal noise, no colour of its own. */
+  --am-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E");
+  --am-grain-opacity: 0.045;
+  --am-ambient-drift: 48s;
+  /* The film's own shade: keeps the player's text readable over a bright frame. */
+  --am-player-shade-top: linear-gradient(to bottom, rgb(8 6 14 / 0.72), rgb(8 6 14 / 0.3) 55%, transparent);
+  --am-player-shade-bottom: linear-gradient(to top, rgb(8 6 14 / 0.78), rgb(8 6 14 / 0.32) 55%, transparent);
+  /* A lit top edge on raised surfaces (sheets, the hero card), as light from the screen. */
+  --am-edge-light: inset 0 1px 0 rgb(246 242 250 / 0.08);
   /* The poster placeholder on the "ready" card. */
   --am-poster: linear-gradient(160deg, #3a2b52, #1a1424 60%);
   --am-poster-glow: radial-gradient(60% 40% at 50% 70%, rgb(255 140 158 / 0.5), transparent 70%);
@@ -69,7 +88,11 @@
   --am-text-md: 1.0625rem; /* 17, iOS body */
   --am-text-lg: 1.375rem; /* 22 */
   --am-text-xl: 2rem; /* 32 */
-  --am-text-display: clamp(2.75rem, 7vw, 4.75rem);
+  /* Roles, not sizes: a screen's title, the home hero, a card's heading. */
+  --am-text-title: clamp(2rem, 1.4rem + 2.6vw, 3.125rem); /* 32 → 50 */
+  --am-text-display: clamp(2.5rem, 1.5rem + 4.6vw, 4.75rem); /* 40 → 76 */
+  --am-leading-tight: 1.04;
+  --am-measure: 38ch;
 
   /* ---- Radii (by hierarchy, not one radius everywhere) ---- */
   --am-radius-chip: 10px;
@@ -94,8 +117,12 @@
   --am-shadow-float: 0 12px 40px -12px rgb(6 4 12 / 0.7);
   --am-shadow-bubble: 0 10px 30px -10px rgb(6 4 12 / 0.8);
   --am-shadow-glow: 0 0 24px var(--am-thread-glow);
+  /* Elevation by role: a tile sits on glass, a panel floats over the backdrop, a sheet over everything. */
+  --am-shadow-panel: 0 24px 60px -28px rgb(6 4 12 / 0.85), var(--am-edge-light);
+  --am-shadow-sheet: 0 -20px 60px -20px rgb(6 4 12 / 0.8), var(--am-edge-light);
 
   /* ---- Layers ---- */
+  --am-z-backdrop: -1;
   --am-z-base: 0;
   --am-z-thread: 1;
   --am-z-raised: 10;
@@ -123,7 +150,8 @@
 [data-theme="dark"] {
   --lg-foreground: var(--am-milk);
   --lg-muted: var(--am-milk-muted);
-  --lg-glass: rgb(29 24 40 / 0.56);
+  /* Clear enough to show the salle obscure through it, dark enough for milk text at 4.5:1 over a bright frame. */
+  --lg-glass: rgb(29 24 40 / 0.5);
   --lg-glass-active: rgb(56 47 74 / 0.66);
   --lg-edge: rgb(246 242 250 / 0.1);
   --lg-selection: rgb(246 242 250 / 0.14);
@@ -140,5 +168,9 @@
   --lg-destructive: var(--am-coral);
   --lg-ring: var(--am-thread);
   --lg-ease: var(--am-ease-out);
-  --lg-blur: 22px;
+  --lg-blur: 18px;
+  /* A touch more bend and a lit rim: the glass should visibly lens the thread behind it. */
+  --lg-glass-bend: 0.55;
+  --lg-glass-dispersion: 0.5;
+  --lg-rim-shine: 0.2;
 }

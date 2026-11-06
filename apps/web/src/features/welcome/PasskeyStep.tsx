@@ -1,7 +1,7 @@
 import { ScanFace } from "lucide-react";
 import { useState } from "react";
 import { errorMessage } from "../../api/http.ts";
-import { Button } from "../../ui/controls.tsx";
+import { Button, Glass } from "../../ui/controls.tsx";
 import { toast } from "../../ui/toast.ts";
 import { registerPasskey } from "../account/account.ts";
 
@@ -25,28 +25,22 @@ export function PasskeyStep({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="grid w-full justify-items-center gap-5">
-      <span className="grid size-[88px] place-items-center rounded-[28px] border border-line-strong bg-fill-soft text-fg">
-        <ScanFace className="size-11" aria-hidden />
-      </span>
-      <h1 className="font-rounded-tight text-[clamp(32px,4.4vw,50px)] leading-[1.05] font-extrabold text-fg">
-        Activer Face ID ?
-      </h1>
-      <p className="text-md text-fg-muted">
-        Tu n'auras plus besoin de ta clé sur cet appareil. Elle reste ta solution de secours.
-      </p>
+      <Glass className="surface-panel grid size-[88px] place-items-center text-accent">
+        <ScanFace className="size-11" strokeWidth={1.5} aria-hidden />
+      </Glass>
+      <h1 className="type-title">Activer Face ID ?</h1>
+      <p className="type-lede">Tu n'auras plus besoin de ta clé sur cet appareil. Elle reste ta solution de secours.</p>
       <p role="alert" className="min-h-6 text-sm text-danger">
         {error}
       </p>
-      <Button variant="filled" size="large" icon={<ScanFace />} onClick={enable} disabled={busy}>
-        {busy ? "Un instant…" : "Activer Face ID"}
-      </Button>
-      <button
-        type="button"
-        onClick={onDone}
-        className="min-h-11 text-sm font-semibold text-fg-muted underline underline-offset-4"
-      >
-        Plus tard
-      </button>
+      <div className="flex w-full flex-wrap justify-center gap-3 max-sm:[&>*]:flex-1">
+        <Button size="large" onClick={onDone}>
+          Plus tard
+        </Button>
+        <Button variant="filled" size="large" icon={<ScanFace />} onClick={enable} disabled={busy}>
+          {busy ? "Un instant…" : "Activer Face ID"}
+        </Button>
+      </div>
     </div>
   );
 }

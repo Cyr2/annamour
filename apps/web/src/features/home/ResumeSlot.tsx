@@ -1,8 +1,8 @@
-import { Play } from "lucide-react";
+import { ChevronRight, Play } from "lucide-react";
 import { motion } from "motion/react";
 import { useMemo } from "react";
-import { Link } from "wouter";
 import { spring } from "../../lib/motion.ts";
+import { GlassLink } from "../../ui/GlassLink.tsx";
 import { Progress } from "../../ui/Progress.tsx";
 import { latestUnfinished, progressOf, resumeLine } from "../sessions/session-rules.ts";
 import { useSessions } from "../sessions/sessions.ts";
@@ -18,24 +18,29 @@ export function ResumeSlot() {
   const progress = progressOf(session) ?? 0;
   return (
     <motion.div
-      className="mt-4 w-[min(460px,100%)]"
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={spring.ui}
+      className="mt-6 w-[min(460px,100%)]"
+      initial={{ opacity: 0, y: 16, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ ...spring.ui, delay: 0.15 }}
     >
-      <Link
+      <GlassLink
         href={`/s/${session.code}`}
-        className="lg-glass flex min-h-11 items-center gap-4 rounded-panel p-3.5 pr-5 text-left no-underline transition-transform duration-300 active:scale-[0.98]"
+        className="surface-panel"
+        linkClassName="group flex min-h-11 items-center gap-4 p-3.5 pr-4 text-left"
       >
         <Progress.Ring value={progress} label={`${Math.round(progress * 100)} % regardé`}>
-          <Play aria-hidden className="relative size-5 fill-current text-fg" />
+          <Play aria-hidden className="relative ml-0.5 size-5 fill-current text-fg" />
         </Progress.Ring>
-        <span className="grid min-w-0 gap-0.5">
-          <small className="text-xs font-semibold text-thread">Reprendre</small>
+        <span className="grid min-w-0 flex-1 gap-0.5">
+          <span className="text-xs font-semibold text-accent">Reprendre</span>
           <strong className="truncate font-rounded-tight text-md font-extrabold text-fg">{session.title}</strong>
-          <span className="truncate text-sm text-fg-muted">{resumeLine(session, Date.now())}</span>
+          <span className="text-sm text-pretty text-fg-muted">{resumeLine(session, Date.now())}</span>
         </span>
-      </Link>
+        <ChevronRight
+          aria-hidden
+          className="size-5 shrink-0 text-fg-subtle transition-transform duration-200 ease-out group-hover:translate-x-0.5"
+        />
+      </GlassLink>
     </motion.div>
   );
 }

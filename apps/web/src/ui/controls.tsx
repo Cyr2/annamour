@@ -28,10 +28,17 @@ export type { MenuEntry, MenuItem, SegmentedControlItem } from "glisse";
 export interface ButtonProps extends Omit<GlisseButtonProps, "variant" | "tint" | "destructive"> {
   /** `filled` is the one primary action of a view (the thread colour); `glass` everything else. */
   variant?: "filled" | "glass";
-  /** `regular` is 44px (the touch minimum), `large` 52px for a screen's main call to action. */
-  size?: "regular" | "large";
-  /** `destructive` for actions that end or delete something. */
-  tone?: "default" | "destructive";
+  /**
+   * `regular` is 44px (the touch minimum), `large` 52px for a screen's main
+   * call to action, `hero` an 88px round icon button (the player's centre play).
+   */
+  size?: "regular" | "large" | "hero";
+  /**
+   * `accent` tints a glass button's label with the thread colour: a secondary
+   * action that still belongs to the moment (copy the link, show the key).
+   * `destructive` for actions that end or delete something.
+   */
+  tone?: "default" | "accent" | "destructive";
   ref?: Ref<HTMLButtonElement>;
 }
 
@@ -48,6 +55,7 @@ export function Button({
       {...props}
       type={type}
       variant={variant}
+      tint={tone === "accent" ? "var(--am-accent)" : undefined}
       destructive={tone === "destructive"}
       data-size={size}
       className={cx("am-button", className)}
@@ -81,6 +89,7 @@ export function SegmentedControl(props: SegmentedControlProps) {
   return <GlisseSegmentedControl {...props} />;
 }
 
-export function Menu({ align = "end", ...props }: MenuProps) {
-  return <GlisseMenu align={align} {...props} />;
+/** An overflow menu (ellipsis by default). Our class gives its trigger and rows the 44px touch size. */
+export function Menu({ align = "end", className, ...props }: MenuProps) {
+  return <GlisseMenu align={align} {...props} className={cx("am-menu", className)} />;
 }

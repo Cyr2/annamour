@@ -25,7 +25,7 @@ export function ReadyStep({ room }: { room: RoomSnapshot }) {
   return (
     <>
       <Sheet.Lede>Choisis comment tu le regardes. Chacun pourra changer de son côté.</Sheet.Lede>
-      <div className="flex items-center gap-3.5 rounded-[20px] border border-line-strong bg-fill-soft p-3.5">
+      <div className="surface-tile flex items-center gap-3.5 p-3.5">
         <div
           aria-hidden
           className="relative h-[72px] w-[54px] shrink-0 overflow-hidden rounded-[10px]"

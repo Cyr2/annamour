@@ -73,7 +73,7 @@ export function CodeInput({
               <div
                 key={slot}
                 className={cx(
-                  "relative grid h-16 w-14 place-items-center rounded-control border-2 bg-surface transition-colors duration-200",
+                  "relative grid h-16 w-14 place-items-center rounded-control border-2 bg-fill-soft backdrop-blur-md transition-colors duration-200",
                   error ? "border-danger" : isActive ? "border-accent" : char ? "border-line-strong" : "border-line",
                 )}
               >

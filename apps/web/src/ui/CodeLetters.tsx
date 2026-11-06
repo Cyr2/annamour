@@ -10,7 +10,7 @@ export function CodeLetters({ code }: { code: string }) {
           // biome-ignore lint/suspicious/noArrayIndexKey: a code can repeat a letter; the position is the identity.
           key={`${i}-${letter}`}
           aria-hidden
-          className="grid h-[clamp(64px,8.6vw,88px)] w-[clamp(52px,7vw,72px)] place-items-center rounded-[18px] border border-line-strong bg-fill-soft font-rounded-tight text-[clamp(32px,4.6vw,48px)] font-black text-fg"
+          className="grid h-[clamp(64px,8.6vw,88px)] w-[clamp(52px,7vw,72px)] place-items-center rounded-control bg-fill-soft font-rounded-tight text-[clamp(32px,4.6vw,48px)] font-black text-fg shadow-[inset_0_0_0_1px_var(--am-line-strong)]"
           initial={{ opacity: 0, y: 14, scale: 0.8 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ ...spring.bubble, delay: i * 0.06 }}

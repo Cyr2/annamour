@@ -13,6 +13,11 @@ function headline(otherNames: string[]): string {
   return `${joinNames(otherNames)} ${otherNames.length > 1 ? "sont là" : "est là"}`;
 }
 
+function statusLine(resumeAt: number | null, othersCount: number): string {
+  if (resumeAt) return `On reprend à ${formatClock(resumeAt)}, là où vous vous étiez arrêtés`;
+  return othersCount ? "Vous êtes connectés" : "Envoie le code à qui tu veux, jusqu'à 8 personnes";
+}
+
 /** The salon: the code and its QR to share, who is here, and the button that starts the film for everyone. */
 export function LobbyView({ code, onStart }: { code: string; onStart: () => void }) {
   const room = useRoom((s) => s.room);
@@ -35,37 +40,45 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
   };
 
   return (
-    <div className="safe-area mx-auto flex min-h-dvh max-w-[1240px] flex-col">
+    <div className="safe-area mx-auto flex min-h-dvh max-w-[1100px] flex-col">
       <ScreenTopBar back="/" title={room?.media.title ?? "Séance"} />
-      <main className="grid flex-1 items-center gap-[clamp(20px,4vw,48px)] py-6 md:grid-cols-2">
-        <Glass className="grid justify-items-center gap-[18px] rounded-panel p-[26px] text-center">
-          <p className="text-sm font-semibold text-fg-muted">Le code de la séance</p>
-          <CodeLetters code={code} />
-          <QrCode value={joinUrl} label={`QR code pour rejoindre la séance ${code}`} className="size-[132px]" />
-          <Button size="regular" icon={<Copy />} onClick={copy}>
-            {copied ? "Lien copié" : "Copier le lien"}
-          </Button>
-        </Glass>
-        <div className="grid justify-items-center gap-[26px] text-center">
-          <SalonPresence members={members} you={you} className="w-[min(380px,100%)]" />
-          <h1
-            className="font-rounded-tight text-[clamp(28px,3.6vw,40px)] leading-[1.05] font-extrabold text-fg"
-            aria-live="polite"
-          >
-            {headline(others)}
-          </h1>
-          <p className="flex items-center gap-2 text-sm text-fg-muted">
-            <span aria-hidden className={`size-2 rounded-full ${others.length ? "bg-success" : "bg-waiting"}`} />
-            {resumeAt
-              ? `On reprend à ${formatClock(resumeAt)}, là où vous vous étiez arrêtés`
-              : others.length
-                ? "Vous êtes connectés"
-                : "Envoie le code à qui tu veux, jusqu'à 8 personnes"}
-          </p>
+      <main className="grid flex-1 content-center items-center gap-8 py-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:gap-12">
+        <div className="grid justify-items-center gap-6 text-center md:order-2">
+          <SalonPresence members={members} you={you} className="w-[min(360px,100%)]" />
+          <div className="grid justify-items-center gap-3">
+            <h1 className="type-title" aria-live="polite">
+              {headline(others)}
+            </h1>
+            {/* The dot flows with the words, so it stays by the first one when the line wraps. */}
+            <p className="max-w-[40ch] text-sm text-pretty text-fg-muted">
+              <span
+                aria-hidden
+                className={`mr-2 inline-block size-2 rounded-full align-middle ${others.length ? "bg-success" : "bg-waiting"}`}
+              />
+              {statusLine(resumeAt, others.length)}
+            </p>
+          </div>
           <Button variant="filled" size="large" icon={<Play />} onClick={onStart} disabled={!room}>
             {resumeAt ? "Reprendre le film" : "Lancer le film"}
           </Button>
         </div>
+        <Glass className="surface-panel grid justify-items-center gap-5 p-6 text-center sm:p-8 md:order-1">
+          <p className="type-label">Le code de la séance</p>
+          <CodeLetters code={code} />
+          <div className="flex items-center gap-4 text-left">
+            <QrCode
+              value={joinUrl}
+              label={`QR code pour rejoindre la séance ${code}`}
+              className="size-[104px] shrink-0"
+            />
+            <div className="grid justify-items-start gap-2.5">
+              <p className="max-w-[18ch] text-sm text-fg-muted">Ou scanne ce code, ou envoie le lien.</p>
+              <Button icon={<Copy />} tone="accent" onClick={copy}>
+                {copied ? "Lien copié" : "Copier le lien"}
+              </Button>
+            </div>
+          </div>
+        </Glass>
       </main>
     </div>
   );

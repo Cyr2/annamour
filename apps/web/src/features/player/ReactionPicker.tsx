@@ -2,7 +2,7 @@ import { REACTIONS, type Reaction } from "@annamour/protocol";
 import { Smile } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef } from "react";
-import { spring } from "../../lib/motion.ts";
+import { exit, spring } from "../../lib/motion.ts";
 import { createReactionThrottle } from "../../sync/reactions.ts";
 import { Glass } from "../../ui/controls.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
@@ -44,21 +44,22 @@ export function ReactionPicker({ open, onOpenChange, onReact }: ReactionPickerPr
   }, [open, onOpenChange]);
 
   return (
-    <div ref={root} className="relative">
+    // Not positioned itself: the pop is placed against the controls capsule, just above it.
+    <div ref={root}>
       <IconButton
         label="Envoyer une réaction"
         icon={<Smile />}
         aria-expanded={open}
         onClick={() => onOpenChange(!open)}
-        className={open ? "bg-fill-hover" : undefined}
+        className={open ? "bg-fill-hover text-accent" : undefined}
       />
       <AnimatePresence>
         {open ? (
           <motion.div
-            className="absolute right-[-10px] bottom-[58px] origin-bottom-right"
+            className="absolute right-1 bottom-[calc(100%+12px)] origin-bottom-right sm:right-3"
             initial={{ opacity: 0, y: 10, scale: 0.88 }}
             animate={{ opacity: 1, y: 0, scale: 1, transition: spring.ui }}
-            exit={{ opacity: 0, y: 6, scale: 0.94, transition: { duration: 0.16 } }}
+            exit={{ opacity: 0, y: 6, scale: 0.94, transition: exit.quick }}
           >
             <Glass role="menu" aria-label="Réactions" className="flex gap-0.5 rounded-pill p-1.5 shadow-float">
               {REACTIONS.map((emoji, index) => (

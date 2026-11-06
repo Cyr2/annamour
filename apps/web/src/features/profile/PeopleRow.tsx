@@ -19,8 +19,8 @@ interface PeopleRowProps {
 /** « Avec qui je regarde »: one row of bubbles, everyone once, most shared first. Tapping one filters the list. */
 export function PeopleRow({ people, favoriteId, totalSessions, selected, onSelect }: PeopleRowProps) {
   return (
-    <Glass className="grid gap-3 rounded-panel p-5">
-      <h2 className="font-rounded-tight text-lg font-extrabold text-fg">Avec qui je regarde</h2>
+    <Glass className="surface-panel grid gap-3 p-4 sm:p-5">
+      <h2 className="type-heading">Avec qui je regarde</h2>
       <fieldset className="-mx-1 flex min-w-0 gap-1 overflow-x-auto border-0 p-0 pb-1">
         <legend className="sr-only">Filtrer mes séances par personne</legend>
         <PersonChip
