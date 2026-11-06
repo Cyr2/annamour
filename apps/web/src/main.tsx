@@ -3,10 +3,10 @@ import "@fontsource-variable/nunito";
 import "glisse/styles.css";
 import "./styles/app.css";
 
+import { registerSW } from "virtual:pwa-register";
 import { MotionConfig } from "motion/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { registerSW } from "virtual:pwa-register";
 import { App } from "./App.tsx";
 import { spring } from "./lib/motion.ts";
 

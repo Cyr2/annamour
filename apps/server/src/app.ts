@@ -1,11 +1,11 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { Hono } from "hono";
+import { CreateRoomRequest, type CreateRoomResponse, isRoomCode } from "@annamour/protocol";
 import { serveStatic } from "@hono/node-server/serve-static";
-import { CreateRoomRequest, isRoomCode, type CreateRoomResponse } from "@annamour/protocol";
+import { Hono } from "hono";
 import { HlsError, importHls } from "./hls.ts";
-import { FetchError, safeFetchText, type TextFetcher } from "./safe-fetch.ts";
 import type { RoomStore } from "./rooms.ts";
+import { FetchError, safeFetchText, type TextFetcher } from "./safe-fetch.ts";
 
 export interface AppOptions {
   store: RoomStore;
@@ -18,6 +18,22 @@ export interface AppOptions {
 const DEFAULT_TITLE = "Notre séance";
 const CREATE_LIMIT = { windowMs: 60_000, max: 10 };
 
+/** First hop of X-Forwarded-For (the real client behind the proxy). */
+function clientIp(forwardedFor: string | undefined): string {
+  return forwardedFor?.split(",")[0]?.trim() ?? "local";
+}
+
+/** What to tell the person when a link can't be imported; null for unexpected errors. */
+function importErrorMessage(error: unknown): string | null {
+  if (error instanceof HlsError) return "Ce lien ne mène pas à une vidéo lisible.";
+  if (error instanceof FetchError) {
+    // Signed CDN links answer 401/403 once their token has expired.
+    const expired = error.status === 401 || error.status === 403;
+    return expired ? "Ce lien a expiré : récupère-en un nouveau." : "Impossible d'ouvrir ce lien.";
+  }
+  return null;
+}
+
 export function createApp({ store, fetchText = safeFetchText, webDist, now = Date.now }: AppOptions) {
   const app = new Hono();
   const createdBy = new Map<string, number[]>();
@@ -25,9 +41,10 @@ export function createApp({ store, fetchText = safeFetchText, webDist, now = Dat
   app.get("/api/health", (c) => c.json({ ok: true, rooms: store.size }));
 
   app.post("/api/rooms", async (c) => {
-    const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
+    const ip = clientIp(c.req.header("x-forwarded-for"));
     const recent = (createdBy.get(ip) ?? []).filter((t) => now() - t < CREATE_LIMIT.windowMs);
-    if (recent.length >= CREATE_LIMIT.max) return c.json({ error: "Trop de séances créées, réessaie dans une minute." }, 429);
+    if (recent.length >= CREATE_LIMIT.max)
+      return c.json({ error: "Trop de séances créées, réessaie dans une minute." }, 429);
 
     const parsed = CreateRoomRequest.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: "Colle un lien https vers une playlist .m3u8." }, 400);
@@ -38,12 +55,9 @@ export function createApp({ store, fetchText = safeFetchText, webDist, now = Dat
       createdBy.set(ip, [...recent, now()]);
       return c.json({ code: room.code } satisfies CreateRoomResponse, 201);
     } catch (error) {
-      if (error instanceof HlsError) return c.json({ error: "Ce lien ne mène pas à une vidéo lisible." }, 422);
-      if (error instanceof FetchError) {
-        const expired = error.status === 401 || error.status === 403;
-        return c.json({ error: expired ? "Ce lien a expiré : récupère-en un nouveau." : "Impossible d'ouvrir ce lien." }, 422);
-      }
-      throw error;
+      const message = importErrorMessage(error);
+      if (message === null) throw error;
+      return c.json({ error: message }, 422);
     }
   });
 
@@ -74,12 +88,15 @@ export function createApp({ store, fetchText = safeFetchText, webDist, now = Dat
   app.all("/api/*", (c) => c.json({ error: "Not found" }, 404));
 
   if (webDist) {
+    // Vite fingerprints everything under /assets, so those files never change.
+    // (serveStatic's onFound hook does not reach the response in @hono/node-server 2, hence this wrapper.)
     app.use(
       "/assets/*",
-      serveStatic({
-        root: webDist,
-        onFound: (_path, c) => c.header("cache-control", "public, max-age=31536000, immutable"),
-      }),
+      async (c, next) => {
+        await next();
+        if (c.res.ok) c.res.headers.set("cache-control", "public, max-age=31536000, immutable");
+      },
+      serveStatic({ root: webDist }),
     );
     app.use("*", serveStatic({ root: webDist }));
     // SPA fallback: every other path is a client route.

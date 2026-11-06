@@ -1,4 +1,4 @@
-import { correct, positionAt, type PlaybackState } from "@annamour/protocol";
+import { correct, type PlaybackState, positionAt } from "@annamour/protocol";
 import type Hls from "hls.js";
 import type { SyncClient } from "./SyncClient.ts";
 
@@ -193,13 +193,13 @@ export class PlayerSync {
     const native = video.canPlayType("application/vnd.apple.mpegurl") !== "";
     // Safari (incl. iPad) gets native HLS: AirPlay, PiP, fullscreen and battery all work best.
     if (native && isApple()) {
-      this.useNative(src);
+      this.attachNative(src);
       return;
     }
     const { default: HlsClass } = await import("hls.js");
     if (token !== this.sourceToken || this.destroyed) return;
     if (!HlsClass.isSupported()) {
-      if (native) this.useNative(src);
+      if (native) this.attachNative(src);
       else this.update({ error: "Ce navigateur ne sait pas lire cette vidéo." });
       return;
     }
@@ -235,7 +235,7 @@ export class PlayerSync {
     this.update({ engine: "hls.js", error: null });
   }
 
-  private useNative(src: string): void {
+  private attachNative(src: string): void {
     this.video.src = src;
     this.sourceReady = true;
     this.update({ engine: "native", error: null });
@@ -283,16 +283,22 @@ export class PlayerSync {
     if (!playback || !this.sourceReady || this.destroyed || video.readyState < HAVE_METADATA) return;
 
     const target = this.target(playback);
+    if (playback.status === "paused") this.holdPaused(target);
+    else this.followPlaying(target);
+  };
 
-    if (playback.status === "paused") {
-      this.setRate(1);
-      this.doPause();
-      if (!video.seeking && Math.abs(video.currentTime - target) > PAUSED_TOLERANCE) this.doSeek(target);
-      this.evaluateBuffering();
-      return;
-    }
+  /** Shared state is paused: stop and sit exactly on the shared position. */
+  private holdPaused(target: number): void {
+    const video = this.video;
+    this.setRate(1);
+    this.doPause();
+    if (!video.seeking && Math.abs(video.currentTime - target) > PAUSED_TOLERANCE) this.doSeek(target);
+    this.evaluateBuffering();
+  }
 
-    // Playing.
+  /** Shared state is playing: start if needed, then keep drift under control. */
+  private followPlaying(target: number): void {
+    const video = this.video;
     if (video.ended && target >= video.duration - 0.1) return;
     if (this.state.blocked) return; // waiting for a tap; nothing we can do
 
@@ -305,19 +311,21 @@ export class PlayerSync {
     // Let seeks land and stalls recover before judging drift.
     if (video.seeking || now() - this.seekIssuedAt < SEEK_COOLDOWN_MS || video.readyState < HAVE_FUTURE_DATA) {
       this.setRate(1);
-      this.evaluateBuffering();
-      return;
+    } else {
+      this.correctDrift(target);
     }
+    this.evaluateBuffering();
+  }
 
-    const correction = correct(video.currentTime, target);
+  private correctDrift(target: number): void {
+    const correction = correct(this.video.currentTime, target);
     if (correction.kind === "seek") {
       this.setRate(1);
       this.doSeek(correction.to + this.seekLead);
     } else {
       this.setRate(correction.rate);
     }
-    this.evaluateBuffering();
-  };
+  }
 
   /* ---------- programmatic element changes (always "expected") ---------- */
 

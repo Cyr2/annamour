@@ -1,6 +1,6 @@
 import { normalizeRoomCode, ROOM_CODE_LENGTH } from "@annamour/protocol";
 import { AnimatePresence, motion, useAnimate, useReducedMotion } from "motion/react";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { exit, shakeKeyframes, shakeTransition, spring } from "../lib/motion.ts";
 import { cx } from "./cx.ts";
 
@@ -12,9 +12,13 @@ interface CodeInputProps {
   /** A message to show under the cells; setting one shakes them. */
   error?: string | null;
   label: string;
-  autoFocus?: boolean;
+  /** Focus the field when it mounts (e.g. on the join screen, where typing the code is the only task). */
+  focusOnMount?: boolean;
   className?: string;
 }
+
+/** One stable identity per letter cell: the cells never move, only their content changes. */
+const SLOTS = Array.from({ length: ROOM_CODE_LENGTH }, (_, i) => `slot-${i}`);
 
 /**
  * Room code entry, one cell per letter. A single real input sits over the
@@ -26,10 +30,11 @@ export function CodeInput({
   onComplete,
   error = null,
   label,
-  autoFocus,
+  focusOnMount = false,
   className,
 }: CodeInputProps) {
   const id = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [focused, setFocused] = useState(false);
   const [scope, animate] = useAnimate<HTMLDivElement>();
   const reduceMotion = useReducedMotion() ?? false;
@@ -38,6 +43,11 @@ export function CodeInput({
     if (!error || reduceMotion || !scope.current) return;
     animate(scope.current, { x: shakeKeyframes }, shakeTransition);
   }, [error, reduceMotion, animate, scope]);
+
+  // Explicit focus instead of the autoFocus attribute, so only callers that ask for it move focus.
+  useEffect(() => {
+    if (focusOnMount) inputRef.current?.focus();
+  }, [focusOnMount]);
 
   const handleChange = (raw: string) => {
     const next = normalizeRoomCode(raw);
@@ -56,12 +66,12 @@ export function CodeInput({
       </label>
       <div ref={scope} className="relative w-fit">
         <div className="flex gap-2.5" aria-hidden>
-          {Array.from({ length: ROOM_CODE_LENGTH }, (_, i) => {
+          {SLOTS.map((slot, i) => {
             const char = value[i];
             const isActive = focused && i === active;
             return (
               <div
-                key={i}
+                key={slot}
                 className={cx(
                   "relative grid h-16 w-14 place-items-center rounded-control border-2 bg-surface transition-colors duration-200",
                   error ? "border-danger" : isActive ? "border-accent" : char ? "border-line-strong" : "border-line",
@@ -70,7 +80,7 @@ export function CodeInput({
                 <AnimatePresence mode="popLayout" initial={false}>
                   {char ? (
                     <motion.span
-                      key={char + i}
+                      key={`${slot}-${char}`}
                       className="font-rounded-tight text-[1.75rem] leading-none font-extrabold text-fg"
                       initial={{ y: 10, scale: 0.5, opacity: 0 }}
                       animate={{ y: 0, scale: 1, opacity: 1, transition: spring.snappy }}
@@ -93,6 +103,7 @@ export function CodeInput({
           })}
         </div>
         <input
+          ref={inputRef}
           id={id}
           value={value}
           onChange={(e) => handleChange(e.target.value)}
@@ -102,7 +113,6 @@ export function CodeInput({
             e.target.setSelectionRange(end, end);
           }}
           onBlur={() => setFocused(false)}
-          autoFocus={autoFocus}
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="characters"

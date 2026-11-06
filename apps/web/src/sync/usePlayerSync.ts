@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { initialPlayerSyncState, PlayerSync, type PlayerSyncState } from "./PlayerSync.ts";
-import { useRoom, type RoomState } from "./room.ts";
+import { type RoomState, useRoom } from "./room.ts";
 import type { SyncClient } from "./SyncClient.ts";
 
 export interface PlayerControls {

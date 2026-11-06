@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
 import type { ServerMessage } from "@annamour/protocol";
+import { describe, expect, it } from "vitest";
 import type { ImportedMedia } from "../src/hls.ts";
-import { MAX_MEMBERS, RoomStore, type Connection } from "../src/rooms.ts";
+import { type Connection, MAX_MEMBERS, RoomStore } from "../src/rooms.ts";
+import { required } from "./required.ts";
 
 const media: ImportedMedia = {
   playlists: new Map([["master.m3u8", "#EXTM3U"]]),
@@ -28,8 +29,8 @@ function setup() {
   const room = store.create("Film", media, 0);
   const a = fakeConnection();
   const b = fakeConnection();
-  const idA = room.join("client-aaaa", "Darius", "peach", a.connection, 0)!;
-  const idB = room.join("client-bbbb", "Anna", "lilac", b.connection, 0)!;
+  const idA = required(room.join("client-aaaa", "Darius", "peach", a.connection, 0), "Darius to join");
+  const idB = required(room.join("client-bbbb", "Anna", "lilac", b.connection, 0), "Anna to join");
   return { store, room, a, b, idA, idB };
 }
 
@@ -46,7 +47,12 @@ describe("Room", () => {
   it("broadcasts play and pause with the author", () => {
     const { room, b, idA } = setup();
     room.handle(idA, { type: "play", position: 12 }, 1000);
-    expect(b.last()).toMatchObject({ type: "playback", action: "play", by: idA, playback: { status: "playing", position: 12 } });
+    expect(b.last()).toMatchObject({
+      type: "playback",
+      action: "play",
+      by: idA,
+      playback: { status: "playing", position: 12 },
+    });
     room.handle(idA, { type: "pause" }, 3000);
     expect(b.last()).toMatchObject({ type: "playback", action: "pause", playback: { status: "paused", position: 14 } });
   });
@@ -92,11 +98,11 @@ describe("Room", () => {
   it("replaces the socket when the same device reconnects", () => {
     const { room, a } = setup();
     const again = fakeConnection();
-    const id = room.join("client-aaaa", "Darius", "mint", again.connection, 10);
+    const id = required(room.join("client-aaaa", "Darius", "mint", again.connection, 10), "Darius to rejoin");
     expect(a.isClosed()).toBe(true);
     expect(room.size).toBe(2);
     // the stale socket closing later must not remove the member
-    room.leave(id!, a.connection, 20);
+    room.leave(id, a.connection, 20);
     expect(room.size).toBe(2);
   });
 
@@ -115,7 +121,8 @@ describe("Room", () => {
   it("refuses members beyond the limit", () => {
     const store = new RoomStore();
     const room = store.create("Film", media, 0);
-    for (let i = 0; i < MAX_MEMBERS; i++) expect(room.join(`client-${i}xxxxxx`, `P${i}`, "sky", fakeConnection().connection, 0)).not.toBeNull();
+    for (let i = 0; i < MAX_MEMBERS; i++)
+      expect(room.join(`client-${i}xxxxxx`, `P${i}`, "sky", fakeConnection().connection, 0)).not.toBeNull();
     expect(room.join("client-extra-1", "Extra", "sky", fakeConnection().connection, 0)).toBeNull();
   });
 

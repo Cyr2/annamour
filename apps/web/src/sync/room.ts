@@ -1,14 +1,8 @@
-import type {
-  ErrorCode,
-  Member,
-  PlaybackAction,
-  PlaybackState,
-  RoomSnapshot,
-} from "@annamour/protocol";
+import type { ErrorCode, Member, PlaybackAction, PlaybackState, RoomSnapshot } from "@annamour/protocol";
 import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { currentIdentity } from "./identity.ts";
-import { SyncClient, type ConnectionStatus } from "./SyncClient.ts";
+import { type ConnectionStatus, SyncClient } from "./SyncClient.ts";
 
 /* The room as this device knows it, fed by the SyncClient. */
 
