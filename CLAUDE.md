@@ -16,7 +16,7 @@ Watch-together PWA : deux personnes à distance regardent la même vidéo HLS, s
 - (global) `ui-ux-pro-max` : règles UX/accessibilité (cibles ≥ 44 px, contraste 4.5:1, reduced motion).
 
 ## Exigences produit validées sur la maquette
-- **Maquette de référence** : https://claude.ai/artifact/AwKSht7CqP8Lr1kaznN86C (écrans accueil, salon, rejoindre, lecteur, profil).
+- **Maquette de référence (validée)** : `docs/maquette.html` (ouvrir dans un navigateur ; copie de https://claude.ai/artifact/AwKSht7CqP8Lr1kaznN86C). Écrans : 1er lancement, accueil, salon, rejoindre, lecteur, profil. Le logo y est provisoire.
 - **Réactions** : 6 émojis seulement (`REACTIONS`), menu dans la barre du lecteur, l'émoji s'envole chez tout le monde avec le prénom.
 - **Séances persistantes** : on regarde parfois un film en plusieurs soirs, à plusieurs jours d'intervalle.
   - Serveur : persister les salons (playlists en cache, sous-titres, titre, dernière position) dans SQLite (`node:sqlite`, intégré à Node) sur un volume Coolify ; garder un salon au moins 60 jours après sa dernière utilisation ; position sauvegardée à chaque pause et quand le salon se vide.
