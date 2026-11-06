@@ -38,7 +38,10 @@ pnpm dev        # serveur sur :8787, PWA Vite sur :5173 (proxy /api et /ws)
 pnpm test       # tests du protocole et du serveur
 pnpm typecheck
 pnpm build
+pnpm e2e        # deux navigateurs Chrome, serveur local lancé automatiquement
 ```
+
+Pour lancer le test de bout en bout contre une instance déployée, sans serveur local : `E2E_BASE_URL=https://annamour.mondomaine.fr pnpm e2e`. Il y crée deux comptes de test et une séance.
 
 ## Déploiement (Coolify)
 
