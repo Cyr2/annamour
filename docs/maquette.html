@@ -991,8 +991,8 @@ button { cursor: pointer; border: 0; background: none; }
     const chip = (id) => {
       const p = PEOPLE[id], n = countWith(id), fav = id === top;
       const heart = fav ? `<span class="heart-badge" aria-hidden="true"><svg><use href="#i-heart"/></svg></span>` : "";
-      const label = fav ? `<small class="fav">Complice de canapé</small>` : `<small>${n} séance${n > 1 ? "s" : ""}</small>`;
-      return `<button class="person-chip" data-person="${id}" aria-pressed="${circleFilter === id}" aria-label="${p.name}, ${n} séance${n > 1 ? "s" : ""} ensemble${fav ? ", complice de canapé" : ""}"><span class="bubble" style="--c:${p.c}">${p.name[0]}${heart}</span><b>${p.name}</b>${label}</button>`;
+      const label = `<small>${n} séance${n > 1 ? "s" : ""}</small>`;
+      return `<button class="person-chip" data-person="${id}" aria-pressed="${circleFilter === id}" aria-label="${p.name}, ${n} séance${n > 1 ? "s" : ""} ensemble"><span class="bubble" style="--c:${p.c}">${p.name[0]}${heart}</span><b>${p.name}</b>${label}</button>`;
     };
     circle.innerHTML = `
       <h2>Avec qui je regarde</h2>
