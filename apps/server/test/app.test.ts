@@ -3,10 +3,9 @@ import { parseServerMessage, type RoomSnapshot, type ServerMessage } from "@anna
 import { type ServerType, serve } from "@hono/node-server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import WebSocket from "ws";
-import { createApp } from "../src/app.ts";
 import { attachRealtime } from "../src/realtime.ts";
-import { RoomStore } from "../src/rooms.ts";
 import { FetchError, type TextFetcher } from "../src/safe-fetch.ts";
+import { testApp } from "./helpers.ts";
 
 const MASTER = "https://cdn.example/movie/master.m3u8?token=t";
 const fakeFetch: TextFetcher = async (url) => {
@@ -17,8 +16,7 @@ const fakeFetch: TextFetcher = async (url) => {
   throw new FetchError("not found", 404);
 };
 
-const store = new RoomStore();
-const app = createApp({ store, fetchText: fakeFetch });
+const { app, services } = testApp({ fetchText: fakeFetch });
 
 describe("HTTP API", () => {
   it("creates a room and serves its playlists", async () => {
@@ -64,7 +62,7 @@ describe("WebSocket sync", () => {
 
   beforeAll(async () => {
     server = serve({ fetch: app.fetch, port: 0 });
-    attachRealtime(server, store);
+    attachRealtime(server, services);
     await new Promise((r) => server.once("listening", r));
     port = (server.address() as AddressInfo).port;
     const res = await app.request("/api/rooms", {

@@ -45,6 +45,15 @@ pnpm build
 1. Nouvelle ressource → depuis ce dépôt Git → **Build Pack : Dockerfile**.
 2. Port exposé : `8787`.
 3. Domaine : par ex. `https://annamour.mondomaine.fr` (HTTPS obligatoire pour la PWA ; Coolify gère le certificat et les WebSocket).
-4. Variables d'environnement : aucune obligatoire (`PORT`, `WEB_DIST` ont des valeurs par défaut).
+4. **Stockage persistant** : ajouter un volume monté sur `/app/data`. Les séances (playlists en cache, sous-titres, dernière position) et les comptes y vivent dans SQLite (`annamour.db`) ; sans volume, tout est perdu à chaque redéploiement.
+5. Variables d'environnement :
 
-Le conteneur expose `/api/health` pour le healthcheck.
+| Variable           | Obligatoire       | Rôle                                                                                                                                                                                                        |
+| ------------------ | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `KEY_PEPPER`       | oui               | Secret mêlé à l'empreinte des clés de 4 mots. Le serveur refuse de démarrer sans lui en production. Ne jamais le changer : toutes les clés deviendraient invalides. Générer avec `openssl rand -base64 32`. |
+| `RP_ID`            | pour les passkeys | Domaine définitif, sans protocole (ex. `annamour.mondomaine.fr`). Les passkeys y sont liées. Défaut : `localhost`.                                                                                          |
+| `ORIGIN`           | pour les passkeys | Adresse(s) de la PWA, séparées par des virgules (ex. `https://annamour.mondomaine.fr`). Défaut : `http://localhost:5173`.                                                                                   |
+| `DATA_DIR`         | non               | Dossier de la base SQLite. Défaut dans l'image : `/app/data`.                                                                                                                                               |
+| `PORT`, `WEB_DIST` | non               | Port d'écoute (`8787`) et dossier de la PWA construite : valeurs par défaut adaptées.                                                                                                                       |
+
+Le conteneur expose `/api/health` pour le healthcheck. Un salon est gardé 60 jours après sa dernière utilisation.

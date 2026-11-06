@@ -1,7 +1,6 @@
 import {
   type BubbleColor,
   type ClientMessage,
-  generateRoomCode,
   initialPlayback,
   type Media,
   type Member,
@@ -18,8 +17,15 @@ import {
 import type { ImportedMedia } from "./hls.ts";
 
 export const MAX_MEMBERS = 8;
-/** An empty room is kept this long, so a dropped connection can come back. */
-export const EMPTY_ROOM_TTL_MS = 6 * 60 * 60 * 1000;
+
+/** Called whenever the room's position is worth keeping (pause, seek, join, last person leaving). */
+export type SavePosition = (position: number, now: number) => void;
+
+export interface RoomOptions {
+  /** Where a reopened session resumes, in seconds. */
+  position?: number;
+  save?: SavePosition;
+}
 
 export interface Connection {
   send(message: ServerMessage): void;
@@ -41,12 +47,15 @@ export class Room {
   private resumeAfterBuffer = false;
   private readonly participants = new Map<string, Participant>();
   private nextMemberId = 1;
+  private readonly save: SavePosition;
   emptySince: number | null;
 
-  constructor(code: string, title: string, imported: ImportedMedia, now: number) {
+  constructor(code: string, title: string, imported: ImportedMedia, now: number, options: RoomOptions = {}) {
     this.code = code;
     this.imported = imported;
-    this.playback = initialPlayback(now);
+    // A reopened session always starts paused, where everyone left it.
+    this.playback = { ...initialPlayback(now), position: options.position ?? 0 };
+    this.save = options.save ?? (() => {});
     this.emptySince = now;
     const base = `/api/rooms/${code}`;
     this.media = {
@@ -87,6 +96,7 @@ export class Room {
       this.participants.set(id, member);
     }
     this.emptySince = null;
+    this.saveNow(now);
     connection.send({ type: "welcome", you: member.id, room: this.snapshot(), serverTime: now });
     this.broadcastMembers();
     this.maybeResume(now);
@@ -101,6 +111,7 @@ export class Room {
       this.emptySince = now;
       this.playback = pause(this.playback, now);
       this.resumeAfterBuffer = false;
+      this.saveNow(now);
       return;
     }
     this.broadcastMembers();
@@ -153,6 +164,11 @@ export class Room {
     return positionAt(this.playback, now);
   }
 
+  /** Persists where the video is right now. */
+  saveNow(now: number): void {
+    this.save(this.positionAt(now), now);
+  }
+
   closeAll(): void {
     for (const p of this.participants.values()) p.connection.close();
     this.participants.clear();
@@ -170,6 +186,7 @@ export class Room {
 
   private setPlayback(next: PlaybackState, action: PlaybackAction, by?: string): void {
     this.playback = next;
+    if (next.status === "paused" || action === "seek") this.save(next.position, next.at);
     this.broadcast({ type: "playback", playback: next, action, ...(by ? { by } : {}) });
   }
 
@@ -179,46 +196,5 @@ export class Room {
 
   private broadcast(message: ServerMessage): void {
     for (const p of this.participants.values()) p.connection.send(message);
-  }
-}
-
-export class RoomStore {
-  private readonly rooms = new Map<string, Room>();
-  private readonly random: () => number;
-
-  constructor(random: () => number = Math.random) {
-    this.random = random;
-  }
-
-  create(title: string, imported: ImportedMedia, now: number): Room {
-    let code = generateRoomCode(this.random);
-    for (let tries = 0; this.rooms.has(code); tries++) {
-      if (tries > 50) throw new Error("No free room code");
-      code = generateRoomCode(this.random);
-    }
-    const room = new Room(code, title, imported, now);
-    this.rooms.set(code, room);
-    return room;
-  }
-
-  get(code: string): Room | undefined {
-    return this.rooms.get(code);
-  }
-
-  get size(): number {
-    return this.rooms.size;
-  }
-
-  /** Drops rooms that have been empty for longer than the TTL. */
-  sweep(now: number, ttl = EMPTY_ROOM_TTL_MS): number {
-    let removed = 0;
-    for (const [code, room] of this.rooms) {
-      if (room.emptySince !== null && now - room.emptySince > ttl) {
-        room.closeAll();
-        this.rooms.delete(code);
-        removed++;
-      }
-    }
-    return removed;
   }
 }

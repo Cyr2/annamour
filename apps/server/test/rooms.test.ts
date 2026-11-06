@@ -1,16 +1,8 @@
 import type { ServerMessage } from "@annamour/protocol";
 import { describe, expect, it } from "vitest";
-import type { ImportedMedia } from "../src/hls.ts";
-import { type Connection, MAX_MEMBERS, RoomStore } from "../src/rooms.ts";
+import { type Connection, MAX_MEMBERS } from "../src/rooms.ts";
+import { media, testStore } from "./helpers.ts";
 import { required } from "./required.ts";
-
-const media: ImportedMedia = {
-  playlists: new Map([["master.m3u8", "#EXTM3U"]]),
-  audio: [],
-  subtitles: [],
-  subtitleFiles: new Map(),
-  duration: 100,
-};
 
 function fakeConnection() {
   const inbox: ServerMessage[] = [];
@@ -25,13 +17,13 @@ function fakeConnection() {
 }
 
 function setup() {
-  const store = new RoomStore();
+  const { store, repository } = testStore();
   const room = store.create("Film", media, 0);
   const a = fakeConnection();
   const b = fakeConnection();
   const idA = required(room.join("client-aaaa", "Darius", "peach", a.connection, 0), "Darius to join");
   const idB = required(room.join("client-bbbb", "Anna", "lilac", b.connection, 0), "Anna to join");
-  return { store, room, a, b, idA, idB };
+  return { store, repository, room, a, b, idA, idB };
 }
 
 describe("Room", () => {
@@ -119,21 +111,29 @@ describe("Room", () => {
   });
 
   it("refuses members beyond the limit", () => {
-    const store = new RoomStore();
+    const { store } = testStore();
     const room = store.create("Film", media, 0);
     for (let i = 0; i < MAX_MEMBERS; i++)
       expect(room.join(`client-${i}xxxxxx`, `P${i}`, "sky", fakeConnection().connection, 0)).not.toBeNull();
     expect(room.join("client-extra-1", "Extra", "sky", fakeConnection().connection, 0)).toBeNull();
   });
 
-  it("pauses an emptied room and sweeps it after the TTL", () => {
-    const { store, room, a, b, idA, idB } = setup();
+  it("pauses an emptied room and saves where it stopped", () => {
+    const { repository, room, a, b, idA, idB } = setup();
     room.handle(idA, { type: "play", position: 0 }, 0);
     room.leave(idA, a.connection, 1000);
     room.leave(idB, b.connection, 2000);
     expect(room.playback).toMatchObject({ status: "paused", position: 2 });
-    expect(store.sweep(2000 + 1000, 5000)).toBe(0);
-    expect(store.sweep(2000 + 6000, 5000)).toBe(1);
-    expect(store.get(room.code)).toBeUndefined();
+    expect(repository.find(room.code)).toMatchObject({ position: 2, lastUsedAt: 2000 });
+  });
+
+  it("saves the position on every pause and seek, not on play", () => {
+    const { repository, room, idA } = setup();
+    room.handle(idA, { type: "play", position: 10 }, 1000);
+    expect(repository.find(room.code)?.position).toBe(0);
+    room.handle(idA, { type: "seek", position: 50 }, 2000);
+    expect(repository.find(room.code)?.position).toBe(50);
+    room.handle(idA, { type: "pause" }, 4000);
+    expect(repository.find(room.code)).toMatchObject({ position: 52, lastUsedAt: 4000 });
   });
 });

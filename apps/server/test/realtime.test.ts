@@ -3,26 +3,18 @@ import { parseServerMessage, type ServerMessage } from "@annamour/protocol";
 import { type ServerType, serve } from "@hono/node-server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import WebSocket from "ws";
-import { createApp } from "../src/app.ts";
-import type { ImportedMedia } from "../src/hls.ts";
 import { attachRealtime } from "../src/realtime.ts";
-import { MAX_MEMBERS, RoomStore } from "../src/rooms.ts";
+import { MAX_MEMBERS } from "../src/rooms.ts";
+import { media, testApp } from "./helpers.ts";
 
-const media: ImportedMedia = {
-  playlists: new Map([["master.m3u8", "#EXTM3U"]]),
-  audio: [],
-  subtitles: [],
-  subtitleFiles: new Map(),
-  duration: 60,
-};
-
-const store = new RoomStore();
+const { app, services } = testApp();
+const { store } = services;
 let server: ServerType;
 let port: number;
 
 beforeAll(async () => {
-  server = serve({ fetch: createApp({ store }).fetch, port: 0 });
-  attachRealtime(server, store);
+  server = serve({ fetch: app.fetch, port: 0 });
+  attachRealtime(server, services);
   await new Promise((resolve) => server.once("listening", resolve));
   port = (server.address() as AddressInfo).port;
 });
