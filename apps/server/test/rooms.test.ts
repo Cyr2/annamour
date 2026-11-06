@@ -100,6 +100,18 @@ describe("Room", () => {
     expect(room.size).toBe(2);
   });
 
+  it("broadcasts reactions to everyone, with a cooldown", () => {
+    const { room, a, b, idA } = setup();
+    room.handle(idA, { type: "react", emoji: "❤️" }, 1000);
+    expect(a.last()).toEqual({ type: "reaction", by: idA, emoji: "❤️" });
+    expect(b.last()).toEqual({ type: "reaction", by: idA, emoji: "❤️" });
+    const before = b.inbox.length;
+    room.handle(idA, { type: "react", emoji: "🔥" }, 1100);
+    expect(b.inbox.length).toBe(before);
+    room.handle(idA, { type: "react", emoji: "🔥" }, 1400);
+    expect(b.last()).toEqual({ type: "reaction", by: idA, emoji: "🔥" });
+  });
+
   it("refuses members beyond the limit", () => {
     const store = new RoomStore();
     const room = store.create("Film", media, 0);

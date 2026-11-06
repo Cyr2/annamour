@@ -4,6 +4,7 @@ import {
   pause,
   play,
   positionAt,
+  REACTION_COOLDOWN_MS,
   seek,
   type BubbleColor,
   type ClientMessage,
@@ -28,6 +29,7 @@ export interface Connection {
 interface Participant extends Member {
   clientId: string;
   connection: Connection;
+  lastReactionAt: number;
 }
 
 export class Room {
@@ -81,7 +83,7 @@ export class Room {
     } else {
       if (this.participants.size >= MAX_MEMBERS) return null;
       const id = `m${this.nextMemberId++}`;
-      this.participants.set(id, { id, clientId, name, color, buffering: false, connection });
+      this.participants.set(id, { id, clientId, name, color, buffering: false, connection, lastReactionAt: -Infinity });
     }
     const member = existing ?? [...this.participants.values()].at(-1)!;
     this.emptySince = null;
@@ -138,6 +140,11 @@ export class Room {
         }
         this.broadcastMembers();
         this.maybeResume(now);
+        return;
+      case "react":
+        if (now - participant.lastReactionAt < REACTION_COOLDOWN_MS) return;
+        participant.lastReactionAt = now;
+        this.broadcast({ type: "reaction", by: memberId, emoji: message.emoji });
         return;
     }
   }

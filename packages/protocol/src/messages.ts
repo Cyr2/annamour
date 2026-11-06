@@ -59,6 +59,13 @@ export type RoomSnapshot = z.infer<typeof RoomSnapshot>;
 
 export const Name = z.string().trim().min(1).max(24);
 
+/** A deliberately short set: reactions should stay light on top of a film. */
+export const REACTIONS = ["❤️", "😂", "😮", "😭", "🔥", "🍿"] as const;
+export const Reaction = z.enum(REACTIONS);
+export type Reaction = z.infer<typeof Reaction>;
+/** Minimum delay between two reactions from the same person, in ms. */
+export const REACTION_COOLDOWN_MS = 300;
+
 /* ---------- client → server ---------- */
 
 export const ClientMessage = z.discriminatedUnion("type", [
@@ -68,6 +75,7 @@ export const ClientMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("pause"), position: Position.optional() }),
   z.object({ type: z.literal("seek"), position: Position }),
   z.object({ type: z.literal("buffering"), buffering: z.boolean() }),
+  z.object({ type: z.literal("react"), emoji: Reaction }),
 ]);
 export type ClientMessage = z.infer<typeof ClientMessage>;
 
@@ -90,6 +98,8 @@ export const ServerMessage = z.discriminatedUnion("type", [
     by: z.string().optional(),
   }),
   z.object({ type: z.literal("members"), members: z.array(Member) }),
+  /** Shown to everyone in the room, the sender included. */
+  z.object({ type: z.literal("reaction"), by: z.string(), emoji: Reaction }),
   z.object({ type: z.literal("error"), code: ErrorCode, message: z.string() }),
 ]);
 export type ServerMessage = z.infer<typeof ServerMessage>;
