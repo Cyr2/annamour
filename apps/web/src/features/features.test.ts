@@ -1,4 +1,4 @@
-﻿import type { Member } from "@annamour/protocol";
+import type { Member } from "@annamour/protocol";
 import { describe, expect, it, vi } from "vitest";
 import { safeNext, welcomePath } from "./account/AccountGate.tsx";
 import { memberChanges } from "./player/member-changes.ts";

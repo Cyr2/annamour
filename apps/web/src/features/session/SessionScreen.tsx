@@ -1,4 +1,4 @@
-﻿import { isRoomCode, normalizeRoomCode } from "@annamour/protocol";
+import { isRoomCode, normalizeRoomCode } from "@annamour/protocol";
 import { useState } from "react";
 import { useRoom, useRoomConnection } from "../../sync/room.ts";
 import { usePlayerSync } from "../../sync/usePlayerSync.ts";

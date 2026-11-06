@@ -1,4 +1,4 @@
-﻿import type { Reaction } from "@annamour/protocol";
+import type { Reaction } from "@annamour/protocol";
 import { Maximize, Pause, Play, RotateCcw, RotateCw, Subtitles } from "lucide-react";
 import { formatClock } from "../../lib/format.ts";
 import { Glass } from "../../ui/controls.tsx";
