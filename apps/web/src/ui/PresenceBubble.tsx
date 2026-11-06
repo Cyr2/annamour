@@ -15,7 +15,18 @@ import { cx } from "./cx.ts";
  *   </PresenceBubble>
  */
 
-export type PresenceStatus = "here" | "waiting";
+/** `alone` breathes like `waiting` but without the halo: nobody is late, there is just nobody else yet. */
+export type PresenceStatus = "here" | "waiting" | "alone";
+export type BubbleSize = "xs" | "sm" | "md" | "lg" | "xl";
+
+/** 32, 36, 56, 84 and 88 px, with the initial at 40% of the diameter. */
+export const BUBBLE_SIZE_CLASSES: Record<BubbleSize, string> = {
+  xs: "size-8 text-[0.875rem]",
+  sm: "size-9 text-[0.9375rem]",
+  md: "size-14 text-[1.5rem]",
+  lg: "size-[84px] text-[2.125rem]",
+  xl: "size-[88px] text-[2.25rem]",
+};
 
 interface PresenceBubbleProps {
   name: string;
@@ -23,7 +34,7 @@ interface PresenceBubbleProps {
   status?: PresenceStatus;
   /** Change this number to ripple once. 0 means no ripple yet. */
   pulse?: number;
-  size?: "md" | "lg";
+  size?: BubbleSize;
   className?: string;
   children?: ReactNode;
 }
@@ -31,6 +42,7 @@ interface PresenceBubbleProps {
 const STATUS_LABEL: Record<PresenceStatus, string> = {
   here: "en phase",
   waiting: "en chargement",
+  alone: "en attente des autres",
 };
 
 function initialOf(name: string): string {
@@ -49,6 +61,7 @@ function PresenceBubbleRoot({
 }: PresenceBubbleProps) {
   const reduceMotion = useReducedMotion() ?? false;
   const waiting = status === "waiting";
+  const breathing = status !== "here" && !reduceMotion;
   const style = { "--bubble": bubbleColor(color) } as CSSProperties;
 
   return (
@@ -56,14 +69,11 @@ function PresenceBubbleRoot({
       <motion.div
         role="img"
         aria-label={`${name}, ${STATUS_LABEL[status]}`}
-        className={cx(
-          "relative grid place-items-center rounded-full shadow-bubble",
-          size === "lg" ? "size-20 text-[2rem]" : "size-14 text-[1.5rem]",
-        )}
+        className={cx("relative grid place-items-center rounded-full shadow-bubble", BUBBLE_SIZE_CLASSES[size])}
         initial={{ scale: 0.6, opacity: 0 }}
-        animate={waiting && !reduceMotion ? { scale: [1, 1.06, 1], opacity: 1 } : { scale: 1, opacity: 1 }}
+        animate={breathing ? { scale: [1, 1.06, 1], opacity: 1 } : { scale: 1, opacity: 1 }}
         transition={
-          waiting && !reduceMotion
+          breathing
             ? { scale: { duration: 2.6, ease: "easeInOut", repeat: Infinity }, opacity: spring.bubble }
             : spring.bubble
         }

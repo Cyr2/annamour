@@ -1,3 +1,4 @@
+import type { AudioTrack } from "@annamour/protocol";
 import { useEffect, useMemo, useState } from "react";
 import { initialPlayerSyncState, PlayerSync, type PlayerSyncState } from "./PlayerSync.ts";
 import { type RoomState, useRoom } from "./room.ts";
@@ -8,6 +9,8 @@ export interface PlayerControls {
   play: () => boolean;
   pause: () => boolean;
   seek: (position: number) => boolean;
+  /** Personal audio language; never sent to the room. */
+  selectAudio: (track: AudioTrack | null) => void;
   /** After `blocked`: call from the tap that should start playback. */
   unlock: () => void;
 }
@@ -20,6 +23,7 @@ const offline: PlayerControls = {
   play: () => false,
   pause: () => false,
   seek: () => false,
+  selectAudio: () => {},
   unlock: () => {},
 };
 
@@ -61,6 +65,7 @@ export function usePlayerSync(video: HTMLVideoElement | null, client: SyncClient
             play: () => engine.play(),
             pause: () => engine.pause(),
             seek: (position) => engine.seek(position),
+            selectAudio: (track) => engine.selectAudio(track),
             unlock: () => engine.unlock(),
           }
         : offline,

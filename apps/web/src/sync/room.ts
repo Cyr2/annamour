@@ -2,6 +2,7 @@ import type { ErrorCode, Member, PlaybackAction, PlaybackState, RoomSnapshot } f
 import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { currentIdentity } from "./identity.ts";
+import { clearReactions, showReaction } from "./reactions.ts";
 import { type ConnectionStatus, SyncClient } from "./SyncClient.ts";
 
 /* The room as this device knows it, fed by the SyncClient. */
@@ -67,6 +68,11 @@ export function bindRoom(client: SyncClient): () => void {
       case "error":
         useRoom.setState({ error: { code: message.code, message: message.message } });
         break;
+      case "reaction": {
+        const { you, members } = useRoom.getState();
+        showReaction(message, you, members);
+        break;
+      }
       case "pong":
         break;
     }
@@ -75,6 +81,7 @@ export function bindRoom(client: SyncClient): () => void {
   return () => {
     offStatus();
     offMessage();
+    clearReactions();
   };
 }
 

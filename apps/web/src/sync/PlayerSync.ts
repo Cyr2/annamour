@@ -1,4 +1,4 @@
-import { correct, type PlaybackState, positionAt } from "@annamour/protocol";
+import { type AudioTrack, correct, type PlaybackState, positionAt } from "@annamour/protocol";
 import type Hls from "hls.js";
 import type { SyncClient } from "./SyncClient.ts";
 
@@ -86,6 +86,9 @@ export class PlayerSync {
   private bufferingSent = false;
   private bufferingTimer: ReturnType<typeof setTimeout> | undefined;
 
+  /** The audio rendition this person picked; personal, never sent to the room. */
+  private audioChoice: AudioTrack | null = null;
+
   private loop: ReturnType<typeof setInterval> | undefined;
   private destroyed = false;
   private readonly offStatus: () => void;
@@ -103,6 +106,7 @@ export class PlayerSync {
     video.addEventListener("seeked", this.onSeeked);
     video.addEventListener("canplay", this.onCanPlay);
     video.addEventListener("loadedmetadata", this.tick);
+    video.addEventListener("loadedmetadata", this.applyAudio);
     video.addEventListener("error", this.onMediaError);
     for (const type of BUFFER_EVENTS) video.addEventListener(type, this.evaluateBuffering);
     document.addEventListener("visibilitychange", this.onVisibility);
@@ -130,6 +134,7 @@ export class PlayerSync {
     video.removeEventListener("seeked", this.onSeeked);
     video.removeEventListener("canplay", this.onCanPlay);
     video.removeEventListener("loadedmetadata", this.tick);
+    video.removeEventListener("loadedmetadata", this.applyAudio);
     video.removeEventListener("error", this.onMediaError);
     for (const type of BUFFER_EVENTS) video.removeEventListener(type, this.evaluateBuffering);
     document.removeEventListener("visibilitychange", this.onVisibility);
@@ -180,6 +185,12 @@ export class PlayerSync {
     return true;
   }
 
+  /** Switches this device to another audio rendition (language). Only this person hears the change. */
+  selectAudio(track: AudioTrack | null): void {
+    this.audioChoice = track;
+    this.applyAudio();
+  }
+
   /** Retry playback after the browser blocked it. Must run inside a tap/click handler. */
   unlock(): void {
     this.update({ blocked: false });
@@ -226,6 +237,7 @@ export class PlayerSync {
       else if (data.type === HlsClass.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
       else this.update({ error: "Lecture impossible." });
     });
+    hls.on(HlsClass.Events.AUDIO_TRACKS_UPDATED, this.applyAudio);
     hls.on(HlsClass.Events.FRAG_BUFFERED, () => {
       this.fatalRecoveries = 0;
     });
@@ -256,6 +268,24 @@ export class PlayerSync {
     }
     if (this.state.engine) this.update({ engine: null });
   }
+
+  private readonly applyAudio = (): void => {
+    const choice = this.audioChoice;
+    if (!choice) return;
+    const matches = (name: string, language: string | undefined) =>
+      name === choice.label || (choice.language !== undefined && language === choice.language);
+    if (this.hls) {
+      const index = this.hls.audioTracks.findIndex((t) => matches(t.name, t.lang));
+      if (index >= 0 && this.hls.audioTrack !== index) this.hls.audioTrack = index;
+      return;
+    }
+    const tracks = nativeAudioTracks(this.video);
+    const index = tracks.findIndex((t) => matches(t.label, t.language));
+    if (index < 0) return;
+    tracks.forEach((t, i) => {
+      t.enabled = i === index;
+    });
+  };
 
   /* ---------- the sync loop ---------- */
 
@@ -456,6 +486,20 @@ export class PlayerSync {
     this.state = next;
     this.emit(next);
   }
+}
+
+/** Safari's AudioTrackList (not in the TypeScript DOM types). */
+interface NativeAudioTrack {
+  label: string;
+  language: string;
+  enabled: boolean;
+}
+
+function nativeAudioTracks(video: HTMLVideoElement): NativeAudioTrack[] {
+  const list: unknown = Reflect.get(video, "audioTracks");
+  if (!list || typeof list !== "object" || !(Symbol.iterator in list)) return [];
+  // Narrowed by shape just above; the entries are the browser's own AudioTrack objects.
+  return Array.from(list as Iterable<NativeAudioTrack>);
 }
 
 const BUFFER_EVENTS = ["waiting", "playing", "canplay", "canplaythrough", "seeking", "seeked", "stalled"] as const;

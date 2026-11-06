@@ -2,33 +2,23 @@ import { motion, useAnimationFrame, useMotionValue, useReducedMotion, useSpring 
 import { createContext, type ReactNode, use, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { spring } from "../lib/motion.ts";
 import { cx } from "./cx.ts";
+import { type Point, threadPath } from "./thread-path.ts";
 
 /*
- * The red thread: drawn between two anchors (the presence bubbles). Taut when
- * everyone is in sync; slack and gently waving while someone is catching up.
+ * The red thread: drawn from bubble to bubble, in the order of their `index`.
+ * Taut when everyone is in sync; slack and gently waving while someone is
+ * catching up (or while the other end is still empty).
  *
  *   <RedThread.Root synced={synced}>
  *     <RedThread.Line />
- *     <RedThread.Anchor end="start"><PresenceBubble … /></RedThread.Anchor>
- *     <RedThread.Anchor end="end"><PresenceBubble … /></RedThread.Anchor>
+ *     <RedThread.Anchor index={0}><PresenceBubble … /></RedThread.Anchor>
+ *     <RedThread.Anchor index={1}><PresenceBubble … /></RedThread.Anchor>
  *   </RedThread.Root>
  */
 
-type End = "start" | "end";
-interface Point {
-  x: number;
-  y: number;
-  /** Radius of the anchor: the thread is tied at its rim, not its centre. */
-  r: number;
-}
-interface Ends {
-  start: Point;
-  end: Point;
-}
-
 interface ThreadContextValue {
-  state: { synced: boolean; ends: Ends | null };
-  actions: { register: (end: End, el: HTMLElement | null) => void };
+  state: { synced: boolean; points: Point[] };
+  actions: { register: (index: number, el: HTMLElement | null) => void };
 }
 
 const ThreadContext = createContext<ThreadContextValue | null>(null);
@@ -37,6 +27,10 @@ function useThread(): ThreadContextValue {
   const ctx = use(ThreadContext);
   if (!ctx) throw new Error("RedThread parts must be inside <RedThread.Root>");
   return ctx;
+}
+
+function samePoints(a: Point[], b: Point[]): boolean {
+  return a.length === b.length && a.every((p, i) => p.x === b[i]?.x && p.y === b[i]?.y && p.r === b[i]?.r);
 }
 
 /* ---------- Root ---------- */
@@ -49,35 +43,25 @@ interface RootProps {
 
 function Root({ synced, className, children }: RootProps) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const anchors = useRef<Record<End, HTMLElement | null>>({ start: null, end: null });
-  const [ends, setEnds] = useState<Ends | null>(null);
+  const anchors = useRef(new Map<number, HTMLElement>());
+  const [points, setPoints] = useState<Point[]>([]);
 
   const measure = useCallback(() => {
     const root = rootRef.current;
-    const { start, end } = anchors.current;
-    if (!root || !start || !end) return;
+    if (!root) return;
     const box = root.getBoundingClientRect();
-    const centre = (el: HTMLElement): Point => {
-      const r = el.getBoundingClientRect();
-      return {
-        x: Math.round(r.left - box.left + r.width / 2),
-        y: Math.round(r.top - box.top + r.height / 2),
-        // Layout size, not the box: an entering bubble may still be scaled down.
-        r: Math.round(Math.min(el.offsetWidth, el.offsetHeight) / 2),
-      };
-    };
-    const next = { start: centre(start), end: centre(end) };
-    setEnds((prev) =>
-      prev &&
-      prev.start.x === next.start.x &&
-      prev.start.y === next.start.y &&
-      prev.start.r === next.start.r &&
-      prev.end.x === next.end.x &&
-      prev.end.y === next.end.y &&
-      prev.end.r === next.end.r
-        ? prev
-        : next,
-    );
+    const next = [...anchors.current.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([, el]): Point => {
+        const r = el.getBoundingClientRect();
+        return {
+          x: Math.round(r.left - box.left + r.width / 2),
+          y: Math.round(r.top - box.top + r.height / 2),
+          // Layout size, not the box: an entering bubble may still be scaled down.
+          r: Math.round(Math.min(el.offsetWidth, el.offsetHeight) / 2),
+        };
+      });
+    setPoints((prev) => (samePoints(prev, next) ? prev : next));
   }, []);
 
   const observer = useRef<ResizeObserver | null>(null);
@@ -86,7 +70,7 @@ function Root({ synced, className, children }: RootProps) {
     const ro = new ResizeObserver(measure);
     observer.current = ro;
     if (rootRef.current) ro.observe(rootRef.current);
-    for (const el of Object.values(anchors.current)) if (el) ro.observe(el);
+    for (const el of anchors.current.values()) ro.observe(el);
     measure();
     return () => {
       ro.disconnect();
@@ -95,19 +79,23 @@ function Root({ synced, className, children }: RootProps) {
   }, [measure]);
 
   const register = useCallback(
-    (end: End, el: HTMLElement | null) => {
-      const prev = anchors.current[end];
+    (index: number, el: HTMLElement | null) => {
+      const prev = anchors.current.get(index);
       if (prev === el) return;
       if (prev) observer.current?.unobserve(prev);
-      anchors.current[end] = el;
-      if (el) observer.current?.observe(el);
+      if (el) {
+        anchors.current.set(index, el);
+        observer.current?.observe(el);
+      } else {
+        anchors.current.delete(index);
+      }
       measure();
     },
     [measure],
   );
 
   return (
-    <ThreadContext value={{ state: { synced, ends }, actions: { register } }}>
+    <ThreadContext value={{ state: { synced, points }, actions: { register } }}>
       <div ref={rootRef} className={cx("relative isolate", className)}>
         {children}
       </div>
@@ -118,16 +106,17 @@ function Root({ synced, className, children }: RootProps) {
 /* ---------- Anchor ---------- */
 
 interface AnchorProps {
-  end: End;
+  /** Position along the thread: anchors are joined in increasing order. */
+  index: number;
   className?: string;
   children: ReactNode;
 }
 
-function Anchor({ end, className, children }: AnchorProps) {
+function Anchor({ index, className, children }: AnchorProps) {
   const {
     actions: { register },
   } = useThread();
-  const ref = useCallback((el: HTMLDivElement | null) => register(end, el), [end, register]);
+  const ref = useCallback((el: HTMLDivElement | null) => register(index, el), [index, register]);
   return (
     <div ref={ref} className={cx("relative z-10", className)}>
       {children}
@@ -137,46 +126,13 @@ function Anchor({ end, className, children }: AnchorProps) {
 
 /* ---------- Line ---------- */
 
-const SEGMENTS = 40;
 /** Peak wave height while slack, and how far the thread droops, in px. */
 const SLACK_AMPLITUDE = 7;
 const SLACK_SAG = 16;
 
-function threadPath(ends: Ends, sag: number, amplitude: number, time: number): string {
-  const centreDx = ends.end.x - ends.start.x;
-  const centreDy = ends.end.y - ends.start.y;
-  const centreLength = Math.hypot(centreDx, centreDy) || 1;
-  const ux = centreDx / centreLength;
-  const uy = centreDy / centreLength;
-  const start = { x: ends.start.x + ux * ends.start.r, y: ends.start.y + uy * ends.start.r };
-  const end = { x: ends.end.x - ux * ends.end.r, y: ends.end.y - uy * ends.end.r };
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const length = Math.hypot(dx, dy) || 1;
-  // Unit normal, oriented so a positive offset hangs downwards.
-  let nx = -dy / length;
-  let ny = dx / length;
-  if (ny < 0) {
-    nx = -nx;
-    ny = -ny;
-  }
-  let d = "";
-  for (let i = 0; i <= SEGMENTS; i++) {
-    const t = i / SEGMENTS;
-    const envelope = Math.sin(Math.PI * t); // ends stay tied to the anchors
-    const wave =
-      Math.sin(2 * Math.PI * 1.5 * t - time * 0.0032) + 0.35 * Math.sin(2 * Math.PI * 2.6 * t + time * 0.0021);
-    const offset = envelope * (sag + amplitude * wave);
-    const x = start.x + dx * t + nx * offset;
-    const y = start.y + dy * t + ny * offset;
-    d += `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
-  }
-  return d;
-}
-
 function Line({ className }: { className?: string }) {
   const {
-    state: { synced, ends },
+    state: { synced, points },
   } = useThread();
   const reduceMotion = useReducedMotion() ?? false;
 
@@ -198,16 +154,16 @@ function Line({ className }: { className?: string }) {
   }, [synced, reduceMotion, amplitude, sag]);
 
   useAnimationFrame((time) => {
-    if (!ends) return;
+    if (points.length < 2) return;
     // With reduced motion the slack thread is drawn still: a frozen wave.
-    const next = threadPath(ends, sag.get(), amplitude.get(), reduceMotion ? 0 : time);
+    const next = threadPath(points, sag.get(), amplitude.get(), reduceMotion ? 0 : time);
     if (next !== last.current) {
       last.current = next;
       d.set(next);
     }
   });
 
-  if (!ends) return null;
+  if (points.length < 2) return null;
 
   return (
     // Filters go on a wrapper, not the animated SVG, so the path repaints cheaply.
@@ -224,7 +180,7 @@ function Line({ className }: { className?: string }) {
           strokeLinecap="round"
           strokeLinejoin="round"
           className="stroke-thread"
-          animate={{ opacity: synced ? 1 : 0.7 }}
+          animate={{ opacity: synced ? 1 : 0.72 }}
           transition={spring.ui}
         />
       </svg>
