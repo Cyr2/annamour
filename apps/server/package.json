@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p .",
     "start": "tsx src/index.ts",
-    "test": "vitest run",
+    "test": "vitest run --coverage",
     "typecheck": "tsc -p ."
   },
   "dependencies": {
@@ -21,6 +21,7 @@
   "devDependencies": {
     "@types/node": "^26.6.6",
     "@types/ws": "^8.18.2",
+    "@vitest/coverage-v8": "^5.1.0",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"
   }

@@ -1,7 +1,7 @@
 import type { Server as HttpServer } from "node:http";
 import type { Http2SecureServer, Http2Server } from "node:http2";
-import { WebSocketServer, type WebSocket } from "ws";
 import { parseClientMessage, type ServerMessage } from "@annamour/protocol";
+import { type WebSocket, WebSocketServer } from "ws";
 import type { Connection, RoomStore } from "./rooms.ts";
 
 const HELLO_TIMEOUT_MS = 5_000;
@@ -9,7 +9,10 @@ const HEARTBEAT_MS = 25_000;
 const MAX_MESSAGE_BYTES = 4 * 1024;
 
 /** Attaches the sync WebSocket endpoint (/ws?room=ABCD) to the HTTP server. */
-export function attachRealtime(server: HttpServer | Http2Server | Http2SecureServer, store: RoomStore): WebSocketServer {
+export function attachRealtime(
+  server: HttpServer | Http2Server | Http2SecureServer,
+  store: RoomStore,
+): WebSocketServer {
   const wss = new WebSocketServer({ noServer: true, maxPayload: MAX_MESSAGE_BYTES });
   const alive = new WeakMap<WebSocket, boolean>();
 

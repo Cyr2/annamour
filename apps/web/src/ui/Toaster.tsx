@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { exit, spring } from "../lib/motion.ts";
 import { bubbleColor } from "./colors.ts";
 import { Glass } from "./controls.tsx";
-import { useToasts, type Toast } from "./toast.ts";
+import { type Toast, useToasts } from "./toast.ts";
 
 /** A glass pill that springs down from the top of the screen. */
 function Capsule({ toast }: { toast: Toast }) {

@@ -12,6 +12,17 @@ export function sampleFrom(t0: number, ts: number, t1: number): ClockSample {
   return { offset: ts - (t0 + t1) / 2, rtt: Math.max(0, t1 - t0) };
 }
 
+/** Median of a non-empty, ascending-sorted list. */
+function median(sorted: readonly number[]): number {
+  const mid = Math.floor(sorted.length / 2);
+  const upper = sorted[mid];
+  if (upper === undefined) throw new RangeError("median of an empty list");
+  if (sorted.length % 2) return upper;
+  // Even length: mid >= 1, so the lower middle exists.
+  const lower = sorted[mid - 1] ?? upper;
+  return (lower + upper) / 2;
+}
+
 /**
  * Keeps the most recent samples and trusts the fastest round trips: they
  * carry the least queuing noise. Returns the median offset of the best half.
@@ -45,8 +56,7 @@ export class ClockEstimator {
       .slice(0, Math.max(1, Math.ceil(this.samples.length / 2)))
       .map((s) => s.offset)
       .sort((a, b) => a - b);
-    const mid = Math.floor(best.length / 2);
-    return best.length % 2 ? best[mid]! : (best[mid - 1]! + best[mid]!) / 2;
+    return median(best);
   }
 
   get rtt(): number {

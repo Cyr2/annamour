@@ -22,11 +22,11 @@ Chaque appareil lit la vidéo directement depuis le CDN d'origine.
 
 ## Structure
 
-| Dossier | Rôle |
-|---|---|
+| Dossier             | Rôle                                                                               |
+| ------------------- | ---------------------------------------------------------------------------------- |
 | `packages/protocol` | Types et schémas zod partagés, maths de synchro (horloge, dérive, état de lecture) |
-| `apps/server` | Node 26 + Hono + `ws` : API, WebSocket, import HLS, service de la PWA |
-| `apps/web` | PWA React 19 + Vite + Tailwind 4 + Motion + glisse (Liquid Glass) |
+| `apps/server`       | Node 26 + Hono + `ws` : API, WebSocket, import HLS, service de la PWA              |
+| `apps/web`          | PWA React 19 + Vite + Tailwind 4 + Motion + glisse (Liquid Glass)                  |
 
 ## Développement
 

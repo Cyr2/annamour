@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { importHls } from "../src/hls.ts";
 import { FetchError, isPrivateAddress, type TextFetcher } from "../src/safe-fetch.ts";
+import { required } from "./required.ts";
 
 const Q = "token=abc&exp=1";
 const BASE = "https://naka.example/api/v1/r2/movies/12445-x";
@@ -42,13 +43,13 @@ describe("importHls", () => {
   it("rewrites playlists to local names and keeps segments absolute", async () => {
     const media = await importHls(new URL(`${BASE}/master.m3u8?${Q}`), fakeFetch);
 
-    const master = media.playlists.get("master.m3u8")!;
+    const master = required(media.playlists.get("master.m3u8"), "the master playlist");
     expect(master).toContain('URI="p0.m3u8"');
     expect(master).toContain('URI="p1.m3u8"');
     expect(master).toMatch(/\np2\.m3u8$/);
     expect(master).not.toContain("token=");
 
-    const video = media.playlists.get("p2.m3u8")!;
+    const video = required(media.playlists.get("p2.m3u8"), "the video playlist p2.m3u8");
     expect(video).toContain("https://media.example/movies/12445-x/720p/segment-000.ts");
     expect(video).toContain(`${BASE}/720p/segment-002.ts`);
     expect(media.duration).toBeCloseTo(24.52);
@@ -80,7 +81,16 @@ describe("importHls", () => {
 
 describe("isPrivateAddress", () => {
   it("blocks local and private ranges", () => {
-    for (const ip of ["127.0.0.1", "10.1.2.3", "192.168.1.20", "172.20.0.1", "169.254.1.1", "::1", "fd00::1", "::ffff:10.0.0.1"]) {
+    for (const ip of [
+      "127.0.0.1",
+      "10.1.2.3",
+      "192.168.1.20",
+      "172.20.0.1",
+      "169.254.1.1",
+      "::1",
+      "fd00::1",
+      "::ffff:10.0.0.1",
+    ]) {
       expect(isPrivateAddress(ip), ip).toBe(true);
     }
     for (const ip of ["104.21.3.4", "8.8.8.8", "2606:4700::1111"]) expect(isPrivateAddress(ip), ip).toBe(false);

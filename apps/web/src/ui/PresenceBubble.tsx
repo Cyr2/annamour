@@ -61,11 +61,7 @@ function PresenceBubbleRoot({
           size === "lg" ? "size-20 text-[2rem]" : "size-14 text-[1.5rem]",
         )}
         initial={{ scale: 0.6, opacity: 0 }}
-        animate={
-          waiting && !reduceMotion
-            ? { scale: [1, 1.06, 1], opacity: 1 }
-            : { scale: 1, opacity: 1 }
-        }
+        animate={waiting && !reduceMotion ? { scale: [1, 1.06, 1], opacity: 1 } : { scale: 1, opacity: 1 }}
         transition={
           waiting && !reduceMotion
             ? { scale: { duration: 2.6, ease: "easeInOut", repeat: Infinity }, opacity: spring.bubble }
@@ -103,9 +99,7 @@ function PresenceBubbleRoot({
             transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
           />
         ) : null}
-        <span className="relative font-rounded-tight font-extrabold text-on-accent select-none">
-          {initialOf(name)}
-        </span>
+        <span className="relative font-rounded-tight font-extrabold text-on-accent select-none">{initialOf(name)}</span>
       </motion.div>
       {children}
     </div>

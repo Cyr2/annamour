@@ -11,7 +11,10 @@ export const RoomCode = z
   .length(ROOM_CODE_LENGTH)
   .refine((s) => [...s].every((c) => ROOM_CODE_ALPHABET.includes(c)), "invalid room code");
 
-export const Position = z.number().min(0).max(60 * 60 * 24);
+export const Position = z
+  .number()
+  .min(0)
+  .max(60 * 60 * 24);
 
 export const PlaybackStateSchema = z.object({
   status: z.enum(["playing", "paused"]),

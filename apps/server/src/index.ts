@@ -12,7 +12,7 @@ const store = new RoomStore();
 const app = createApp({ store, ...(existsSync(webDist) ? { webDist } : {}) });
 
 const server = serve({ fetch: app.fetch, port, hostname: "0.0.0.0" }, (info) => {
-  console.log(`Annamour server on http://localhost:${info.port}${existsSync(webDist) ? " (serving PWA)" : ""}`);
+  console.info(`Annamour server on http://localhost:${info.port}${existsSync(webDist) ? " (serving PWA)" : ""}`);
 });
 const wss = attachRealtime(server, store);
 

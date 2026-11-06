@@ -1,19 +1,19 @@
 import {
-  generateRoomCode,
-  initialPlayback,
-  pause,
-  play,
-  positionAt,
-  REACTION_COOLDOWN_MS,
-  seek,
   type BubbleColor,
   type ClientMessage,
+  generateRoomCode,
+  initialPlayback,
   type Media,
   type Member,
   type PlaybackAction,
   type PlaybackState,
+  pause,
+  play,
+  positionAt,
+  REACTION_COOLDOWN_MS,
   type RoomSnapshot,
   type ServerMessage,
+  seek,
 } from "@annamour/protocol";
 import type { ImportedMedia } from "./hls.ts";
 
@@ -72,20 +72,20 @@ export class Room {
 
   /** Returns the member id, or null when the room is full. */
   join(clientId: string, name: string, color: BubbleColor, connection: Connection, now: number): string | null {
-    const existing = [...this.participants.values()].find((p) => p.clientId === clientId);
-    if (existing) {
+    let member = [...this.participants.values()].find((p) => p.clientId === clientId);
+    if (member) {
       // Same device reconnecting: the new socket replaces the old one.
-      existing.connection.close();
-      existing.connection = connection;
-      existing.name = name;
-      existing.color = color;
-      existing.buffering = false;
+      member.connection.close();
+      member.connection = connection;
+      member.name = name;
+      member.color = color;
+      member.buffering = false;
     } else {
       if (this.participants.size >= MAX_MEMBERS) return null;
       const id = `m${this.nextMemberId++}`;
-      this.participants.set(id, { id, clientId, name, color, buffering: false, connection, lastReactionAt: -Infinity });
+      member = { id, clientId, name, color, buffering: false, connection, lastReactionAt: -Infinity };
+      this.participants.set(id, member);
     }
-    const member = existing ?? [...this.participants.values()].at(-1)!;
     this.emptySince = null;
     connection.send({ type: "welcome", you: member.id, room: this.snapshot(), serverTime: now });
     this.broadcastMembers();
