@@ -5,9 +5,11 @@ import {
   createLinkToken,
   fetchMe,
   fetchSessions,
+  hideSession,
   linkWithToken,
   loginWithKey,
   logout,
+  updateAccount,
 } from "./accounts.ts";
 import { ApiRequestError } from "./http.ts";
 
@@ -82,5 +84,20 @@ describe("accounts API", () => {
     const session = { code: "YWEK", title: "Film", position: 10, lastUsedAt: 1, participants: [] };
     server(200, { sessions: [session] });
     await expect(fetchSessions()).resolves.toEqual([session]);
+  });
+
+  it("renames the account and changes its colour", async () => {
+    const fetch = server(200, { account: { ...account, name: "Dari" } });
+    await expect(updateAccount({ name: "Dari" })).resolves.toMatchObject({ name: "Dari" });
+    expect(sent(fetch)).toEqual({ path: API.me, method: "PATCH", body: { name: "Dari" } });
+    server(400, { error: "bad" });
+    await expect(updateAccount({ color: "mint" })).rejects.toThrow("Choisis un prénom de 1 à 24 lettres.");
+  });
+
+  it("removes a session from my list", async () => {
+    const fetch = vi.fn(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetch);
+    await hideSession("YWEK");
+    expect(fetch).toHaveBeenCalledWith(`${API.sessions}/YWEK`, expect.objectContaining({ method: "DELETE" }));
   });
 });

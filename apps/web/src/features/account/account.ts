@@ -1,4 +1,4 @@
-import { Account, AccountKey, type BubbleColor } from "@annamour/protocol";
+import { Account, AccountKey, type BubbleColor, type UpdateAccountRequest } from "@annamour/protocol";
 import { create } from "zustand";
 import * as accounts from "../../api/accounts.ts";
 import * as passkeys from "../../api/passkeys.ts";
@@ -83,4 +83,15 @@ export async function registerPasskey(): Promise<void> {
   await passkeys.registerPasskey();
   const { account } = useAccount.getState();
   if (account) signIn({ ...account, hasPasskey: true });
+}
+
+/** Saves a new prénom or colour on the account; the room bubble follows. */
+export async function updateProfile(changes: UpdateAccountRequest): Promise<Account> {
+  return signIn(await accounts.updateAccount(changes));
+}
+
+/** Ends this device's session on the server, then forgets the account and its key here. */
+export async function logout(): Promise<void> {
+  await accounts.logout();
+  signOut();
 }

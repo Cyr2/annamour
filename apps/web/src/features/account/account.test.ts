@@ -9,6 +9,8 @@ vi.mock("../../api/accounts.ts", () => ({
   createAccount: vi.fn(async () => ({ account: anna, key })),
   loginWithKey: vi.fn(async () => anna),
   linkWithToken: vi.fn(async () => anna),
+  updateAccount: vi.fn(async (changes: object) => ({ ...anna, ...changes })),
+  logout: vi.fn(async () => undefined),
 }));
 vi.mock("../../api/passkeys.ts", () => ({
   loginWithPasskey: vi.fn(async () => anna),
@@ -16,8 +18,17 @@ vi.mock("../../api/passkeys.ts", () => ({
 }));
 
 const api = await import("../../api/accounts.ts");
-const { createAccount, linkWithToken, loginWithKey, loginWithPasskey, refreshAccount, registerPasskey, useAccount } =
-  await import("./account.ts");
+const {
+  createAccount,
+  linkWithToken,
+  loginWithKey,
+  loginWithPasskey,
+  logout,
+  refreshAccount,
+  registerPasskey,
+  updateProfile,
+  useAccount,
+} = await import("./account.ts");
 const { useIdentity } = await import("../../sync/identity.ts");
 
 beforeEach(() => {
@@ -61,5 +72,19 @@ describe("account store", () => {
     vi.mocked(api.fetchMe).mockRejectedValueOnce(new Error("offline"));
     await refreshAccount();
     expect(useAccount.getState().status).toBe("guest");
+  });
+
+  it("saves a new prénom and colour, and the room bubble follows", async () => {
+    await createAccount("Anna", "lilac");
+    await updateProfile({ name: "Annie", color: "mint" });
+    expect(useAccount.getState().account).toMatchObject({ name: "Annie", color: "mint" });
+    expect(useIdentity.getState()).toMatchObject({ name: "Annie", color: "mint" });
+  });
+
+  it("forgets the account and its key on logout", async () => {
+    await createAccount("Anna", "lilac");
+    await logout();
+    expect(api.logout).toHaveBeenCalled();
+    expect(useAccount.getState()).toMatchObject({ status: "guest", account: null, key: null });
   });
 });
