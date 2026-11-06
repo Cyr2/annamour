@@ -5,6 +5,9 @@ import { defineConfig } from "@playwright/test";
 
 const PORT = Number(process.env.E2E_PORT ?? 8790);
 const ROOT = join(import.meta.dirname, "..");
+/** Set E2E_BASE_URL to test a deployed instance (e.g. production) instead of starting a local server. */
+const EXTERNAL_URL = process.env.E2E_BASE_URL?.trim() || undefined;
+const LOCAL_URL = `http://localhost:${PORT}`;
 
 /**
  * End-to-end: the real server serving the built PWA, two independent
@@ -19,22 +22,24 @@ export default defineConfig({
   workers: 1,
   reporter: [["list"]],
   use: {
-    baseURL: `http://localhost:${PORT}`,
+    baseURL: EXTERNAL_URL ?? LOCAL_URL,
     channel: "chrome",
     launchOptions: { args: ["--autoplay-policy=no-user-gesture-required", "--mute-audio"] },
     trace: "retain-on-failure",
   },
-  webServer: {
-    command: "pnpm --filter @annamour/web build && pnpm --filter @annamour/server start",
-    cwd: ROOT,
-    url: `http://localhost:${PORT}/api/health`,
-    timeout: 180_000,
-    reuseExistingServer: false,
-    env: {
-      PORT: String(PORT),
-      DATA_DIR: mkdtempSync(join(tmpdir(), "annamour-e2e-")),
-      WEB_DIST: join(ROOT, "apps/web/dist"),
-      ORIGIN: `http://localhost:${PORT}`,
-    },
-  },
+  webServer: EXTERNAL_URL
+    ? undefined
+    : {
+        command: "pnpm --filter @annamour/web build && pnpm --filter @annamour/server start",
+        cwd: ROOT,
+        url: `${LOCAL_URL}/api/health`,
+        timeout: 180_000,
+        reuseExistingServer: false,
+        env: {
+          PORT: String(PORT),
+          DATA_DIR: mkdtempSync(join(tmpdir(), "annamour-e2e-")),
+          WEB_DIST: join(ROOT, "apps/web/dist"),
+          ORIGIN: LOCAL_URL,
+        },
+      },
 });
