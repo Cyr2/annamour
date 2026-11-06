@@ -1,0 +1,179 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+/*
+ * Tailwind reads our tokens: only the semantic palette exists as classes
+ * (bg-canvas, text-fg-muted, bg-accent, ...), so raw colours can't sneak in.
+ */
+@theme {
+  --color-*: initial;
+}
+
+@theme inline {
+  --color-canvas: var(--am-canvas);
+  --color-surface: var(--am-surface);
+  --color-surface-raised: var(--am-surface-raised);
+  --color-fg: var(--am-fg);
+  --color-fg-muted: var(--am-fg-muted);
+  --color-fg-subtle: var(--am-fg-subtle);
+  --color-accent: var(--am-accent);
+  --color-accent-soft: var(--am-accent-soft);
+  --color-on-accent: var(--am-on-accent);
+  --color-secondary: var(--am-secondary);
+  --color-success: var(--am-success);
+  --color-danger: var(--am-danger);
+  --color-line: var(--am-line);
+  --color-line-strong: var(--am-line-strong);
+  --color-thread: var(--am-thread);
+  --color-bubble-peach: var(--am-bubble-peach);
+  --color-bubble-lilac: var(--am-bubble-lilac);
+  --color-bubble-mint: var(--am-bubble-mint);
+  --color-bubble-sky: var(--am-bubble-sky);
+  --color-bubble-butter: var(--am-bubble-butter);
+  --color-bubble-rose: var(--am-bubble-rose);
+  --color-palette-night: var(--am-night);
+  --color-palette-ink: var(--am-ink);
+  --color-palette-milk: var(--am-milk);
+  --color-palette-thread: var(--am-thread);
+  --color-palette-lilac: var(--am-lilac);
+  --color-palette-mint: var(--am-mint);
+
+  --font-sans: var(--am-font-body);
+  --font-rounded: var(--am-font-display);
+
+  --text-xs: var(--am-text-xs);
+  --text-sm: var(--am-text-sm);
+  --text-md: var(--am-text-md);
+  --text-lg: var(--am-text-lg);
+  --text-xl: var(--am-text-xl);
+  --text-display: var(--am-text-display);
+
+  --radius-chip: var(--am-radius-chip);
+  --radius-control: var(--am-radius-control);
+  --radius-panel: var(--am-radius-panel);
+  --radius-sheet: var(--am-radius-sheet);
+  --radius-pill: var(--am-radius-pill);
+
+  --shadow-float: var(--am-shadow-float);
+  --shadow-bubble: var(--am-shadow-bubble);
+  --shadow-glow: var(--am-shadow-glow);
+
+  --ease-out: var(--am-ease-out);
+  --ease-in: var(--am-ease-in);
+}
+
+/* ---- Base ---- */
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background-color: var(--am-canvas);
+    color: var(--am-fg);
+    font-family: var(--am-font-body);
+    font-size: 100%;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    min-height: 100dvh;
+    background-color: var(--am-canvas);
+    overscroll-behavior-y: none;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--am-font-display);
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--am-focus);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background-color: var(--am-accent-soft);
+  }
+}
+
+/* Pads content clear of the notch, the home indicator and rounded corners. */
+@utility safe-area {
+  padding-top: max(var(--am-space-4), var(--am-safe-top));
+  padding-right: max(var(--am-space-gutter), var(--am-safe-right));
+  padding-bottom: max(var(--am-space-5), var(--am-safe-bottom));
+  padding-left: max(var(--am-space-gutter), var(--am-safe-left));
+}
+
+@utility font-rounded-tight {
+  font-family: var(--am-font-display);
+  letter-spacing: -0.025em;
+}
+
+/* ---- glisse adjustments (unlayered so they beat its prepended styles) ---- */
+
+/* iOS-sized hit areas: 44px minimum, 52px for primary actions. */
+.am-button.lg-button {
+  height: var(--am-touch-target);
+  padding-inline: 18px;
+  border-radius: calc(var(--am-touch-target) / 2);
+  font-size: var(--am-text-sm);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.am-button.lg-button[data-size="large"] {
+  height: 52px;
+  padding-inline: 24px;
+  border-radius: 26px;
+  font-size: var(--am-text-md);
+}
+
+.am-button.lg-button[data-icon="only"] {
+  width: var(--am-touch-target);
+  padding: 0;
+}
+
+.am-button.lg-button[data-size="large"][data-icon="only"] {
+  width: 52px;
+}
+
+/* glisse paints filled labels white: on peach that's 2.3:1. Night is 8.5:1. */
+.am-button.lg-button[data-variant="filled"] {
+  color: var(--am-on-accent);
+}
+
+.am-button.lg-button:focus-visible {
+  outline: 2px solid var(--am-focus);
+  outline-offset: 3px;
+}
+
+.am-input.lg-input {
+  height: 48px;
+  max-width: none;
+  border-radius: var(--am-radius-control);
+  font-size: var(--am-text-md);
+}
+
+/* ---- Reduced motion ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

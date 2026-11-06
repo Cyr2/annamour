@@ -1,0 +1,14 @@
+{
+  "name": "annamour",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.9",
+  "engines": { "node": ">=26" },
+  "scripts": {
+    "dev": "pnpm --parallel --filter ./apps/* dev",
+    "build": "pnpm --filter @annamour/protocol build && pnpm --filter @annamour/web build && pnpm --filter @annamour/server build",
+    "start": "pnpm --filter @annamour/server start",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
+  }
+}

@@ -1,0 +1,125 @@
+/*
+ * Annamour design tokens, palette "Nuit douce".
+ * The only place raw colour values live. Components use the semantic
+ * tokens (or the Tailwind classes mapped onto them in app.css).
+ */
+
+:root {
+  /* ---- Palette ---- */
+  --am-night: #12101a;
+  --am-ink: #1d1828;
+  --am-ink-raised: #272135;
+  --am-milk: #f6f2fa;
+  --am-milk-muted: #aba3bd; /* 7.8:1 on night */
+  --am-milk-subtle: #8e86a0; /* 5.4:1 on night */
+  --am-thread: #ff8c9e; /* peach-rose: the red thread */
+  --am-lilac: #a99cff;
+  --am-mint: #7fe3c1;
+  --am-coral: #ff6b78;
+
+  /* Bubble colours, one per BUBBLE_COLORS entry. Night text on each is at least 8.5:1. */
+  --am-bubble-peach: #ffb199;
+  --am-bubble-lilac: #b9abff;
+  --am-bubble-mint: #86e5c4;
+  --am-bubble-sky: #8fcbff;
+  --am-bubble-butter: #ffde8a;
+  --am-bubble-rose: #ff8fb4;
+
+  /* ---- Semantic colours ---- */
+  --am-canvas: var(--am-night);
+  --am-surface: var(--am-ink);
+  --am-surface-raised: var(--am-ink-raised);
+  --am-fg: var(--am-milk);
+  --am-fg-muted: var(--am-milk-muted);
+  --am-fg-subtle: var(--am-milk-subtle);
+  --am-accent: var(--am-thread);
+  --am-accent-soft: rgb(255 140 158 / 0.16);
+  --am-on-accent: var(--am-night);
+  --am-secondary: var(--am-lilac);
+  --am-success: var(--am-mint);
+  --am-danger: var(--am-coral);
+  --am-line: rgb(246 242 250 / 0.1);
+  --am-line-strong: rgb(246 242 250 / 0.18);
+  --am-focus: var(--am-thread);
+  --am-thread-glow: rgb(255 140 158 / 0.45);
+
+  /* ---- Type ---- */
+  --am-font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter Variable", "Segoe UI", system-ui, sans-serif;
+  --am-font-display: ui-rounded, "SF Pro Rounded", "Nunito Variable", -apple-system, system-ui, sans-serif;
+  --am-text-xs: 0.8125rem; /* 13 */
+  --am-text-sm: 0.9375rem; /* 15 */
+  --am-text-md: 1.0625rem; /* 17, iOS body */
+  --am-text-lg: 1.375rem; /* 22 */
+  --am-text-xl: 2rem; /* 32 */
+  --am-text-display: clamp(2.75rem, 7vw, 4.75rem);
+
+  /* ---- Radii (by hierarchy, not one radius everywhere) ---- */
+  --am-radius-chip: 10px;
+  --am-radius-control: 16px;
+  --am-radius-panel: 28px;
+  --am-radius-sheet: 36px;
+  --am-radius-pill: 999px;
+
+  /* ---- Spacing ---- */
+  --am-space-1: 4px;
+  --am-space-2: 8px;
+  --am-space-3: 12px;
+  --am-space-4: 16px;
+  --am-space-5: 24px;
+  --am-space-6: 32px;
+  --am-space-7: 48px;
+  --am-space-8: 72px;
+  --am-space-gutter: clamp(16px, 4vw, 40px);
+  --am-touch-target: 44px;
+
+  /* ---- Shadows (tinted by the night, never grey) ---- */
+  --am-shadow-float: 0 12px 40px -12px rgb(6 4 12 / 0.7);
+  --am-shadow-bubble: 0 10px 30px -10px rgb(6 4 12 / 0.8);
+  --am-shadow-glow: 0 0 24px var(--am-thread-glow);
+
+  /* ---- Layers ---- */
+  --am-z-base: 0;
+  --am-z-thread: 1;
+  --am-z-raised: 10;
+  --am-z-overlay: 40;
+  --am-z-toast: 60;
+
+  /* ---- Motion (CSS side; JS springs live in src/lib/motion.ts) ---- */
+  --am-duration-fast: 150ms;
+  --am-duration-base: 220ms;
+  --am-duration-slow: 300ms;
+  --am-ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  --am-ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+  /* ---- Safe areas ---- */
+  --am-safe-top: env(safe-area-inset-top, 0px);
+  --am-safe-right: env(safe-area-inset-right, 0px);
+  --am-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --am-safe-left: env(safe-area-inset-left, 0px);
+}
+
+/*
+ * glisse (Liquid Glass) adopts our palette. Its defaults sit in :where(),
+ * so this attribute selector wins without !important.
+ */
+[data-theme="dark"] {
+  --lg-foreground: var(--am-milk);
+  --lg-muted: var(--am-milk-muted);
+  --lg-glass: rgb(29 24 40 / 0.56);
+  --lg-glass-active: rgb(56 47 74 / 0.66);
+  --lg-edge: rgb(246 242 250 / 0.1);
+  --lg-selection: rgb(246 242 250 / 0.14);
+  --lg-surface: rgb(29 24 40 / 0.9);
+  --lg-surface-edge: rgb(246 242 250 / 0.14);
+  --lg-shadow: rgb(6 4 12 / 0.55);
+  --lg-highlight: rgb(246 242 250 / 0.12);
+  --lg-separator: rgb(246 242 250 / 0.14);
+  --lg-segment-thumb: rgb(246 242 250 / 0.22);
+  --lg-track: rgb(246 242 250 / 0.22);
+  --lg-rail: rgb(246 242 250 / 0.12);
+  --lg-fill: var(--am-thread);
+  --lg-on: var(--am-mint);
+  --lg-destructive: var(--am-coral);
+  --lg-ring: var(--am-thread);
+  --lg-ease: var(--am-ease-out);
+}
