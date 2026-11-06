@@ -20,8 +20,14 @@ Watch-together PWA : deux personnes à distance regardent la même vidéo HLS, s
 - **Réactions** : 6 émojis seulement (`REACTIONS`), menu dans la barre du lecteur, l'émoji s'envole chez tout le monde avec le prénom.
 - **Séances persistantes** : on regarde parfois un film en plusieurs soirs, à plusieurs jours d'intervalle.
   - Serveur : persister les salons (playlists en cache, sous-titres, titre, dernière position) dans SQLite (`node:sqlite`, intégré à Node) sur un volume Coolify ; garder un salon au moins 60 jours après sa dernière utilisation ; position sauvegardée à chaque pause et quand le salon se vide.
-  - Appareil : profil (prénom, couleur) et « Mes séances » en localStorage, sans compte : code, titre, dernière position, date, avec qui. Carte « Reprendre » sur l'accueil.
-  - Reprise : rouvrir une séance remet tout le monde à la position enregistrée.
+  - Carte « Reprendre » sur l'accueil ; reprise : rouvrir une séance remet tout le monde à la position enregistrée.
+- **Compte sans inscription** (écran « 1er lancement » et section « Ton compte » du profil) :
+  - Clé de 4 mots créée automatiquement au premier lancement (liste française de 2048 mots simples, ~44 bits). La clé est le compte : ni email ni mot de passe.
+  - Serveur : ne stocke qu'une empreinte HMAC-SHA256 de la clé avec un secret serveur (`KEY_PEPPER`, variable d'env Coolify) ; essais limités (10/h/IP) ; session par cookie httpOnly.
+  - Ajouter un appareil : QR code de connexion à usage unique valable 5 minutes, ou saisie des 4 mots.
+  - Passkey (Face ID / Touch ID) en option, liée au domaine définitif (WebAuthn, rpID = domaine de prod) ; la clé reste le secours.
+  - Rejoindre une séance avec un code reste possible sans compte.
+- **Espace duo** : les séances regardées ensemble apparaissent chez chaque participant ayant un compte, avec la même position ; carte « Notre duo » (nombre de séances, heures ensemble).
 
 ## Conventions
 - L'appli n'importe jamais `glisse` directement : passer par `apps/web/src/ui/`.
