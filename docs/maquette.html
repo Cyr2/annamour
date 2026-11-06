@@ -376,6 +376,16 @@ button { cursor: pointer; border: 0; background: none; }
 .person-chip .bubble.all { background: rgb(255 255 255 / .08); border: 1px solid var(--edge); color: var(--milk); font-size: 12px; font-weight: 800; }
 .person-chip b { font-size: 13px; font-weight: 600; line-height: 1.2; }
 .person-chip small { font-size: 11px; color: var(--muted); line-height: 1.2; }
+.bestie { display: flex; align-items: center; gap: 16px; padding: 14px 18px; border-radius: 22px; background: linear-gradient(135deg, rgb(255 140 158 / .14), rgb(169 156 255 / .1)); border: 1px solid rgb(255 140 158 / .26); flex-wrap: wrap; }
+.bestie .duo { width: 150px; flex: none; align-items: center; gap: 0; }
+.bestie .bubble { --size: 50px; font-size: 20px; }
+.bestie-text { min-width: 0; flex: 1; display: grid; gap: 1px; }
+.bestie-text small { font-size: 12px; font-weight: 700; color: var(--peach); }
+.bestie-text b { font-family: var(--rounded); font-weight: 800; font-size: 19px; letter-spacing: -.01em; }
+.bestie-text span { font-size: 13px; color: var(--muted); }
+.heart-badge { position: absolute; right: -5px; bottom: -5px; width: 24px; height: 24px; border-radius: 50%; background: var(--peach); display: grid; place-items: center; box-shadow: 0 0 0 3px var(--ink), 0 4px 12px var(--thread-glow); animation: heartbeat 1.8s ease-in-out infinite; }
+.heart-badge svg { width: 13px; height: 13px; color: var(--on-color); }
+@keyframes heartbeat { 0%, 100% { transform: scale(1); } 14% { transform: scale(1.24); } 28% { transform: scale(1); } 42% { transform: scale(1.14); } 56% { transform: scale(1); } }
 .qr-big { width: 196px; height: 196px; border-radius: 22px; background: var(--milk); padding: 14px; justify-self: center; }
 .qr-big canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
 .word-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -456,7 +466,8 @@ button { cursor: pointer; border: 0; background: none; }
   <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m11.5 11.5 8-8M16.5 6.5l2.5 2.5M14.5 8.5l2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-face" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M9 9.5v1M15 9.5v1M12 9.5v3.5h-1M9.5 16a3.5 3.5 0 0 0 5 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
-  <symbol id="i-x"viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.6 3.9 4.5 7.2 4.5c2 0 3.5 1.1 4.8 2.9 1.3-1.8 2.8-2.9 4.8-2.9 3.3 0 5.6 3.1 4.4 6.6-1.7 4.8-9.2 9.4-9.2 9.4Z" fill="currentColor"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
   <symbol id="i-smile"viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="9" cy="10" r="1.2" fill="currentColor"/><circle cx="15" cy="10" r="1.2" fill="currentColor"/></symbol>
   <symbol id="i-copy"viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -931,13 +942,27 @@ button { cursor: pointer; border: 0; background: none; }
     const box = $("#history"); box.innerHTML = "";
     const circle = document.createElement("section");
     circle.className = "circle-card glass";
-    const ids = Object.keys(PEOPLE).filter((id) => sessions.some((s) => (s.with || []).includes(id)));
+    const countWith = (id) => sessions.filter((s) => (s.with || []).includes(id)).length;
+    // Most shared sessions first; the first one becomes the "complice de canapé".
+    const ids = Object.keys(PEOPLE).filter((id) => countWith(id) > 0).sort((a, b) => countWith(b) - countWith(a));
+    const top = ids[0] && countWith(ids[0]) >= 2 ? ids[0] : null;
+    const hoursWith = (id) => Math.max(1, Math.round(sessions.filter((s) => (s.with || []).includes(id)).reduce((t, s) => t + s.pos, 0) / 3600));
+    const bestie = top ? `
+      <div class="bestie">
+        <div class="duo" data-thread="taut">
+          <svg class="thread" aria-hidden="true"><path/></svg>
+          <div class="person"><span class="bubble" style="--c:${state.me.color}">${(state.me.name[0] || "?").toUpperCase()}</span></div>
+          <div class="person"><span class="bubble" style="--c:${PEOPLE[top].c}">${PEOPLE[top].name[0]}<span class="heart-badge" aria-hidden="true"><svg><use href="#i-heart"/></svg></span></span></div>
+        </div>
+        <div class="bestie-text"><small>Complice de canapé</small><b>${PEOPLE[top].name}</b><span>${countWith(top)} séances ensemble · ${hoursWith(top)} h de films</span></div>
+      </div>` : "";
     const chip = (id) => {
-      const p = PEOPLE[id], n = sessions.filter((s) => (s.with || []).includes(id)).length;
+      const p = PEOPLE[id], n = countWith(id);
       return `<button class="person-chip" data-person="${id}" aria-pressed="${circleFilter === id}"><span class="bubble" style="--c:${p.c}">${p.name[0]}</span><b>${p.name}</b><small>${n} séance${n > 1 ? "s" : ""}</small></button>`;
     };
     circle.innerHTML = `
       <h2>Avec qui je regarde</h2>
+      ${bestie}
       <div class="people" role="group" aria-label="Filtrer par personne">
         <button class="person-chip" data-person="" aria-pressed="${circleFilter === null}"><span class="bubble all">Tous</span><b>Tout le monde</b><small>${sessions.length} séances</small></button>
         ${ids.map(chip).join("")}
@@ -948,7 +973,10 @@ button { cursor: pointer; border: 0; background: none; }
       circleFilter = b.dataset.person || null; renderHistory();
     });
     box.append(circle);
-    const list = circleFilter ? sessions.filter((s) => (s.with || []).includes(circleFilter)) : sessions;
+    // Forget threads whose element was re-rendered away, then tie the new one.
+    threads.splice(0, threads.length, ...threads.filter((t) => document.contains(t.duo)));
+    if (top) initThread($(".bestie .duo", circle));
+    const list =circleFilter ? sessions.filter((s) => (s.with || []).includes(circleFilter)) : sessions;
     const head = document.createElement("div"); head.className = "history-head";
     head.innerHTML = `<h2>${circleFilter ? "Avec " + PEOPLE[circleFilter].name : "Mes séances"}</h2><span class="me-note">${list.length} séance${list.length > 1 ? "s" : ""}</span>`;
     box.append(head);
