@@ -1,4 +1,4 @@
-# Annamour — instructions pour Claude
+# Annamour — instructions du projet
 
 Watch-together PWA : deux personnes à distance regardent la même vidéo HLS, synchronisée. Pas de compte. Interface en français.
 
@@ -19,7 +19,7 @@ Watch-together PWA : deux personnes à distance regardent la même vidéo HLS, s
 
 ## Exigences produit validées sur la maquette
 
-- **Maquette de référence (validée)** : `docs/maquette.html` (ouvrir dans un navigateur ; copie de https://claude.ai/artifact/AwKSht7CqP8Lr1kaznN86C). Écrans : 1er lancement, accueil, salon, rejoindre, lecteur, profil. Le logo y est provisoire.
+- **Maquette de référence (validée)** : `docs/maquette.html` (ouvrir dans un navigateur). Écrans : 1er lancement, accueil, salon, rejoindre, lecteur, profil. Le logo y est provisoire.
 - **Réactions** : 6 émojis seulement (`REACTIONS`), menu dans la barre du lecteur, l'émoji s'envole chez tout le monde avec le prénom.
 - **Séances persistantes** : on regarde parfois un film en plusieurs soirs, à plusieurs jours d'intervalle.
   - Serveur : persister les salons (playlists en cache, sous-titres, titre, dernière position) dans SQLite (`node:sqlite`, intégré à Node) sur un volume Coolify ; garder un salon au moins 60 jours après sa dernière utilisation ; position sauvegardée à chaque pause et quand le salon se vide.
@@ -77,7 +77,8 @@ Ces règles sont vérifiées par la CI (`pnpm verify`) : une PR qui ne les respe
 
 - Jamais de commit direct sur `main`. Une branche et une PR par sujet, petite et cohérente.
 - Messages de commit et titres de PR en français, au présent, qui disent ce que ça change pour l'utilisateur ou le code.
-- La CI (lint, types, tests + couverture, build, image Docker + test de démarrage) doit être verte. **Claude fusionne lui-même les PR une fois la CI verte** (squash), à la demande de l'utilisateur ; jamais une PR en brouillon ni celle d'une autre session.
+- La CI (lint, types, tests + couverture, build, image Docker + test de démarrage) doit être verte. **Les PR sont fusionnées automatiquement une fois la CI verte** (squash) ; jamais une PR en brouillon ni celle d'une autre session.
+- **Aucune signature d'outil ou d'assistant** nulle part : pas de trailer `Co-Authored-By`, pas de mention « Generated with … » dans les commits, les PR, le code ou la documentation. Les commits sont signés par l'auteur du dépôt uniquement.
 - `biome-ignore` seulement en dernier recours, toujours avec la raison précise.
 
 ### Définition de « terminé »
