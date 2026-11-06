@@ -6,6 +6,14 @@ Version TV d'Annamour pour Android TV / Google TV (cible de test : vidéoproject
 
 **La TV est l'écran, le téléphone la télécommande et le clavier.** La TV ne demande jamais de taper un prénom, une clé ou un lien.
 
+**Même appli, même interface.** La TV réutilise les écrans existants de la PWA (design « salle obscure », mêmes composants, mêmes textes) : accueil, carte « Reprendre », rejoindre, salon, lecteur. Le mode TV ne fait que les adapter : mise à l'échelle pour 3 m de distance, focus bien visible, navigation aux flèches, marges de sécurité, effets de verre allégés. La maquette fil de fer sert seulement à valider les parcours de la télécommande, pas le visuel.
+
+Seuls éléments nouveaux :
+- l'écran « Relie cette TV à ton compte » (QR + code court) ;
+- un clavier de lettres à l'écran sous les 4 cases de « Rejoindre » ;
+- le comportement télécommande du lecteur (OK, ◀ ▶, barre ▲ ▼, Retour) appliqué à la capsule de commandes existante ;
+- côté téléphone, l'entrée « Lier une TV » dans le profil.
+
 ## Décisions validées
 
 | Sujet | Décision |
@@ -33,7 +41,7 @@ Version TV d'Annamour pour Android TV / Google TV (cible de test : vidéoproject
 - Jetons stockés hachés comme les autres ; tests et couverture selon les règles du dépôt.
 
 ### Interface TV (même appli web, mode TV)
-- Mode TV activé par l'appli Android TV (paramètre `?tv=1` mémorisé) ou par détection (`navigator.userAgent` Android TV / Google TV) ; routes dédiées sous `/tv`.
+- Mode TV activé par l'appli Android TV (paramètre `?tv=1` mémorisé) ou par détection (`navigator.userAgent` Android TV / Google TV). **Pas d'écrans dupliqués** : les écrans existants reçoivent une variante TV (classe ou contexte `tv` sur la racine), seule la liaison a sa route `/tv/lier`. L'accueil TV montre en plus la liste « Mes séances » du profil, sous la carte « Reprendre ».
 - **Navigation spatiale** au pavé directionnel : bibliothèque éprouvée (ex. `@noriginmedia/norigin-spatial-navigation`) ; focus très visible (anneau + légère mise à l'échelle) ; Retour (`Escape`/`Backspace`/`GoBack`) géré partout.
 - « 10 pieds » : texte plus grand, marges de sécurité de 5 % sur les bords, cibles larges ; effets de verre allégés (pas de réfraction SVG : les puces de TV sont lentes), animations courtes.
 - Le lecteur réutilise `PlayerSync` et la synchro existante ; seule la couche de contrôle change.
