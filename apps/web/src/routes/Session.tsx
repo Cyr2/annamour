@@ -2,12 +2,12 @@ import { isRoomCode, normalizeRoomCode } from "@annamour/protocol";
 import { Pause, Play } from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
-import { Button } from "../ui/controls.tsx";
-import { PresenceBubble } from "../ui/PresenceBubble.tsx";
-import { Wordmark } from "../ui/Wordmark.tsx";
 import { useRoom, useRoomConnection } from "../sync/room.ts";
 import type { ConnectionStatus } from "../sync/SyncClient.ts";
 import { usePlayerSync } from "../sync/usePlayerSync.ts";
+import { Button } from "../ui/controls.tsx";
+import { PresenceBubble } from "../ui/PresenceBubble.tsx";
+import { Wordmark } from "../ui/Wordmark.tsx";
 
 /* Placeholder for the watch screen: wires the sync layer end to end. */
 
@@ -30,6 +30,7 @@ export function Session({ code: raw }: { code: string }) {
   const status = useRoom((s) => s.status);
   const members = useRoom((s) => s.members);
   const title = useRoom((s) => s.room?.media.title);
+  const subtitles = useRoom((s) => s.room?.media.subtitles);
   const playing = useRoom((s) => s.playback?.status === "playing");
 
   return (
@@ -46,7 +47,20 @@ export function Session({ code: raw }: { code: string }) {
       <h1 className="text-xl font-extrabold">{title ?? "Séance"}</h1>
 
       <div className="relative overflow-hidden rounded-panel bg-surface">
-        <video ref={setVideo} className="aspect-video w-full" playsInline controls />
+        {/* biome-ignore lint/a11y/useMediaCaption: subtitle <track>s come from the room's media at runtime (mapped below), which static analysis cannot see; a placeholder track would be an empty caption file. */}
+        <video ref={setVideo} className="aspect-video w-full" playsInline controls>
+          {subtitles?.map((track) => (
+            <track
+              key={track.id}
+              kind="subtitles"
+              src={track.url}
+              srcLang={track.language}
+              label={track.label}
+              // Forced French subtitles only translate foreign lines: show them by default.
+              default={track.forced && track.language === "fr"}
+            />
+          ))}
+        </video>
         {player.blocked ? (
           <div className="absolute inset-0 grid place-items-center">
             <Button variant="filled" size="large" icon={<Play />} onClick={player.controls.unlock}>

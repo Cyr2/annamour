@@ -1,9 +1,9 @@
 import {
+  type ClientMessage,
   ClockEstimator,
   parseServerMessage,
-  sampleFrom,
-  type ClientMessage,
   type ServerMessage,
+  sampleFrom,
 } from "@annamour/protocol";
 import type { Identity } from "./identity.ts";
 

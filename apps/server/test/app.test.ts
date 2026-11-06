@@ -1,8 +1,8 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { AddressInfo } from "node:net";
-import { serve, type ServerType } from "@hono/node-server";
-import WebSocket from "ws";
 import { parseServerMessage, type RoomSnapshot, type ServerMessage } from "@annamour/protocol";
+import { type ServerType, serve } from "@hono/node-server";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import WebSocket from "ws";
 import { createApp } from "../src/app.ts";
 import { attachRealtime } from "../src/realtime.ts";
 import { RoomStore } from "../src/rooms.ts";
@@ -11,7 +11,8 @@ import { FetchError, type TextFetcher } from "../src/safe-fetch.ts";
 const MASTER = "https://cdn.example/movie/master.m3u8?token=t";
 const fakeFetch: TextFetcher = async (url) => {
   if (url.href === MASTER) return "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\nv/playlist.m3u8?token=t";
-  if (url.href === "https://cdn.example/movie/v/playlist.m3u8?token=t") return "#EXTM3U\n#EXTINF:10,\ns0.ts\n#EXT-X-ENDLIST";
+  if (url.href === "https://cdn.example/movie/v/playlist.m3u8?token=t")
+    return "#EXTM3U\n#EXTINF:10,\ns0.ts\n#EXT-X-ENDLIST";
   if (url.href.startsWith("https://cdn.example/expired")) throw new FetchError("denied", 401);
   throw new FetchError("not found", 404);
 };
@@ -36,12 +37,18 @@ describe("HTTP API", () => {
     const master = await app.request(snapshot.media.src);
     expect(master.headers.get("content-type")).toContain("mpegurl");
     expect(await master.text()).toContain("p0.m3u8");
-    expect(await (await app.request(`/api/rooms/${code}/hls/p0.m3u8`)).text()).toContain("https://cdn.example/movie/v/s0.ts");
+    expect(await (await app.request(`/api/rooms/${code}/hls/p0.m3u8`)).text()).toContain(
+      "https://cdn.example/movie/v/s0.ts",
+    );
   });
 
   it("explains bad links in plain words", async () => {
     const post = (body: unknown) =>
-      app.request("/api/rooms", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      app.request("/api/rooms", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
     expect((await post({ url: "http://insecure.example/a.m3u8" })).status).toBe(400);
     const expired = await post({ url: "https://cdn.example/expired.m3u8" });
     expect(expired.status).toBe(422);
@@ -77,7 +84,7 @@ describe("WebSocket sync", () => {
     ws.on("message", (d) => {
       const m = parseServerMessage(d.toString());
       if (m) inbox.push(m);
-      waiters.splice(0).forEach((w) => w());
+      for (const wake of waiters.splice(0)) wake();
     });
     const next = async (pred: (m: ServerMessage) => boolean) => {
       for (;;) {

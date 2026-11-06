@@ -65,60 +65,93 @@ export async function importHls(masterUrl: URL, fetchText: TextFetcher): Promise
     return { playlists, audio, subtitleFiles: new Map(), subtitles: [], duration: media.duration || undefined };
   }
 
-  const upstream = new Map<string, URL>();
-  let counter = 0;
-  const register = (uri: string): string => {
-    const name = `p${counter++}.m3u8`;
-    upstream.set(name, new URL(uri, masterUrl));
-    return name;
-  };
-
-  let firstVariant: string | undefined;
-  let expectVariantUri = false;
-  const out: string[] = [];
-  for (const raw of masterText.split(/\r?\n/)) {
-    const line = raw.trim();
-    if (line.startsWith("#EXT-X-I-FRAME-STREAM-INF")) continue; // trick-play only, not needed
-    if (line.startsWith("#EXT-X-MEDIA") && URI_ATTR.test(line)) {
-      const type = attr(line, "TYPE");
-      if (type === "SUBTITLES" || type === "CLOSED-CAPTIONS") continue; // handled as WebVTT side files
-      const name = register(URI_ATTR.exec(line)![1]!);
-      if (type === "AUDIO") {
-        const language = attr(line, "LANGUAGE");
-        audio.push({ id: name, label: attr(line, "NAME") ?? language ?? "Audio", ...(language ? { language } : {}) });
-      }
-      out.push(line.replace(URI_ATTR, `URI="${name}"`));
-      continue;
-    }
-    if (line.startsWith("#EXT-X-STREAM-INF")) {
-      expectVariantUri = true;
-      out.push(line.replace(/,?SUBTITLES="[^"]*"/, ""));
-      continue;
-    }
-    if (isUriLine(line) && expectVariantUri) {
-      const name = register(line);
-      firstVariant ??= name;
-      expectVariantUri = false;
-      out.push(name);
-      continue;
-    }
-    out.push(line);
-  }
-  playlists.set("master.m3u8", out.join("\n"));
+  const master = new MasterRewriter(masterUrl, audio);
+  playlists.set("master.m3u8", master.rewrite(masterText));
 
   let duration: number | undefined;
   await Promise.all(
-    [...upstream].map(async ([name, url]) => {
+    [...master.upstream].map(async ([name, url]) => {
       const text = await fetchText(url);
       if (!text.trimStart().startsWith("#EXTM3U")) throw new HlsError(`Playlist ${name} is not HLS`);
       const media = absolutizeMediaPlaylist(text, url);
       playlists.set(name, media.text);
-      if (name === firstVariant && media.duration > 0) duration = media.duration;
+      if (name === master.firstVariant && media.duration > 0) duration = media.duration;
     }),
   );
 
   const { subtitles, subtitleFiles } = await discoverSiblingSubtitles(masterUrl, fetchText);
   return { playlists, audio, subtitles, subtitleFiles, duration };
+}
+
+/**
+ * Rewrites a master playlist so every child playlist is served by us under a
+ * short local name (p0.m3u8, p1.m3u8...), remembering where each one lives
+ * upstream. Audio renditions found along the way are pushed to `audio`.
+ */
+class MasterRewriter {
+  /** Local name -> upstream URL of every child playlist to fetch. */
+  readonly upstream = new Map<string, URL>();
+  /** The first video variant: its duration stands for the whole video. */
+  firstVariant: string | undefined;
+  /** A #EXT-X-STREAM-INF tag was just seen: the next URI line is its variant. */
+  private expectVariantUri = false;
+  private readonly masterUrl: URL;
+  private readonly audio: AudioTrack[];
+
+  constructor(masterUrl: URL, audio: AudioTrack[]) {
+    this.masterUrl = masterUrl;
+    this.audio = audio;
+  }
+
+  rewrite(masterText: string): string {
+    const out: string[] = [];
+    for (const raw of masterText.split(/\r?\n/)) {
+      const line = this.rewriteLine(raw.trim());
+      if (line !== null) out.push(line);
+    }
+    return out.join("\n");
+  }
+
+  /** Returns the rewritten line, or null to drop it. */
+  private rewriteLine(line: string): string | null {
+    if (line.startsWith("#EXT-X-I-FRAME-STREAM-INF")) return null; // trick-play only, not needed
+    if (line.startsWith("#EXT-X-MEDIA")) return this.rewriteMediaLine(line);
+    if (line.startsWith("#EXT-X-STREAM-INF")) {
+      this.expectVariantUri = true;
+      // Subtitles are served as WebVTT side files, not as HLS renditions.
+      return line.replace(/,?SUBTITLES="[^"]*"/, "");
+    }
+    if (this.expectVariantUri && isUriLine(line)) return this.rewriteVariantLine(line);
+    return line;
+  }
+
+  private rewriteMediaLine(line: string): string | null {
+    const uri = URI_ATTR.exec(line)?.[1];
+    if (uri === undefined) return line; // e.g. muxed audio declared without its own playlist
+    const type = attr(line, "TYPE");
+    if (type === "SUBTITLES" || type === "CLOSED-CAPTIONS") return null; // handled as WebVTT side files
+    const name = this.register(uri);
+    if (type === "AUDIO") this.audio.push(audioTrack(line, name));
+    return line.replace(URI_ATTR, `URI="${name}"`);
+  }
+
+  private rewriteVariantLine(uri: string): string {
+    const name = this.register(uri);
+    this.firstVariant ??= name;
+    this.expectVariantUri = false;
+    return name;
+  }
+
+  private register(uri: string): string {
+    const name = `p${this.upstream.size}.m3u8`;
+    this.upstream.set(name, new URL(uri, this.masterUrl));
+    return name;
+  }
+}
+
+function audioTrack(line: string, id: string): AudioTrack {
+  const language = attr(line, "LANGUAGE");
+  return { id, label: attr(line, "NAME") ?? language ?? "Audio", ...(language ? { language } : {}) };
 }
 
 /**

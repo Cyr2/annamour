@@ -1,8 +1,8 @@
 import { BUBBLE_COLORS, isRoomCode } from "@annamour/protocol";
 import { LogIn, Pause, Play, Plus } from "lucide-react";
 import { useId, useState } from "react";
-import { BUBBLE_COLOR_LABELS, bubbleColor } from "../ui/colors.ts";
 import { CodeInput } from "../ui/CodeInput.tsx";
+import { BUBBLE_COLOR_LABELS, bubbleColor } from "../ui/colors.ts";
 import { Button, Switch } from "../ui/controls.tsx";
 import { PresenceBubble } from "../ui/PresenceBubble.tsx";
 import { RedThread } from "../ui/RedThread.tsx";
@@ -79,15 +79,10 @@ function Hero() {
         </div>
       </RedThread.Root>
 
-      <h1
-        id="hero-title"
-        className="mt-14 font-rounded-tight text-display leading-[1.02] font-extrabold text-fg"
-      >
+      <h1 id="hero-title" className="mt-14 font-rounded-tight text-display leading-[1.02] font-extrabold text-fg">
         Une soirée ensemble
       </h1>
-      <p className="mt-4 max-w-[42ch] text-md text-fg-muted">
-        Le même film, à la même seconde, chacun chez soi.
-      </p>
+      <p className="mt-4 max-w-[42ch] text-md text-fg-muted">Le même film, à la même seconde, chacun chez soi.</p>
 
       <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
         <label
@@ -149,7 +144,13 @@ function StartPanel() {
         Créez une séance avec un lien vidéo, puis envoyez le code à l'autre personne.
       </p>
 
-      <Button variant="filled" size="large" icon={<Plus />} className="mt-7" onClick={() => toast({ message: "Séance créée", icon: <Play /> })}>
+      <Button
+        variant="filled"
+        size="large"
+        icon={<Plus />}
+        className="mt-7"
+        onClick={() => toast({ message: "Séance créée", icon: <Play /> })}
+      >
         Créer une séance
       </Button>
 
