@@ -26,9 +26,15 @@ export function QrCode({ value, label, className }: QrCodeProps) {
       scale: 1,
       errorCorrectionLevel: "M",
       color: { dark: token("--am-night"), light: token("--am-milk") },
-    }).catch(() => {
-      // A value too long for a QR code: the link stays available through the copy button.
-    });
+    })
+      .then(() => {
+        // The renderer pins the canvas to its pixel size inline; the CSS box decides the size instead.
+        canvas.style.removeProperty("width");
+        canvas.style.removeProperty("height");
+      })
+      .catch(() => {
+        // A value too long for a QR code: the link stays available through the copy button.
+      });
   }, [value]);
 
   return (

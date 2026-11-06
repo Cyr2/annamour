@@ -8,6 +8,7 @@ import {
   LinkToken,
   SessionList,
   type SessionSummary,
+  type UpdateAccountRequest,
 } from "@annamour/protocol";
 import { z } from "zod";
 import { ApiRequestError, request } from "./http.ts";
@@ -72,4 +73,19 @@ export async function createLinkToken(): Promise<LinkToken> {
 export async function fetchSessions(): Promise<SessionSummary[]> {
   const { sessions } = await request(SessionList, API.sessions);
   return sessions;
+}
+
+/** Changes the prénom and/or bubble colour of the signed-in account. */
+export async function updateAccount(changes: UpdateAccountRequest): Promise<Account> {
+  const { account } = await request(AccountResponse, API.me, {
+    method: "PATCH",
+    body: changes,
+    messages: { 400: "Choisis un prénom de 1 à 24 lettres." },
+  });
+  return account;
+}
+
+/** Removes a session from my list only: the others keep it. */
+export async function hideSession(code: string): Promise<void> {
+  await request(Ignored, `${API.sessions}/${encodeURIComponent(code)}`, { method: "DELETE" });
 }
