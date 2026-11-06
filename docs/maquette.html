@@ -364,6 +364,18 @@ button { cursor: pointer; border: 0; background: none; }
 .duo-stats b { display: block; font-family: var(--rounded); font-weight: 900; font-size: 22px; }
 .duo-stats span { font-size: 12px; color: var(--muted); }
 .duo-card p { margin: 0; font-size: 13px; color: var(--muted); text-align: center; text-wrap: balance; }
+.circle-card { border-radius: var(--r-card); padding: 18px 20px; display: grid; gap: 12px; }
+.circle-card h2 { margin: 0; font-family: var(--rounded); font-weight: 800; font-size: 19px; letter-spacing: -.01em; }
+.circle-card p { margin: 0; font-size: 13px; color: var(--muted); }
+.people { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: thin; }
+.person-chip { display: grid; justify-items: center; gap: 5px; min-width: 76px; padding: 10px 8px; border-radius: 18px; border: 1px solid transparent; transition: background .2s, border-color .2s, transform .4s var(--spring); }
+.person-chip:hover { background: rgb(255 255 255 / .05); }
+.person-chip:active { transform: scale(.95); }
+.person-chip[aria-pressed="true"] { background: rgb(255 255 255 / .09); border-color: var(--edge-hi); }
+.person-chip .bubble { --size: 46px; font-size: 18px; box-shadow: none; }
+.person-chip .bubble.all { background: rgb(255 255 255 / .08); border: 1px solid var(--edge); color: var(--milk); font-size: 12px; font-weight: 800; }
+.person-chip b { font-size: 13px; font-weight: 600; line-height: 1.2; }
+.person-chip small { font-size: 11px; color: var(--muted); line-height: 1.2; }
 .qr-big { width: 196px; height: 196px; border-radius: 22px; background: var(--milk); padding: 14px; justify-self: center; }
 .qr-big canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
 .word-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -518,7 +530,7 @@ button { cursor: pointer; border: 0; background: none; }
               <div class="person" id="annaSlot"><span class="bubble is-empty is-breathing" style="--size:84px">?</span><span class="person-name">Anna</span><span class="person-state">Pas encore là</span></div>
             </div>
             <h2 class="display" id="lobbyTitle">En attente d'Anna…</h2>
-            <div class="status-line" id="lobbyStatus"><span class="status-dot"></span>Envoie-lui le code ou le QR code</div>
+            <div class="status-line" id="lobbyStatus"><span class="status-dot"></span>Envoie le code à qui tu veux, jusqu'à 8 personnes</div>
             <button class="btn btn-primary" id="startFilm" disabled style="opacity:.45"><svg><use href="#i-play"/></svg>Lancer le film</button>
           </div>
         </div>
@@ -853,7 +865,7 @@ button { cursor: pointer; border: 0; background: none; }
   });
   $("#openRoom").addEventListener("click", () => {
     closeSheet();
-    const s = { code: "PZNA", title: $("#titleInput").value.trim() || "Notre séance", pos: 0, dur: 7826, when: "À l'instant", art: "linear-gradient(160deg, #4A2E5C, #1A1424)", fresh: true };
+    const s = { code: "PZNA", title: $("#titleInput").value.trim() || "Notre séance", pos: 0, dur: 7826, when: "À l'instant", with: ["anna"], art: "linear-gradient(160deg, #4A2E5C, #1A1424)", fresh: true };
     sessions.unshift(s);
     openSession(s);
   });
@@ -870,12 +882,23 @@ button { cursor: pointer; border: 0; background: none; }
 
   /* sessions history: kept so you can come back days later */
   const ANNA = ["A", "var(--lilac)"];
+  const PEOPLE = {
+    anna: { name: "Anna", c: "var(--lilac)" },
+    leo: { name: "Léo", c: "var(--butter)" },
+    ines: { name: "Inès", c: "var(--mint)" },
+  };
   const sessions = [
-    { code: "YWEK", title: "Film du vendredi", pos: 4360, dur: 7826, when: "Il y a 3 jours", art: "linear-gradient(160deg, #4A2E5C, #1A1424)" },
-    { code: "QHMP", title: "Saison 2 · Épisode 4", pos: 1630, dur: 2640, when: "Mardi", art: "linear-gradient(160deg, #1F4560, #121822)" },
-    { code: "RTNB", title: "La comédie du dimanche", pos: 1180, dur: 6100, when: "Il y a 2 semaines", art: "linear-gradient(160deg, #5C4A2A, #1C1712)" },
-    { code: "MJKC", title: "Saison 2 · Épisode 3", pos: 2580, dur: 2580, when: "Il y a 3 semaines", art: "linear-gradient(160deg, #24524A, #111C1A)" },
+    { code: "YWEK", title: "Film du vendredi", pos: 4360, dur: 7826, when: "Il y a 3 jours", with: ["anna"], art: "linear-gradient(160deg, #4A2E5C, #1A1424)" },
+    { code: "RTNB", title: "Soirée frissons", pos: 2950, dur: 6100, when: "Samedi", with: ["leo", "ines"], art: "linear-gradient(160deg, #5C2A2A, #1C1212)" },
+    { code: "QHMP", title: "Saison 2 · Épisode 4", pos: 1630, dur: 2640, when: "Mardi", with: ["anna"], art: "linear-gradient(160deg, #1F4560, #121822)" },
+    { code: "BXFW", title: "La comédie du dimanche", pos: 6100, dur: 6100, when: "Il y a 2 semaines", with: ["anna", "leo"], art: "linear-gradient(160deg, #5C4A2A, #1C1712)" },
+    { code: "MJKC", title: "Saison 2 · Épisode 3", pos: 2580, dur: 2580, when: "Il y a 3 semaines", with: ["anna"], art: "linear-gradient(160deg, #24524A, #111C1A)" },
   ];
+  let circleFilter = null;
+  const withNames = (s) => {
+    const n = (s.with || []).map((id) => PEOPLE[id].name);
+    return n.length <= 1 ? n.join("") : n.slice(0, -1).join(", ") + " et " + n.at(-1);
+  };
   let current = sessions[0];
   const isDone = (s) => s.pos >= s.dur - 60;
   function sessionRow(s) {
@@ -886,7 +909,7 @@ button { cursor: pointer; border: 0; background: none; }
       <div class="poster" style="--art:${s.art}"></div>
       <div class="session-info">
         <strong></strong>
-        <div class="session-meta"><span class="code-chip">${s.code}</span><span>${s.when}</span><span class="with"><span class="bubble" style="--c:${state.me.color}"></span><span class="bubble" style="--c:${ANNA[1]}">${ANNA[0]}</span></span></div>
+        <div class="session-meta"><span class="code-chip">${s.code}</span><span>${s.when}</span><span class="with" title="Avec ${withNames(s)}"><span class="bubble" style="--c:${state.me.color}"></span>${(s.with || []).map((id) => `<span class="bubble" style="--c:${PEOPLE[id].c}">${PEOPLE[id].name[0]}</span>`).join("")}</span><span>avec ${withNames(s) || "personne pour l'instant"}</span></div>
         <div class="progress"><i style="width:${Math.round((s.pos / s.dur) * 100)}%"></i></div>
         <div class="session-meta">${isDone(s) ? "Terminé" : `Arrêtés à ${fmt(s.pos)} · reste ${fmtShort(s.dur - s.pos)}`}</div>
       </div>
@@ -906,25 +929,30 @@ button { cursor: pointer; border: 0; background: none; }
   }
   function renderHistory() {
     const box = $("#history"); box.innerHTML = "";
-    const watched = sessions.reduce((t, s) => t + s.pos, 0);
-    const duo = document.createElement("section");
-    duo.className = "duo-card glass";
-    duo.innerHTML = `
-      <h2>Notre duo</h2>
-      <div class="duo" data-thread="taut">
-        <svg class="thread" aria-hidden="true"><path/></svg>
-        <div class="person"><span class="bubble" style="--c:${state.me.color}">${(state.me.name[0] || "?").toUpperCase()}</span></div>
-        <div class="person"><span class="bubble" style="--c:${ANNA[1]}">${ANNA[0]}</span></div>
+    const circle = document.createElement("section");
+    circle.className = "circle-card glass";
+    const ids = Object.keys(PEOPLE).filter((id) => sessions.some((s) => (s.with || []).includes(id)));
+    const chip = (id) => {
+      const p = PEOPLE[id], n = sessions.filter((s) => (s.with || []).includes(id)).length;
+      return `<button class="person-chip" data-person="${id}" aria-pressed="${circleFilter === id}"><span class="bubble" style="--c:${p.c}">${p.name[0]}</span><b>${p.name}</b><small>${n} séance${n > 1 ? "s" : ""}</small></button>`;
+    };
+    circle.innerHTML = `
+      <h2>Avec qui je regarde</h2>
+      <div class="people" role="group" aria-label="Filtrer par personne">
+        <button class="person-chip" data-person="" aria-pressed="${circleFilter === null}"><span class="bubble all">Tous</span><b>Tout le monde</b><small>${sessions.length} séances</small></button>
+        ${ids.map(chip).join("")}
       </div>
-      <div class="duo-stats"><div><b>${sessions.length}</b><span>séances</span></div><div><b>${Math.round(watched / 3600)} h</b><span>ensemble</span></div></div>
-      <p>Les séances que vous regardez ensemble apparaissent chez vous deux, arrêtées au même endroit.</p>`;
-    box.append(duo);
-    threads.splice(0, threads.length, ...threads.filter((t) => document.contains(t.duo)));
-    initThread($(".duo", duo));
+      <p>Une séance peut réunir jusqu'à 8 personnes. Elle apparaît chez chacun, arrêtée au même endroit.</p>`;
+    circle.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-person]"); if (!b) return;
+      circleFilter = b.dataset.person || null; renderHistory();
+    });
+    box.append(circle);
+    const list = circleFilter ? sessions.filter((s) => (s.with || []).includes(circleFilter)) : sessions;
     const head = document.createElement("div"); head.className = "history-head";
-    head.innerHTML = `<h2>Nos séances</h2><span class="me-note">${sessions.length} séance${sessions.length > 1 ? "s" : ""}</span>`;
+    head.innerHTML = `<h2>${circleFilter ? "Avec " + PEOPLE[circleFilter].name : "Mes séances"}</h2><span class="me-note">${list.length} séance${list.length > 1 ? "s" : ""}</span>`;
     box.append(head);
-    const going = sessions.filter((s) => !isDone(s)), done = sessions.filter(isDone);
+    const going = list.filter((s) => !isDone(s)), done = list.filter(isDone);
     if (!sessions.length) { const n = document.createElement("p"); n.className = "empty-note"; n.textContent = "Tes séances apparaîtront ici. Crée-en une ou rejoins Anna avec son code."; box.append(n); return; }
     if (going.length) { const h = document.createElement("h3"); h.textContent = "En cours"; box.append(h); going.forEach((s) => box.append(sessionRow(s))); }
     if (done.length) { const h = document.createElement("h3"); h.textContent = "Terminées"; box.append(h); done.forEach((s) => box.append(sessionRow(s))); }
@@ -936,7 +964,7 @@ button { cursor: pointer; border: 0; background: none; }
     card.onclick = () => openSession(s);
     $("#resumeRing").style.setProperty("--p", Math.round((s.pos / s.dur) * 100));
     $("#resumeTitle").textContent = s.title;
-    $("#resumeMeta").textContent = `${s.when} avec Anna · reste ${fmtShort(s.dur - s.pos)}`;
+    $("#resumeMeta").textContent = `${s.when} avec ${withNames(s)} · reste ${fmtShort(s.dur - s.pos)}`;
   }
   function openSession(s) {
     current = s; state.pos = s.pos; DUR = s.dur;
@@ -1039,7 +1067,7 @@ button { cursor: pointer; border: 0; background: none; }
     $("#lobbyDuo").dataset.thread = "loose";
     $("#annaSlot").innerHTML = '<span class="bubble is-empty is-breathing" style="--size:84px">?</span><span class="person-name">Anna</span><span class="person-state">Pas encore là</span>';
     $("#lobbyTitle").textContent = "En attente d'Anna…";
-    $("#lobbyStatus").innerHTML = '<span class="status-dot"></span>Envoie-lui le code ou le QR code';
+    $("#lobbyStatus").innerHTML = '<span class="status-dot"></span>Envoie le code à qui tu veux, jusqu\'à 8 personnes';
     const s = $("#startFilm"); s.disabled = true; s.style.opacity = ".45";
     $$("#codeLetters span").forEach((sp) => { sp.style.animation = "none"; sp.offsetWidth; sp.style.animation = ""; });
   }
@@ -1209,7 +1237,7 @@ button { cursor: pointer; border: 0; background: none; }
   const demos = {
     accueil: { text: "Ta bulle respire en attendant quelqu'un. La carte « Reprendre » rouvre votre dernière séance là où vous l'aviez laissée.", actions: [["Créer une séance", () => openSheet("link")], ["Voir mes séances", () => { location.hash = "profil"; }]] },
     bienvenue: { text: "Le premier lancement : prénom et couleur, puis ta clé de 4 mots créée pour toi, puis Face ID en option. Aucune inscription.", actions: [["Recommencer", () => showWStep(1)], ["Aller à la clé", () => showWStep(2)], ["Aller à Face ID", () => showWStep(3)]] },
-    profil: { text: "Ta clé de 4 mots est ton compte. Ajoute un appareil par QR code, active Face ID, et retrouve vos séances communes avec Anna, à la seconde près.", actions: [["Afficher ma clé", () => $("#revealKey").click()], ["Ajouter un appareil", () => openSheet("device")], ["Se connecter sur un nouvel appareil", () => $("#loginRow").click()], ["Activer Face ID", () => { if (!passkeyOn) enablePasskey(); }], ["Reprendre la dernière séance", () => { const s = sessions.find((x) => !isDone(x)); if (s) openSession(s); }]] },
+    profil: { text: "Ta clé de 4 mots est ton compte. « Avec qui je regarde » liste les personnes de tes séances : touche une bulle pour filtrer. Une séance à plusieurs apparaît chez chacun, à la même position.", actions: [["Filtrer : avec Léo", () => { circleFilter = "leo"; renderHistory(); }], ["Tout afficher", () => { circleFilter = null; renderHistory(); }],["Afficher ma clé", () => $("#revealKey").click()], ["Ajouter un appareil", () => openSheet("device")], ["Se connecter sur un nouvel appareil", () => $("#loginRow").click()], ["Activer Face ID", () => { if (!passkeyOn) enablePasskey(); }], ["Reprendre la dernière séance", () => { const s = sessions.find((x) => !isDone(x)); if (s) openSession(s); }]] },
     salon: { text: "Le salon attend Anna. Fais-la arriver : sa bulle apparaît et le fil se tend.", actions: [["Faire arriver Anna", annaArrives], ["Recommencer", resetLobby]] },
     rejoindre: { text: "Tape YWEK, colle-le, ou essaie un mauvais code pour voir l'erreur.", actions: [["Essayer un mauvais code", wrongCode], ["Remplir YWEK", () => { "YWEK".split("").forEach((c, i) => (otp[i].value = c)); $("#joinForm").requestSubmit(); }]] },
     lecteur: { text: "Les commandes disparaissent après 3 s. Le bouton sourire ouvre les réactions. Simule ce qu'Anna fait de son côté.", actions: [["Anna réagit", annaReacts], ["Anna met en pause", () => setPlaying(false, "anna")], ["Anna relance", () => setPlaying(true, "anna")], ["Anna avance de 10 s", () => { state.pos += 10; toast("Anna a avancé de 10 s"); pulseAnna(); wake(); }], ["La vidéo d'Anna charge", annaBuffers]] },

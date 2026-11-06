@@ -27,7 +27,7 @@ Watch-together PWA : deux personnes à distance regardent la même vidéo HLS, s
   - Ajouter un appareil : QR code de connexion à usage unique valable 5 minutes, ou saisie des 4 mots.
   - Passkey (Face ID / Touch ID) en option, liée au domaine définitif (WebAuthn, rpID = domaine de prod) ; la clé reste le secours.
   - Rejoindre une séance avec un code reste possible sans compte.
-- **Espace duo** : les séances regardées ensemble apparaissent chez chaque participant ayant un compte, avec la même position ; carte « Notre duo » (nombre de séances, heures ensemble).
+- **Séances partagées (2 à 8 personnes)** : la séance est l'unité de partage, pas un duo. Elle apparaît chez chaque participant ayant un compte, avec la même position. Profil : carte « Avec qui je regarde » (une bulle par personne déjà croisée en séance, avec le nombre de séances communes ; toucher une bulle filtre « Mes séances »). Chaque séance affiche les bulles de tous ses participants (« avec Léo et Inès »). Les textes ne supposent jamais un duo.
 
 ## Conventions
 - L'appli n'importe jamais `glisse` directement : passer par `apps/web/src/ui/`.
