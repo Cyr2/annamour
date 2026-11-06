@@ -1,4 +1,4 @@
-﻿import { type KeyboardEvent, type PointerEvent, useRef, useState } from "react";
+import { type KeyboardEvent, type PointerEvent, useRef, useState } from "react";
 import { formatClock } from "../../lib/format.ts";
 import type { VideoClock } from "./usePlayerEffects.ts";
 

@@ -1,4 +1,4 @@
-﻿import type { Reaction } from "@annamour/protocol";
+import type { Reaction } from "@annamour/protocol";
 import { useMemo, useState } from "react";
 import { useRoom } from "../../sync/room.ts";
 import type { SyncClient } from "../../sync/SyncClient.ts";
