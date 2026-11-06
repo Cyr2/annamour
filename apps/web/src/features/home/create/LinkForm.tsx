@@ -41,7 +41,7 @@ export function LinkForm({ error, onSubmit, onCancel }: LinkFormProps) {
         />
       </Field>
       <Field label="Nom de la séance" htmlFor={titleId}>
-        <Input id={titleId} value={title} onValueChange={setTitle} placeholder="Film du vendredi" maxLength={120} />
+        <Input id={titleId} value={title} onValueChange={setTitle} placeholder="Film du vendredi…" maxLength={120} />
       </Field>
       <p id={errorId} role="alert" className="min-h-5 text-sm text-danger">
         {error ?? ""}

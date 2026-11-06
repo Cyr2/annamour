@@ -19,8 +19,10 @@ async function onboard(page: Page, name: string, path = "/") {
   await expect(page.getByRole("heading", { name: "Voici ta clé" })).toBeVisible();
   await expect(page.getByRole("list", { name: "Ta clé de 4 mots" }).getByRole("listitem")).toHaveCount(4);
   await page.getByRole("button", { name: "Je l'ai notée" }).click();
+  // The Face ID step is optional (only where passkeys exist) and slides in: give it a moment to appear.
   const later = page.getByRole("button", { name: "Plus tard" });
-  if (await later.isVisible().catch(() => false)) await later.click();
+  await later.waitFor({ timeout: 3000 }).catch(() => {});
+  if (await later.isVisible()) await later.click();
 }
 
 const videoTime = (page: Page) => page.locator("video").evaluate((v: HTMLVideoElement) => v.currentTime);

@@ -68,10 +68,8 @@ export function KeyLoginScreen() {
       <ScreenTopBar back="/bienvenue" />
       <main className="grid flex-1 place-items-center py-8 text-center">
         <form onSubmit={submit} className="grid w-[min(460px,100%)] justify-items-center gap-5" noValidate>
-          <h1 className="font-rounded-tight text-[clamp(32px,4.4vw,50px)] leading-[1.05] font-extrabold text-fg">
-            J'ai déjà une clé
-          </h1>
-          <p className="text-md text-fg-muted">Tape tes 4 mots dans l'ordre, ou colle-les d'un coup.</p>
+          <h1 className="type-title">J'ai déjà une clé</h1>
+          <p className="type-lede">Tape tes 4 mots dans l'ordre, ou colle-les d'un coup.</p>
           <motion.div animate={controls} onPaste={paste} className="grid w-full grid-cols-2 gap-2">
             {words.map((word, index) => (
               <Input

@@ -21,6 +21,8 @@ export const exit = {
   /** Default exit: fast, accelerating away. */
   quick: { duration: 0.16, ease: [0.4, 0, 1, 1] },
   fade: { duration: 0.12, ease: "linear" },
+  /** A sheet sliding back down: about two thirds of its spring in. */
+  sheet: { duration: 0.24, ease: [0.4, 0, 1, 1] },
 } as const satisfies Record<string, Transition>;
 
 export const duration = {

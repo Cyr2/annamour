@@ -13,7 +13,7 @@ export function AccountKeyBox({ keyWords }: { keyWords: AccountKey | null }) {
 
   if (!keyWords) {
     return (
-      <p className="rounded-control border border-line bg-fill-soft p-4 text-sm text-fg-muted">
+      <p className="surface-tile p-4 text-sm text-pretty text-fg-muted">
         Ta clé n'est pas enregistrée sur cet appareil : tu t'es connecté par QR code ou Face ID. Tu la retrouves sur
         l'appareil où tu as créé ton compte.
       </p>
@@ -33,15 +33,19 @@ export function AccountKeyBox({ keyWords }: { keyWords: AccountKey | null }) {
   return (
     <div className="grid gap-3">
       <ol className="grid grid-cols-2 gap-2" aria-label={shown ? "Ta clé de 4 mots" : "Ta clé de 4 mots, masquée"}>
-        {keyWords.map((word) => (
-          <li
-            key={word}
-            className={cx(
-              "rounded-control border border-line-strong bg-fill-soft px-3.5 py-2.5 font-rounded-tight text-lg font-black",
-              shown ? "text-fg select-all" : "text-fg-subtle select-none",
-            )}
-          >
-            {shown ? word : <span aria-hidden>{MASK}</span>}
+        {keyWords.map((word, index) => (
+          <li key={word} className="surface-tile flex min-w-0 items-baseline gap-2.5 px-3.5 py-2.5">
+            <span aria-hidden className="text-xs font-bold text-accent tabular-nums">
+              {index + 1}
+            </span>
+            <span
+              className={cx(
+                "truncate font-rounded-tight text-lg font-black",
+                shown ? "text-fg select-all" : "text-fg-subtle select-none",
+              )}
+            >
+              {shown ? word : <span aria-hidden>{MASK}</span>}
+            </span>
           </li>
         ))}
       </ol>
@@ -54,7 +58,7 @@ export function AccountKeyBox({ keyWords }: { keyWords: AccountKey | null }) {
         >
           {shown ? "Masquer" : "Afficher"}
         </Button>
-        <Button icon={<Copy />} onClick={copy} className="flex-1">
+        <Button icon={<Copy />} tone="accent" onClick={copy} className="flex-1">
           {copied === "done" ? "Copiée" : copied === "failed" ? "Sélectionne-la" : "Copier"}
         </Button>
       </div>

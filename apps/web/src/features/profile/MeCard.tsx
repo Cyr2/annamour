@@ -43,7 +43,7 @@ export function MeCard({ account }: { account: Account }) {
   };
 
   return (
-    <Glass className="grid justify-items-center gap-5 rounded-panel p-5 text-center sm:p-6">
+    <Glass className="surface-panel grid justify-items-center gap-5 p-4 text-center sm:p-6">
       <PresenceBubble name={name.trim() || "?"} color={color} size="xl" />
       <Field label="Ton prénom" htmlFor="profile-name" className="w-full">
         <Input

@@ -1,30 +1,26 @@
 import type { Member } from "@annamour/protocol";
-import { Play } from "lucide-react";
+import { CircleAlert, Play } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { joinNames } from "../../lib/format.ts";
-import { spring } from "../../lib/motion.ts";
+import { exit, spring } from "../../lib/motion.ts";
 import { Button, Glass } from "../../ui/controls.tsx";
 import { PresenceBubble } from "../../ui/PresenceBubble.tsx";
 
-/** The big round play button while the film is paused. */
+/** Centred over the film, above the controls' layer. */
+const CENTRED = "absolute top-1/2 left-1/2 z-10 -translate-1/2";
+
+/** The big round play button while the film is paused: it swells in, and sinks under the finger. */
 export function CenterPlay({ visible, onPlay }: { visible: boolean; onPlay: () => void }) {
   return (
     <AnimatePresence>
       {visible ? (
         <motion.div
-          className="absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2"
-          initial={{ opacity: 0, scale: 0.7 }}
-          animate={{ opacity: 1, scale: 1, transition: spring.ui }}
-          exit={{ opacity: 0, scale: 0.7, transition: { duration: 0.16 } }}
+          className={CENTRED}
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 1, scale: 1, transition: spring.bubble }}
+          exit={{ opacity: 0, scale: 0.8, transition: exit.quick }}
         >
-          <Button
-            variant="glass"
-            size="large"
-            icon={<Play />}
-            aria-label="Reprendre la lecture"
-            onClick={onPlay}
-            className="size-[88px] rounded-full"
-          />
+          <Button variant="glass" size="hero" icon={<Play />} aria-label="Reprendre la lecture" onClick={onPlay} />
         </motion.div>
       ) : null}
     </AnimatePresence>
@@ -39,14 +35,14 @@ export function WaitBanner({ members }: { members: Member[] }) {
       {first ? (
         <motion.div
           role="status"
-          className="absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2"
+          className={`${CENTRED} w-max max-w-[calc(100vw-32px)]`}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1, transition: spring.ui }}
-          exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.16 } }}
+          exit={{ opacity: 0, scale: 0.95, transition: exit.quick }}
         >
-          <Glass className="flex items-center gap-3 rounded-pill py-3 pr-5 pl-3 font-semibold text-fg shadow-float">
+          <Glass className="flex items-center gap-3 rounded-pill py-2.5 pr-5 pl-2.5 font-semibold text-fg shadow-float">
             <PresenceBubble name={first.name} color={first.color} size="sm" status="waiting" />
-            On attend {joinNames(members.map((m) => m.name))}, la vidéo charge…
+            <span className="text-pretty">On attend {joinNames(members.map((m) => m.name))}, la vidéo charge…</span>
           </Glass>
         </motion.div>
       ) : null}
@@ -57,13 +53,28 @@ export function WaitBanner({ members }: { members: Member[] }) {
 /** The browser refused to start the sound without a tap: one tap joins the film. */
 export function BlockedNotice({ onUnlock }: { onUnlock: () => void }) {
   return (
-    <div className="absolute inset-0 z-30 grid place-items-center bg-scrim">
-      <div className="grid justify-items-center gap-4 text-center">
-        <p className="max-w-[32ch] text-md text-fg">Le film a commencé. Touche pour le rejoindre avec le son.</p>
+    <div className="absolute inset-0 z-30 grid place-items-center bg-scrim p-4">
+      <Glass className="surface-panel grid max-w-sm justify-items-center gap-5 p-6 text-center">
+        <p className="text-md text-pretty text-fg">Le film a commencé. Touche pour le rejoindre avec le son.</p>
         <Button variant="filled" size="large" icon={<Play />} onClick={onUnlock}>
           Rejoindre le film
         </Button>
-      </div>
+      </Glass>
+    </div>
+  );
+}
+
+/** The film could not load: said on glass near the top, readable over any frame. */
+export function PlayerError({ message }: { message: string }) {
+  return (
+    <div className="absolute inset-x-4 top-24 z-20 grid justify-items-center">
+      <Glass
+        role="alert"
+        className="flex max-w-md items-center gap-2.5 rounded-pill py-2.5 pr-5 pl-3.5 text-sm font-semibold text-fg shadow-float"
+      >
+        <CircleAlert aria-hidden className="size-5 shrink-0 text-danger" />
+        {message}
+      </Glass>
     </div>
   );
 }

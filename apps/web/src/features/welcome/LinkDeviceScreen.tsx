@@ -1,8 +1,10 @@
+import { KeyRound } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { errorMessage } from "../../api/http.ts";
+import { LinkButton } from "../../ui/LinkButton.tsx";
+import { NoticeScreen } from "../../ui/NoticeScreen.tsx";
 import { ThreadSpinner } from "../../ui/ThreadSpinner.tsx";
-import { Wordmark } from "../../ui/Wordmark.tsx";
 import { linkWithToken } from "../account/account.ts";
 
 /** Reads the one-time token from the QR link (/lier#token): it never reaches server logs. */
@@ -28,28 +30,22 @@ export function LinkDeviceScreen() {
   }, [navigate]);
 
   return (
-    <main className="safe-area grid min-h-dvh place-items-center text-center">
-      <div className="grid justify-items-center gap-5">
-        <Wordmark />
-        {error ? (
-          <>
-            <p role="alert" className="max-w-[40ch] text-md text-fg">
-              {error}
-            </p>
-            <Link
-              href="/cle"
-              className="min-h-11 content-center font-semibold text-accent underline underline-offset-4"
-            >
-              Me connecter avec mes 4 mots
-            </Link>
-          </>
-        ) : (
-          <p className="flex items-center gap-3 text-fg-muted" role="status">
-            <ThreadSpinner />
-            On relie cet appareil à ton compte…
+    <NoticeScreen>
+      {error ? (
+        <>
+          <p role="alert" className="text-md text-fg">
+            {error}
           </p>
-        )}
-      </div>
-    </main>
+          <LinkButton href="/cle" variant="filled" icon={<KeyRound />}>
+            Me connecter avec mes 4 mots
+          </LinkButton>
+        </>
+      ) : (
+        <p className="flex items-center gap-3 text-fg-muted" role="status">
+          <ThreadSpinner />
+          On relie cet appareil à ton compte…
+        </p>
+      )}
+    </NoticeScreen>
   );
 }

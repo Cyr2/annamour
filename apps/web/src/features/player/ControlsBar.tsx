@@ -22,7 +22,11 @@ interface ControlsBarProps {
   onFullscreen: () => void;
 }
 
-/** The glass capsule: timeline, then play, ±10 s, volume, time — and reactions, tracks, full screen. */
+/**
+ * The glass capsule floating over the film: the timeline between its two
+ * clocks, then play, ±10 s and volume on the left; reactions, tracks and full
+ * screen on the right. On a phone the seven buttons share the width evenly.
+ */
 export function ControlsBar(props: ControlsBarProps) {
   const { playing, onToggle, onSeek } = props;
   // Only this capsule follows the video frame by frame; the rest of the player does not re-render.
@@ -31,17 +35,23 @@ export function ControlsBar(props: ControlsBarProps) {
     onSeek(Math.min(clock.duration || Number.POSITIVE_INFINITY, Math.max(0, clock.current + delta)));
 
   return (
-    <Glass className="grid gap-2 rounded-[26px] px-4 pt-3 pb-3.5">
-      <Scrubber clock={clock} onSeek={onSeek} />
-      <div className="flex items-center gap-1.5">
-        <IconButton label={playing ? "Pause" : "Lecture"} icon={playing ? <Pause /> : <Play />} onClick={onToggle} />
+    <Glass className="surface-panel mx-auto grid w-full max-w-[880px] gap-0.5 px-2 pt-2.5 pb-1.5 sm:px-3">
+      <div className="flex items-center gap-3 px-2 text-xs font-semibold text-fg-muted tabular-nums">
+        <span>{formatClock(clock.current)}</span>
+        <Scrubber clock={clock} onSeek={onSeek} className="flex-1" />
+        <span>{formatClock(clock.duration)}</span>
+      </div>
+      <div className="flex items-center justify-between sm:justify-start sm:gap-1">
+        <IconButton
+          label={playing ? "Pause" : "Lecture"}
+          icon={playing ? <Pause /> : <Play />}
+          onClick={onToggle}
+          className="[&>svg]:size-6 [&>svg]:fill-current"
+        />
         <IconButton label="Reculer de 10 secondes" icon={<RotateCcw />} onClick={() => skip(-SEEK_STEP)} />
         <IconButton label="Avancer de 10 secondes" icon={<RotateCw />} onClick={() => skip(SEEK_STEP)} />
         <VolumeControl />
-        <span className="ml-1.5 text-sm text-fg-muted tabular-nums">
-          {formatClock(clock.current)} / {formatClock(clock.duration)}
-        </span>
-        <span className="flex-1" />
+        <span className="hidden flex-1 sm:block" />
         <ReactionPicker open={props.reactionsOpen} onOpenChange={props.onReactionsOpenChange} onReact={props.onReact} />
         <IconButton label="Audio et sous-titres" icon={<Subtitles />} onClick={props.onOpenTracks} />
         <IconButton label="Plein écran" icon={<Maximize />} onClick={props.onFullscreen} />

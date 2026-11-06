@@ -28,9 +28,9 @@ export function AccountCard() {
   };
 
   return (
-    <Glass className="grid gap-4 rounded-panel p-5 sm:p-6">
+    <Glass className="surface-panel grid gap-4 p-4 sm:p-6">
       <div className="grid gap-1">
-        <h2 className="font-rounded-tight text-lg font-extrabold text-fg">Ton compte</h2>
+        <h2 className="type-heading">Ton compte</h2>
         <p className="text-sm text-fg-muted">Ta clé, c'est ton compte : pas d'email, pas de mot de passe.</p>
       </div>
       <AccountKeyBox keyWords={keyWords} />
@@ -42,6 +42,8 @@ export function AccountCard() {
           onClick={() => setAddingDevice(true)}
         />
         {passkeysSupported() ? <PasskeyRow /> : null}
+        {/* Leaving sits apart from the rest, so it is never tapped by mistake. */}
+        <hr className="mx-2 my-1 border-line" />
         <AccountRow
           icon={<LogOut />}
           title="Se déconnecter"

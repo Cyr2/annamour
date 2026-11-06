@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "wouter";
+import { Glass } from "./controls.tsx";
 import { cx } from "./cx.ts";
 
 interface LinkButtonProps {
@@ -13,7 +14,11 @@ interface LinkButtonProps {
   className?: string;
 }
 
-/** A link that looks like our Button: navigation stays a real link (new tab, long press, history). */
+/**
+ * A link that looks like our Button: navigation stays a real link (new tab,
+ * long press, history). The glass variant sits on real glisse Glass, so it
+ * bends the backdrop like a Button does.
+ */
 export function LinkButton({
   href,
   children,
@@ -23,12 +28,12 @@ export function LinkButton({
   label,
   className,
 }: LinkButtonProps) {
-  return (
+  const link = (classes: string) => (
     <Link
       href={href}
       aria-label={label}
       title={children ? undefined : label}
-      className={cx("lg-glass lg-button am-button no-underline", className)}
+      className={cx("lg-button am-button no-underline", classes)}
       data-variant={variant === "glass" ? undefined : variant}
       data-size={size}
       data-icon={icon ? (children ? "" : "only") : undefined}
@@ -36,5 +41,14 @@ export function LinkButton({
       {icon}
       {children}
     </Link>
+  );
+
+  if (variant === "filled") return link(cx("lg-glass", className));
+  return (
+    <Glass
+      className={cx("inline-flex rounded-pill transition-transform duration-200 ease-out active:scale-95", className)}
+    >
+      {link("w-full bg-transparent")}
+    </Glass>
   );
 }

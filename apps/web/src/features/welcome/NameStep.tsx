@@ -36,10 +36,8 @@ export function NameStep({ onCreated }: { onCreated: (key: AccountKey) => void }
       <motion.div key={color} initial={{ scale: 0.6 }} animate={{ scale: 1 }} transition={spring.bubble}>
         <PresenceBubble name={name.trim() || "?"} color={color} size="xl" status="alone" />
       </motion.div>
-      <h1 className="font-rounded-tight text-[clamp(32px,4.4vw,50px)] leading-[1.05] font-extrabold text-fg">
-        Une soirée ensemble
-      </h1>
-      <p className="text-md text-fg-muted">Dis-nous comment t'appeler. C'est ce que les autres verront sur ta bulle.</p>
+      <h1 className="type-title">Une soirée ensemble</h1>
+      <p className="type-lede">Dis-nous comment t'appeler. C'est ce que les autres verront sur ta bulle.</p>
       <Field label="Ton prénom" htmlFor="welcome-name" className="w-full text-left">
         <Input
           id="welcome-name"

@@ -8,7 +8,7 @@ import { cx } from "../../ui/cx.ts";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { ControlsBar } from "./ControlsBar.tsx";
 import { FloatingReactions } from "./FloatingReactions.tsx";
-import { BlockedNotice, CenterPlay, WaitBanner } from "./PlayerOverlays.tsx";
+import { BlockedNotice, CenterPlay, PlayerError, WaitBanner } from "./PlayerOverlays.tsx";
 import { PlayerTopBar } from "./PlayerTopBar.tsx";
 import { TrackPickers } from "./TrackPickers.tsx";
 import { useIdle, usePlaybackNotices, useTrackChoice, useVolumeOnVideo } from "./usePlayerEffects.ts";
@@ -51,9 +51,14 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
   usePlayerKeyboard(active && !tracksOpen, { toggle, seekBy, toggleMute, fullscreen });
 
   return (
-    <section aria-label="Lecteur" className={cx("fixed inset-0 overflow-hidden bg-screen", !active && "invisible")}>
+    <section
+      aria-label="Lecteur"
+      data-watching={active || undefined}
+      className={cx("fixed inset-0 overflow-hidden bg-screen", !active && "invisible")}
+    >
+      {/* The film is glisse's backdrop: the glass controls bend the picture under them. */}
       {/* biome-ignore lint/a11y/useMediaCaption: subtitle tracks come from the room's media at runtime (mapped below). */}
-      <video ref={onVideo} className="absolute inset-0 size-full object-contain" playsInline>
+      <video ref={onVideo} data-glisse-backdrop="" className="absolute inset-0 size-full object-contain" playsInline>
         {media?.subtitles.map((track) => (
           <track
             key={track.id}
@@ -68,10 +73,19 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
       <FloatingReactions />
       <div
         className={cx(
-          "safe-area absolute inset-0 z-10 flex flex-col justify-between py-[18px] transition-opacity duration-300",
+          "safe-area absolute inset-0 z-10 flex flex-col justify-between py-4 transition-opacity duration-300 ease-out",
           idle && "cursor-none opacity-0",
         )}
       >
+        {/* Shades at both edges so titles and clocks read over a bright frame; they fade with the controls. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-(image:--am-player-shade-top)"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-(image:--am-player-shade-bottom)"
+        />
         <PlayerTopBar code={code} />
         <ControlsBar
           video={video}
@@ -91,11 +105,7 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
       />
       <WaitBanner members={loading} />
       {active && player.blocked ? <BlockedNotice onUnlock={controls.unlock} /> : null}
-      {player.error ? (
-        <p role="alert" className="absolute inset-x-0 top-24 z-20 text-center text-sm text-danger">
-          {player.error}
-        </p>
-      ) : null}
+      {player.error ? <PlayerError message={player.error} /> : null}
       <Sheet open={tracksOpen} onClose={() => setTracksOpen(false)} title="Audio et sous-titres">
         <Sheet.Lede>Ce réglage ne change que pour toi.</Sheet.Lede>
         {media ? <TrackPickers code={code} media={media} /> : null}

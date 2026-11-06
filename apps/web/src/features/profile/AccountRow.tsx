@@ -21,7 +21,7 @@ export function AccountRow({ icon, title, detail, onClick, trailing, tone = "def
       disabled={disabled}
       className={cx(
         "flex min-h-14 w-full cursor-pointer items-center gap-3.5 rounded-control px-2 py-2 text-left transition-colors duration-200",
-        "enabled:hover:bg-fill-soft disabled:cursor-default",
+        "enabled:hover:bg-fill-soft enabled:active:bg-fill-hover disabled:cursor-default",
         tone === "destructive" ? "text-danger" : "text-fg",
       )}
     >

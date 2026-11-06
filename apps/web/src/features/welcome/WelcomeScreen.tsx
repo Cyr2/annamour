@@ -1,7 +1,11 @@
 import type { AccountKey } from "@annamour/protocol";
+import { KeyRound } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
-import { Link, useLocation, useSearch } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { passkeysSupported } from "../../api/passkeys.ts";
+import { exit, spring } from "../../lib/motion.ts";
+import { LinkButton } from "../../ui/LinkButton.tsx";
 import { StepDots } from "../../ui/StepDots.tsx";
 import { Wordmark } from "../../ui/Wordmark.tsx";
 import { safeNext } from "../account/AccountGate.tsx";
@@ -28,25 +32,34 @@ export function WelcomeScreen() {
       <header className="flex min-h-12 items-center justify-between gap-3">
         <Wordmark />
         {step.kind === "name" ? (
-          <Link
-            href={`/cle${next === "/" ? "" : `?suite=${encodeURIComponent(next)}`}`}
-            className="min-h-11 content-center text-sm font-semibold text-fg-muted underline underline-offset-4"
-          >
+          <LinkButton href={`/cle${next === "/" ? "" : `?suite=${encodeURIComponent(next)}`}`} icon={<KeyRound />}>
             J'ai déjà une clé
-          </Link>
+          </LinkButton>
         ) : null}
       </header>
       <main className="grid flex-1 place-items-center py-8 text-center">
-        <div className="grid w-[min(460px,100%)] justify-items-center gap-5">
+        {/* Positioned, so the leaving step pops out in place while the next one slides in. */}
+        <div className="relative grid w-[min(440px,100%)] justify-items-center gap-6">
           <StepDots count={3} current={index} />
-          {step.kind === "name" ? <NameStep onCreated={(key) => setStep({ kind: "key", key })} /> : null}
-          {step.kind === "key" ? (
-            <KeyStep
-              keyWords={step.key}
-              onDone={() => (passkeysSupported() ? setStep({ kind: "passkey" }) : finish())}
-            />
-          ) : null}
-          {step.kind === "passkey" ? <PasskeyStep onDone={finish} /> : null}
+          {/* Each step slides in from the right, the way forward; the old one leaves faster than the new one arrives. */}
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.div
+              key={step.kind}
+              className="w-full"
+              initial={{ opacity: 0, x: 28 }}
+              animate={{ opacity: 1, x: 0, transition: spring.ui }}
+              exit={{ opacity: 0, x: -20, transition: exit.quick }}
+            >
+              {step.kind === "name" ? <NameStep onCreated={(key) => setStep({ kind: "key", key })} /> : null}
+              {step.kind === "key" ? (
+                <KeyStep
+                  keyWords={step.key}
+                  onDone={() => (passkeysSupported() ? setStep({ kind: "passkey" }) : finish())}
+                />
+              ) : null}
+              {step.kind === "passkey" ? <PasskeyStep onDone={finish} /> : null}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </main>
     </div>

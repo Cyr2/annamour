@@ -16,14 +16,19 @@ export function ProfileScreen() {
   const account = useAccount((s) => s.account);
   return (
     <div className="safe-area mx-auto flex min-h-dvh max-w-[1240px] flex-col">
-      <ScreenTopBar back="/" title="Profil" />
+      <ScreenTopBar back="/" title={<h1 className="truncate">Profil</h1>} />
       {account ? (
-        <main className="grid flex-1 items-start gap-[clamp(16px,3vw,32px)] py-6 lg:grid-cols-[380px_1fr]">
-          <div className="grid gap-4">
+        // On a phone: me, then my séances, then the account settings. Wide: me and the account on the left.
+        <main className="grid flex-1 items-start gap-4 py-6 sm:gap-6 lg:grid-cols-[380px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:gap-8">
+          <div className="lg:col-start-1 lg:row-start-1">
             <MeCard account={account} />
+          </div>
+          <div className="mt-2 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0">
+            <Sessions account={account} />
+          </div>
+          <div className="lg:col-start-1 lg:row-start-2">
             <AccountCard />
           </div>
-          <Sessions account={account} />
         </main>
       ) : null}
     </div>

@@ -1,20 +1,27 @@
 import { ChevronLeft } from "lucide-react";
 import type { ReactNode } from "react";
-import { Link } from "wouter";
+import { GlassLink } from "./GlassLink.tsx";
 
-/** Back button, a centred title and an optional action on the right. */
-export function ScreenTopBar({ back, title, action }: { back: string; title?: ReactNode; action?: ReactNode }) {
+/** A round glass back button, for the screen top bar and the player. */
+export function BackLink({ href, label = "Retour" }: { href: string; label?: string }) {
   return (
-    <header className="grid min-h-12 grid-cols-[44px_1fr_auto] items-center gap-3">
-      <Link
-        href={back}
-        aria-label="Retour"
-        className="lg-glass grid size-11 place-items-center rounded-full text-fg transition-transform duration-300 active:scale-90"
-      >
-        <ChevronLeft className="size-5" aria-hidden />
-      </Link>
+    <GlassLink
+      href={href}
+      label={label}
+      className="size-11 shrink-0 rounded-full"
+      linkClassName="grid place-items-center"
+    >
+      <ChevronLeft className="size-5" aria-hidden />
+    </GlassLink>
+  );
+}
+
+/** Back button and a centred title, balanced by an empty column on the right. */
+export function ScreenTopBar({ back, title }: { back: string; title?: ReactNode }) {
+  return (
+    <header className="grid min-h-12 grid-cols-[44px_1fr_44px] items-center gap-3">
+      <BackLink href={back} />
       <div className="min-w-0 truncate text-center font-rounded-tight text-md font-extrabold text-fg">{title}</div>
-      <div className="flex min-w-11 justify-end">{action}</div>
     </header>
   );
 }

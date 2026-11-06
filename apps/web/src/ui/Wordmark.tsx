@@ -46,7 +46,7 @@ export function Wordmark({ size = "sm", className }: WordmarkProps) {
       )}
     >
       <Mark className={large ? "h-9 w-auto" : "h-6 w-auto"} />
-      <span>Annamour</span>
+      <span translate="no">Annamour</span>
     </span>
   );
 }

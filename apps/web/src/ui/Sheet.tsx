@@ -76,14 +76,14 @@ function SheetPanel({ onClose, title, children }: Omit<SheetProps, "open">) {
         tabIndex={-1}
         className={cx(
           "absolute bottom-0 left-1/2 flex max-h-[92dvh] w-[min(560px,100%)] -translate-x-1/2 flex-col gap-4 overflow-y-auto overscroll-contain",
-          "rounded-t-[30px] border border-b-0 border-line-strong bg-sheet px-[26px] pt-2.5 pb-[max(28px,var(--am-safe-bottom))] backdrop-blur-2xl outline-none",
+          "rounded-t-sheet bg-sheet px-6 pt-2.5 pb-[max(28px,var(--am-safe-bottom))] shadow-sheet backdrop-blur-2xl outline-none sm:px-8",
         )}
         initial={{ y: "105%" }}
         animate={{ y: 0, transition: spring.ui }}
-        exit={{ y: "105%", transition: { duration: 0.26, ease: [0.4, 0, 1, 1] } }}
+        exit={{ y: "105%", transition: exit.sheet }}
       >
-        <div aria-hidden className="mx-auto mb-1 h-[5px] w-[38px] shrink-0 rounded-full bg-fill-strong" />
-        <h2 id={titleId} className="font-rounded-tight text-[1.625rem] leading-tight font-extrabold text-fg">
+        <div aria-hidden className="mx-auto mb-2 h-[5px] w-9 shrink-0 rounded-full bg-fill-strong" />
+        <h2 id={titleId} className="type-heading text-[1.625rem] leading-tight">
           {title}
         </h2>
         {children}
@@ -93,11 +93,15 @@ function SheetPanel({ onClose, title, children }: Omit<SheetProps, "open">) {
 }
 
 function Lede({ children }: { children: ReactNode }) {
-  return <p className="-mt-3 text-sm text-fg-muted">{children}</p>;
+  return <p className="-mt-2 text-sm text-pretty text-fg-muted">{children}</p>;
 }
 
+/**
+ * The sheet's buttons, primary last in the markup: stacked full width on a
+ * phone with the primary on top, under the thumb; packed to the right on wider screens.
+ */
 function Actions({ children }: { children: ReactNode }) {
-  return <div className="mt-1.5 flex flex-wrap justify-end gap-2.5">{children}</div>;
+  return <div className="mt-2 flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end">{children}</div>;
 }
 
 export const Sheet = Object.assign(SheetRoot, { Lede, Actions });

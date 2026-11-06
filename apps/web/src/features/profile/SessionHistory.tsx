@@ -30,7 +30,7 @@ export function SessionHistory({ status, error, sessions, personName, me, onRemo
   return (
     <section className="grid gap-3" aria-labelledby="history-title" aria-busy={status === "loading"}>
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id="history-title" className="font-rounded-tight text-lg font-extrabold text-fg">
+        <h2 id="history-title" className="type-heading">
           {personName ? `Avec ${personName}` : "Mes séances"}
         </h2>
         {status === "ready" ? <span className="text-xs text-fg-muted">{plural(sessions.length, "séance")}</span> : null}
@@ -75,7 +75,7 @@ function HistoryBody({
   }
   if (empty) {
     return (
-      <div className="grid justify-items-start gap-3 rounded-panel border border-dashed border-line-strong p-5">
+      <div className="grid justify-items-start gap-4 rounded-panel border border-dashed border-line-strong p-5 sm:p-6">
         <p className="text-sm text-fg-muted">
           Tes séances apparaîtront ici, chez toi comme chez celles et ceux qui les regardent avec toi. Crée-en une ou
           rejoins quelqu'un avec son code.
@@ -104,7 +104,7 @@ function Group({ title, sessions, me, now, onRemove }: GroupProps) {
   if (sessions.length === 0) return null;
   return (
     <div className="grid gap-2.5">
-      <h3 className="mt-2 text-xs font-semibold tracking-[0.08em] text-fg-subtle uppercase">{title}</h3>
+      <h3 className="type-label mt-3 px-1">{title}</h3>
       <ul className="grid gap-2.5">
         <AnimatePresence initial={false}>
           {sessions.map((session) => (
