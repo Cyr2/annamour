@@ -2,10 +2,14 @@ import {
   type AudioTrack,
   bufferedAhead,
   correct,
+  type LeadReport,
   type PlaybackState,
   positionAt,
+  READY_LEAD,
+  type Readying,
   readyToResume,
   STALL_GRACE_MS,
+  shouldReportLead,
 } from "@annamour/protocol";
 import type Hls from "hls.js";
 import { hlsConfig } from "./hls-config.ts";
@@ -120,6 +124,11 @@ export class PlayerSync {
   private bufferingSent = false;
   private bufferingTimer: ReturnType<typeof setTimeout> | undefined;
 
+  /** The room waits for everyone's lead before starting (see readying.ts in the protocol). */
+  private readying: Readying | null = null;
+  /** The lead last told to the room, to avoid repeating it. */
+  private lastLead: LeadReport | null = null;
+
   /** The audio rendition this person picked; personal, never sent to the room. */
   private audioChoice: AudioTrack | null = null;
 
@@ -157,6 +166,7 @@ export class PlayerSync {
       if (status !== "open") return;
       this.bufferingSent = false;
       this.bufferingDesired = false;
+      this.lastLead = null; // a new connection: the room knows nothing of our lead yet
       this.evaluateBuffering();
       this.tick();
     });
@@ -192,9 +202,17 @@ export class PlayerSync {
     this.tick();
   }
 
+  /** The room started (or stopped) waiting for everyone's lead. */
+  setReadying(readying: Readying | null): void {
+    if (readying === this.readying) return;
+    this.readying = readying;
+    this.tick();
+  }
+
   setSource(src: string | null): void {
     if (src === this.src) return;
     this.src = src;
+    this.lastLead = null; // another film: what we had downloaded ahead no longer counts
     this.nativeFailed = false;
     const token = ++this.sourceToken;
     this.teardownSource();
@@ -377,6 +395,19 @@ export class PlayerSync {
     this.doPause();
     if (!video.seeking && Math.abs(video.currentTime - target) > PAUSED_TOLERANCE) this.doSeek(target);
     this.evaluateBuffering();
+    this.reportLead();
+  }
+
+  /**
+   * While paused, tells the room how much is downloaded ahead, so the film
+   * only starts once every device has some (see readying.ts in the protocol).
+   */
+  private reportLead(): void {
+    const lead = Math.round(bufferedAhead(this.bufferedRanges(), this.video.currentTime) * 10) / 10;
+    const at = now();
+    const target = this.readying?.target ?? READY_LEAD;
+    if (!shouldReportLead(lead, this.lastLead, at, { target, waiting: this.readying !== null })) return;
+    if (this.client.send({ type: "lead", seconds: Math.min(lead, 3600) })) this.lastLead = { lead, at };
   }
 
   /** Shared state is playing: start if needed, then keep drift under control. */

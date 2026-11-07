@@ -165,3 +165,110 @@ describe("Room", () => {
     expect(repository.find(room.code)).toMatchObject({ position: 52, lastUsedAt: 4000 });
   });
 });
+
+describe("starting together", () => {
+  const lastOf = (inbox: ServerMessage[], type: ServerMessage["type"]) => inbox.findLast((m) => m.type === type);
+
+  it("starts at once when no device is still downloading", () => {
+    const { room, idA } = setup();
+    room.handle(idA, { type: "play", position: 0 }, 1000);
+    expect(room.playback.status).toBe("playing");
+  });
+
+  it("waits for a device still downloading its lead, shows how far it got, then starts by itself", () => {
+    const { room, a, idA, idB } = setup();
+    room.handle(idB, { type: "lead", seconds: 5 }, 1000);
+    room.handle(idA, { type: "play", position: 0 }, 1500);
+    expect(room.playback).toMatchObject({ status: "paused", position: 0 });
+    expect(lastOf(a.inbox, "playback")).toMatchObject({ action: "wait", by: idA });
+    expect(lastOf(a.inbox, "readying")).toEqual({ type: "readying", readying: { target: 30, until: 26_500 } });
+
+    room.handle(idB, { type: "lead", seconds: 20 }, 2500);
+    expect(room.playback.status).toBe("paused");
+    const members = lastOf(a.inbox, "members");
+    expect(members?.type === "members" && members.members.find((m) => m.id === idB)?.lead).toBe(20);
+
+    room.handle(idB, { type: "lead", seconds: 31 }, 3500);
+    expect(room.playback).toMatchObject({ status: "playing", position: 0, at: 3500 });
+    expect(lastOf(a.inbox, "playback")).toMatchObject({ action: "resume" });
+    expect(lastOf(a.inbox, "readying")).toEqual({ type: "readying", readying: null });
+  });
+
+  it("does not wait for a device whose lead stopped growing (Safari loading nothing while paused)", () => {
+    const { room, idA, idB } = setup();
+    room.handle(idB, { type: "lead", seconds: 0 }, 0);
+    room.handle(idA, { type: "play", position: 0 }, 5000);
+    expect(room.playback.status).toBe("playing");
+  });
+
+  it("lets go of a device that stops downloading during the wait", () => {
+    const { room, idA, idB } = setup();
+    room.handle(idB, { type: "lead", seconds: 2 }, 1000);
+    room.handle(idA, { type: "play", position: 0 }, 1500);
+    expect(room.playback.status).toBe("paused");
+    room.handle(idB, { type: "lead", seconds: 2.2 }, 5100);
+    expect(room.playback.status).toBe("playing");
+  });
+
+  it("never waits past its deadline, even for a device still crawling", () => {
+    const { room, idA, idB } = setup();
+    room.handle(idB, { type: "lead", seconds: 1 }, 1000);
+    room.handle(idA, { type: "play", position: 0 }, 1000);
+    for (let t = 3000; t < 26_000; t += 3000) room.handle(idB, { type: "lead", seconds: t / 1000 }, t);
+    expect(room.playback.status).toBe("paused");
+    // Any message notices the deadline, a ping included.
+    room.handle(idA, { type: "ping", t0: 0 }, 26_000);
+    expect(room.playback.status).toBe("playing");
+  });
+
+  it("is cancelled by a pause: nobody starts behind the person who paused", () => {
+    const { room, a, idA, idB } = setup();
+    room.handle(idB, { type: "lead", seconds: 5 }, 1000);
+    room.handle(idA, { type: "play", position: 0 }, 1500);
+    room.handle(idA, { type: "pause" }, 2000);
+    expect(lastOf(a.inbox, "readying")).toEqual({ type: "readying", readying: null });
+    room.handle(idB, { type: "lead", seconds: 31 }, 3000);
+    expect(room.playback.status).toBe("paused");
+  });
+
+  it("starts over after a seek: what was downloaded was for another moment", () => {
+    const { room, idA, idB } = setup();
+    room.handle(idB, { type: "lead", seconds: 25 }, 1000);
+    room.handle(idA, { type: "play", position: 0 }, 1500);
+    room.handle(idA, { type: "seek", position: 40 }, 2000);
+    room.handle(idB, { type: "lead", seconds: 3 }, 2500);
+    expect(room.playback).toMatchObject({ status: "paused", position: 40 });
+    room.handle(idB, { type: "lead", seconds: 35 }, 3500);
+    expect(room.playback).toMatchObject({ status: "playing", position: 40 });
+  });
+
+  it("starts when the person it waited for leaves", () => {
+    const { room, b, idA, idB } = setup();
+    room.handle(idB, { type: "lead", seconds: 5 }, 1000);
+    room.handle(idA, { type: "play", position: 0 }, 1500);
+    room.leave(idB, b.connection, 2000);
+    expect(room.playback.status).toBe("playing");
+  });
+
+  it("starts a new episode together too, from its beginning", () => {
+    const { room, a, idA, idB } = setup();
+    room.addEpisode({ id: 1, label: "É2", imported: { ...media, duration: 50 } });
+    room.handle(idB, { type: "lead", seconds: 40 }, 500);
+    room.handle(idA, { type: "playEpisode", from: 0, to: 1 }, 1000);
+    const moved = lastOf(a.inbox, "room");
+    expect(moved?.type === "room" && moved.room.readying).toEqual({ target: 30, until: 26_000 });
+    expect(room.playback).toMatchObject({ status: "paused", position: 0 });
+    room.handle(idB, { type: "lead", seconds: 8 }, 1500);
+    expect(room.playback.status).toBe("paused");
+    room.handle(idB, { type: "lead", seconds: 31 }, 2500);
+    expect(room.playback).toMatchObject({ status: "playing", position: 0 });
+  });
+
+  it("keeps the old way for apps that never report their lead", () => {
+    const { room, idA } = setup();
+    room.addEpisode({ id: 1, label: "É2", imported: { ...media, duration: 50 } });
+    room.handle(idA, { type: "playEpisode", from: 0, to: 1 }, 1000);
+    expect(room.playback).toMatchObject({ status: "playing", position: 0 });
+    expect(room.snapshot().readying).toBeUndefined();
+  });
+});
