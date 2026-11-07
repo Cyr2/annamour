@@ -126,6 +126,11 @@ export class Room {
   }
 
   /** The episode on screen. */
+  /** The episode after the one on screen, if one is queued: what everyone watches next. */
+  get nextEpisode(): Episode | undefined {
+    return this.episodes[this.progress.current + 1];
+  }
+
   get currentEpisode(): Episode {
     return this.episodeAtIndex(this.progress.current);
   }

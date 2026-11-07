@@ -17,6 +17,8 @@ import type { RoomStore } from "../room-store.ts";
 
 /** A minute ready from the séance's position: enough to start, encoding then runs far ahead of playback. */
 export const PREP_TARGET_SECONDS = 60;
+/** The next episode's first minute (6 segments of 10 s), made ahead so it starts at once. */
+const NEXT_EPISODE_SEGMENTS = 6;
 /** Encoded files are kept this long after a séance was last watched, then deleted. */
 export const KEEP_AFTER_LAST_USE_MS = 6 * 60 * 60 * 1000;
 const SEGMENT_FILE = /^(\d{5})\.(ts|aac)$/;
@@ -161,17 +163,37 @@ export class LowQualityService {
     this.prepare(plan.video);
     if (plan.lightAudio === "unchecked") this.checkLightAudio(plan);
     if (plan.lightAudio === "offered" && plan.defaultAudio) this.prepare(plan.defaultAudio);
+    const { code, episode } = plan.video.track;
+    if (this.store.get(code)?.currentEpisode.id === episode) this.prepareNext(code);
+  }
+
+  /**
+   * Gets the queued next episode ready to start, behind what is being watched:
+   * its first minute, and its lighter audio checked, so moving on to it (the
+   * end-of-episode countdown, or « Épisode suivant ») starts at once.
+   */
+  prepareNext(code: string): void {
+    const next = this.store.get(code)?.nextEpisode;
+    const plan = next ? this.plan(code, next.id) : undefined;
+    if (!plan || !this.transcoder) return;
+    this.lastUse.set(code, this.now());
+    this.transcoder.prepareLater(plan.video.track, NEXT_EPISODE_SEGMENTS);
+    if (plan.lightAudio === "unchecked") this.checkLightAudio(plan, { later: true });
+    if (plan.lightAudio === "offered" && plan.defaultAudio) {
+      this.transcoder.prepareLater(plan.defaultAudio.track, NEXT_EPISODE_SEGMENTS);
+    }
   }
 
   /** Makes one real segment of the default language lighter; only then is the lighter audio announced. */
-  private checkLightAudio(plan: FilmPlan): void {
+  private checkLightAudio(plan: FilmPlan, { later = false } = {}): void {
     const planned = plan.defaultAudio;
     if (!planned || !this.transcoder) return;
     plan.lightAudio = "checking";
     const { track, playlist } = planned;
-    void this.transcoder.ensure(track, this.startIndex(track, playlist)).then((made) => {
+    void this.transcoder.ensure(track, this.startIndex(track, playlist), { later }).then((made) => {
       plan.lightAudio = made ? "offered" : "refused";
-      if (made) this.prepare(planned);
+      if (made && later) this.transcoder?.prepareLater(track, NEXT_EPISODE_SEGMENTS);
+      else if (made) this.prepare(planned);
       else
         this.log(
           `Lighter audio not offered for ${track.code}/${track.episode}: its source audio could not be made lighter`,
