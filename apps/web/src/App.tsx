@@ -11,6 +11,7 @@ import {
   KeyLoginScreen,
   LinkDeviceScreen,
   ProfileScreen,
+  ReportScreen,
   SessionScreen,
   TvLinkScreen,
   TvPairingScreen,
@@ -51,6 +52,7 @@ export function App() {
           <Route path="/profil">{() => gated(<ProfileScreen />)}</Route>
           <Route path="/a-regarder">{() => gated(<WatchlistScreen />)}</Route>
           <Route path="/tv">{() => gated(<TvLinkScreen />)}</Route>
+          <Route path="/s/:code/qualite">{(params) => gated(<ReportScreen code={params.code} />)}</Route>
           <Route path="/s/:code">{(params) => gated(<SessionScreen code={params.code} />)}</Route>
           <Route>
             <NoticeScreen>
