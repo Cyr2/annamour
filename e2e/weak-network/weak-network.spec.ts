@@ -35,6 +35,8 @@ interface Report {
 async function viewer(browser: Browser): Promise<Page> {
   // Service workers off: requests they make would escape the throttling of the page.
   const context = await browser.newContext({ ignoreHTTPSErrors: true, serviceWorkers: "block" });
+  // The browser keeps 250 resource timings by default: far fewer than the segments of a film.
+  await context.addInitScript(() => performance.setResourceTimingBufferSize(100_000));
   return context.newPage();
 }
 
@@ -53,15 +55,16 @@ async function throttle(page: Page, kbps: number) {
  * The download rate the weak viewer really got (kb/s) since `since` (ms on its
  * page clock), from the segments' resource timings: proof the throttling holds.
  */
-function observedKbps(page: Page, since: number): Promise<number> {
+function observed(page: Page, since: number): Promise<string> {
   return page.evaluate((from) => {
     const entries = performance
       .getEntriesByType("resource")
       .filter((e): e is PerformanceResourceTiming => e instanceof PerformanceResourceTiming)
-      .filter((e) => e.startTime >= from && /\.(ts|aac)(\?|$)/.test(e.name) && e.transferSize > 0);
+      .filter((e) => e.startTime >= from && /\.(ts|aac)(\?|$)/.test(e.name));
     const bytes = entries.reduce((sum, e) => sum + e.transferSize, 0);
     const busyMs = entries.reduce((sum, e) => sum + (e.responseEnd - e.startTime), 0);
-    return busyMs > 0 ? Math.round((bytes * 8) / busyMs) : 0;
+    const kbps = busyMs > 0 ? Math.round((bytes * 8) / busyMs) : 0;
+    return `${entries.length} segments, ${Math.round(bytes / 1024)} KB, ${kbps} kb/s while fetching`;
   }, since);
 }
 
@@ -101,14 +104,15 @@ test("un spectateur sur une 4G faible et changeante regarde avec un autre sur la
   await expect(fiber.getByText("Vidéo prête pour toutes les connexions")).toBeVisible({ timeout: 180_000 });
 
   await throttle(weak, PROFILE_KBPS[0] ?? 0);
+  const beforeStart = await weak.evaluate(() => performance.now());
   await fiber.getByRole("button", { name: "Lancer le film" }).click();
   await expect.poll(() => videoTime(fiber), { timeout: 60_000 }).toBeGreaterThan(2);
-  const steps: string[] = [];
+  const steps = [`before the profile (from launch) → ${await observed(weak, beforeStart)}`];
   for (const kbps of PROFILE_KBPS) {
     await throttle(weak, kbps);
     const since = await weak.evaluate(() => performance.now());
     await weak.waitForTimeout(STEP_MS);
-    steps.push(`${kbps} kb/s asked → ${await observedKbps(weak, since)} kb/s while fetching`);
+    steps.push(`${kbps} kb/s asked → ${await observed(weak, since)}`);
   }
   // Large leads may fetch nothing in some steps (0): that is the lead doing its job.
   console.info(["", "=== Weak link, step by step ===", ...steps].join("\n"));
