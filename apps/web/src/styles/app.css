@@ -419,9 +419,12 @@
   translate: -50% 0;
 }
 
-/* iOS's floating tab bar: three 84px tabs, icons over a short label, the current one in the thread colour. */
+/*
+ * iOS's floating tab bar: four tabs, icons over a short label, the current one in the thread colour.
+ * 84px each, narrower on a small phone so the bar never runs past the screen (16px gutters, its own padding).
+ */
 .am-tab-bar.lg-tab-bar[data-icons] {
-  --lg-tab-width: 84px;
+  --lg-tab-width: min(84px, calc((100vw - 48px) / 4));
   --lg-tab-height: 54px;
   box-shadow: var(--am-shadow-float);
 }
@@ -574,9 +577,17 @@
   font-size: var(--am-text-md);
 }
 
+/* A bottom sheet never scrolls sideways: a button longer than the phone shrinks, its label cut, instead of pushing it. */
+.am-sheet .am-button.lg-button {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* The watchlist's sort: two labels a little longer than glisse's default tab. */
 .am-sort-segments {
-  --lg-tab-width: 9.5rem;
+  --lg-tab-width: min(9.5rem, calc((100vw - 48px) / 2));
   --lg-tab-height: 2.5rem;
 }
 

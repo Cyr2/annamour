@@ -89,7 +89,7 @@ function ItemBody({ item, me, onClose }: { item: WatchlistItem; me: string; onCl
           onClick={() => (item.title.type === "tv" ? setPickingEpisode(true) : void launch(item))}
           data-tv-primary
         >
-          {item.title.type === "tv" ? "Lancer une séance · choisir l'épisode" : "Lancer une séance"}
+          Lancer une séance
         </Button>
         <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0">
           <Button

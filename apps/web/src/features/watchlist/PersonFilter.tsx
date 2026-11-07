@@ -19,7 +19,7 @@ export function PersonFilter({ people, selected, onSelect, legend, multiple }: P
   const isPressed = (id: string | null) =>
     multiple ? (id === null ? multiple.length === 0 : multiple.includes(id)) : selected === id;
   return (
-    <fieldset className="-m-1 flex min-w-0 gap-1 overflow-x-auto border-0 p-1 [scrollbar-width:none]">
+    <fieldset className="-m-1 flex min-w-0 flex-wrap gap-1 border-0 p-1">
       <legend className="sr-only">{legend}</legend>
       <Chip label="Tout le monde" pressed={isPressed(null)} onPress={() => onSelect(null)}>
         <span className="grid size-9 place-items-center rounded-full bg-fill-strong text-fg">

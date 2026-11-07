@@ -118,7 +118,7 @@ function PresenceBubbleRoot({
 }
 
 function Caption({ children }: { children: ReactNode }) {
-  return <span className="text-sm font-semibold text-fg">{children}</span>;
+  return <span className="max-w-full truncate text-sm font-semibold text-fg">{children}</span>;
 }
 
 function Status({ children }: { children: ReactNode }) {

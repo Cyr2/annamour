@@ -48,7 +48,7 @@ export function SalonPresence({ members, you, className }: PresenceProps) {
   return (
     <Thread synced={synced} className={className}>
       {ordered.map((member, index) => (
-        <li key={member.id}>
+        <li key={member.id} className="min-w-0">
           <RedThread.Anchor index={index}>
             <PresenceBubble name={member.name} color={member.color} size="lg" status={statusOf(member)}>
               <PresenceBubble.Caption>
