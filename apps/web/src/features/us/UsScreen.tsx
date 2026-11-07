@@ -8,6 +8,8 @@ import { useAccount } from "../account/account.ts";
 import { loadCircles, useCircles } from "../circles/circles.ts";
 import { AccountCard } from "../profile/AccountCard.tsx";
 import { MeCard } from "../profile/MeCard.tsx";
+import { PlayerChoiceCard } from "../profile/PlayerChoiceCard.tsx";
+import { InterfaceChoiceCard } from "../ui-version/InterfaceChoiceCard.tsx";
 import { CircleCard } from "./CircleCard.tsx";
 import { NameCircleSheet } from "./NameCircleSheet.tsx";
 
@@ -63,6 +65,8 @@ export function UsScreen() {
           </section>
         ) : null}
         <AccountCard />
+        <PlayerChoiceCard />
+        <InterfaceChoiceCard />
       </main>
       <NameCircleSheet open={creating} onClose={() => setCreating(false)} />
     </div>

@@ -7,6 +7,7 @@ import { TabNav } from "./features/nav/TabNav.tsx";
 import { TonightScreen } from "./features/tonight/TonightScreen.tsx";
 import { useTv } from "./features/tv/tv-context.ts";
 import { useTvLocation } from "./features/tv/tv-location.ts";
+import { useCircleUi } from "./features/ui-version/ui-version.ts";
 import {
   JoinCircleScreen,
   JoinScreen,
@@ -19,6 +20,7 @@ import {
   TvLinkScreen,
   TvPairingScreen,
   UsScreen,
+  WatchlistScreen,
   WelcomeScreen,
 } from "./routes.ts";
 import { Ambient } from "./ui/Ambient.tsx";
@@ -41,6 +43,8 @@ function ToTvPairing() {
 /** Home ships with the app; every other screen is fetched the first time it opens (see routes.ts). */
 export function App() {
   const tv = useTv();
+  // A TV keeps its own home and profile, made for the remote, whichever interface is picked.
+  const circles = useCircleUi() && !tv;
   return (
     <Router hook={tv ? useTvLocation : undefined}>
       <Ambient />
@@ -50,16 +54,18 @@ export function App() {
           <Route path="/cle" component={tv ? ToTvPairing : KeyLoginScreen} />
           <Route path="/lier" component={tv ? ToTvPairing : LinkDeviceScreen} />
           <Route path="/tv/lier" component={TvPairingScreen} />
-          {/* A TV keeps its own home and profile, made for the remote; phones and computers get « Ce soir ». */}
-          <Route path="/">{() => gated(tv ? <HomeScreen /> : <TonightScreen />)}</Route>
-          <Route path="/liste">{() => gated(<OurListScreen />)}</Route>
-          <Route path="/nous">{() => gated(<UsScreen />)}</Route>
+          {/* Each interface's pages; the other's addresses lead to their counterpart. */}
+          <Route path="/">{() => gated(circles ? <TonightScreen /> : <HomeScreen />)}</Route>
+          <Route path="/liste">
+            {() => (circles ? gated(<OurListScreen />) : <Redirect to="/a-regarder" replace />)}
+          </Route>
+          <Route path="/nous">{() => (circles ? gated(<UsScreen />) : <Redirect to="/profil" replace />)}</Route>
+          <Route path="/a-regarder">
+            {() => (circles ? <Redirect to="/liste" replace /> : gated(<WatchlistScreen />))}
+          </Route>
+          <Route path="/profil">{() => (circles ? <Redirect to="/nous" replace /> : gated(<ProfileScreen />))}</Route>
           <Route path="/cercle/:token">{(params) => gated(<JoinCircleScreen token={params.token} />)}</Route>
           <Route path="/rejoindre">{() => gated(<JoinScreen />)}</Route>
-          <Route path="/profil">{() => (tv ? gated(<ProfileScreen />) : <Redirect to="/nous" replace />)}</Route>
-          <Route path="/a-regarder">
-            <Redirect to="/liste" replace />
-          </Route>
           <Route path="/tv">{() => gated(<TvLinkScreen />)}</Route>
           <Route path="/s/:code/qualite">{(params) => gated(<ReportScreen code={params.code} />)}</Route>
           <Route path="/s/:code">{(params) => gated(<SessionScreen code={params.code} />)}</Route>

@@ -10,6 +10,7 @@ import { useAccount } from "../account/account.ts";
 import { ofCircle } from "../circles/circle-rules.ts";
 import { describeTitle } from "../home/create/CatalogResults.tsx";
 import { useTv } from "../tv/tv-context.ts";
+import { listPath, useCircleUi } from "../ui-version/ui-version.ts";
 import { useLaunchTitle } from "./useLaunchTitle.ts";
 import { useLoadWatchlist } from "./useLoadWatchlist.ts";
 import { WatchlistItemSheet } from "./WatchlistItemSheet.tsx";
@@ -32,6 +33,7 @@ export function WatchlistShelf({
 }) {
   useLoadWatchlist();
   const tv = useTv();
+  const circleUi = useCircleUi();
   const me = useAccount((s) => s.account?.id ?? "");
   const items = useWatchlist((s) => s.items);
   const toWatch = useMemo(
@@ -55,7 +57,10 @@ export function WatchlistShelf({
             {plural(toWatch.length, "titre")} · ajoute-en depuis ton téléphone
           </span>
         ) : (
-          <Link href="/liste" className="flex min-h-11 items-center gap-1 text-sm font-semibold text-accent">
+          <Link
+            href={listPath(circleUi)}
+            className="flex min-h-11 items-center gap-1 text-sm font-semibold text-accent"
+          >
             Tout voir · {toWatch.length}
             <ChevronRight aria-hidden className="size-4" />
           </Link>
@@ -71,7 +76,7 @@ export function WatchlistShelf({
         {tv ? null : (
           <li className="w-[7.5rem] shrink-0">
             <Link
-              href="/liste"
+              href={listPath(circleUi)}
               className="grid aspect-[2/3] w-full place-items-center rounded-control border border-dashed border-line-strong text-sm font-semibold text-fg-muted"
             >
               <span className="grid justify-items-center gap-1">
