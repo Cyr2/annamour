@@ -7,6 +7,7 @@ import { Button } from "../../ui/controls.tsx";
 import { QrCode } from "../../ui/QrCode.tsx";
 import { ScreenTopBar } from "../../ui/ScreenTopBar.tsx";
 import { Surface } from "../../ui/Surface.tsx";
+import { DownloadCard } from "../download/DownloadCard.tsx";
 import { useTv } from "../tv/tv-context.ts";
 import { SalonPresence } from "./Presence.tsx";
 
@@ -67,6 +68,10 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
               {resumeAt ? "Reprendre le film" : "Lancer le film"}
             </Button>
           </div>
+          {/* A TV is on a home connection, and has no room to store a film. */}
+          {room && !tv && "caches" in window ? (
+            <DownloadCard src={room.media.src} duration={room.media.duration} />
+          ) : null}
         </div>
         <Surface className="surface-panel grid justify-items-center gap-5 p-6 text-center sm:p-8 md:order-1">
           <p className="type-label">Le code de la séance</p>

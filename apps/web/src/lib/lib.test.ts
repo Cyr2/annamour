@@ -1,9 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod/mini";
-import { formatClock, formatDuration, joinNames, plural } from "./format.ts";
+import { formatBytes, formatClock, formatDuration, joinNames, plural } from "./format.ts";
 import { canReloadNow } from "./reload-policy.ts";
 import { readStored, removeStored, writeStored } from "./storage.ts";
 import { visibleArea } from "./visible-area.ts";
+
+describe("formatBytes", () => {
+  it("speaks in Go for a film and in Mo below", () => {
+    expect(formatBytes(3_804_000_000)).toBe("3,8 Go");
+    expect(formatBytes(420_400_000)).toBe("420 Mo");
+  });
+});
 
 describe("formatting", () => {
   it("shows a film clock with hours", () => {

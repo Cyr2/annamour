@@ -16,6 +16,12 @@ export function formatDuration(seconds: number): string {
   return hours ? `${hours} h ${String(minutes % 60).padStart(2, "0")}` : `${minutes} min`;
 }
 
+/** 3_804_000_000 → "3,8 Go", 420_000_000 → "420 Mo". */
+export function formatBytes(bytes: number): string {
+  if (bytes >= 1e9) return `${(bytes / 1e9).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} Go`;
+  return `${Math.round(Math.max(0, bytes) / 1e6)} Mo`;
+}
+
 /** ["Anna"] → "Anna", ["Anna", "Léo", "Inès"] → "Anna, Léo et Inès". */
 export function joinNames(names: readonly string[]): string {
   if (names.length <= 1) return names.join("");
