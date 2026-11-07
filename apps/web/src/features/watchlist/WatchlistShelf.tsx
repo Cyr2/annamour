@@ -1,4 +1,4 @@
-import { sortWatchlist, splitWatchlist, type WatchlistItem } from "@annamour/protocol";
+import { type Circle, sortWatchlist, splitWatchlist, type WatchlistItem } from "@annamour/protocol";
 import { ChevronRight, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "wouter";
@@ -7,6 +7,7 @@ import { BubbleStack } from "../../ui/BubbleStack.tsx";
 import { cx } from "../../ui/cx.ts";
 import { Poster } from "../../ui/Poster.tsx";
 import { useAccount } from "../account/account.ts";
+import { ofCircle } from "../circles/circle-rules.ts";
 import { describeTitle } from "../home/create/CatalogResults.tsx";
 import { useTv } from "../tv/tv-context.ts";
 import { useLaunchTitle } from "./useLaunchTitle.ts";
@@ -21,12 +22,22 @@ const SHELF_SIZE = 10;
  * to watch. On a TV, OK on a film starts it at once (a series asks for its
  * episode first); adding stays on the phone.
  */
-export function WatchlistShelf() {
+export function WatchlistShelf({
+  circle = null,
+  title = "À regarder ensemble",
+}: {
+  /** Only this circle's titles (null: all of them). */
+  circle?: Circle | null;
+  title?: string;
+}) {
   useLoadWatchlist();
   const tv = useTv();
   const me = useAccount((s) => s.account?.id ?? "");
   const items = useWatchlist((s) => s.items);
-  const toWatch = useMemo(() => splitWatchlist(sortWatchlist(items, "wants")).toWatch, [items]);
+  const toWatch = useMemo(
+    () => splitWatchlist(sortWatchlist(ofCircle(items, circle, me), "wants")).toWatch,
+    [items, circle, me],
+  );
   const [openId, setOpenId] = useState<string | null>(null);
   const { launch } = useLaunchTitle();
   if (toWatch.length === 0) return null;
@@ -37,14 +48,14 @@ export function WatchlistShelf() {
     <section className="grid w-full gap-1 text-left" aria-labelledby="shelf-title">
       <div className="flex items-baseline justify-between gap-3 px-1">
         <h2 id="shelf-title" className="type-heading">
-          À regarder ensemble
+          {title}
         </h2>
         {tv ? (
           <span className="text-xs text-fg-muted">
             {plural(toWatch.length, "titre")} · ajoute-en depuis ton téléphone
           </span>
         ) : (
-          <Link href="/a-regarder" className="flex min-h-11 items-center gap-1 text-sm font-semibold text-accent">
+          <Link href="/liste" className="flex min-h-11 items-center gap-1 text-sm font-semibold text-accent">
             Tout voir · {toWatch.length}
             <ChevronRight aria-hidden className="size-4" />
           </Link>
@@ -60,7 +71,7 @@ export function WatchlistShelf() {
         {tv ? null : (
           <li className="w-[7.5rem] shrink-0">
             <Link
-              href="/a-regarder"
+              href="/liste"
               className="grid aspect-[2/3] w-full place-items-center rounded-control border border-dashed border-line-strong text-sm font-semibold text-fg-muted"
             >
               <span className="grid justify-items-center gap-1">

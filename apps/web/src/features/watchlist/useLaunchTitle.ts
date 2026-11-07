@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { playCatalog } from "../../api/catalog.ts";
 import { errorMessage } from "../../api/http.ts";
+import { shownCircle, useCircles } from "../circles/circles.ts";
 import { markWatched } from "./watchlist.ts";
 
 /**
@@ -20,7 +21,7 @@ export function useLaunchTitle() {
     setBusy(true);
     setError(null);
     try {
-      const code = await playCatalog(play);
+      const code = await playCatalog(play, item.circleId ?? shownCircle(useCircles.getState()));
       if (type === "movie") void markWatched(item.id, true).catch(() => {});
       navigate(`/s/${code}`);
     } catch (failure) {

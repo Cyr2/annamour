@@ -11,6 +11,7 @@ import {
   type PlayCatalogRequest,
 } from "@annamour/protocol";
 import { request } from "./http.ts";
+import { inCircle } from "./rooms.ts";
 
 /* The catalog: find a film or a series by name, then start a séance on it. */
 
@@ -37,7 +38,7 @@ export async function addCatalogEpisode(code: string, play: AddCatalogEpisodeReq
 }
 
 /** Gets the title's video on the server and imports it; returns the new séance's code. */
-export async function playCatalog(play: PlayCatalogRequest): Promise<string> {
-  const { code } = await request(CreateRoomResponse, CATALOG_API.play, { body: play });
+export async function playCatalog(play: PlayCatalogRequest, circleId?: string | null): Promise<string> {
+  const { code } = await request(CreateRoomResponse, inCircle(CATALOG_API.play, circleId), { body: play });
   return code;
 }

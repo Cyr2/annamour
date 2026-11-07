@@ -585,6 +585,12 @@
   text-overflow: ellipsis;
 }
 
+/* « Notre liste »: three short states sharing the width on a small phone. */
+.am-state-segments {
+  --lg-tab-width: min(7rem, calc((100vw - 48px) / 3));
+  --lg-tab-height: 2.5rem;
+}
+
 /* The watchlist's sort: two labels a little longer than glisse's default tab. */
 .am-sort-segments {
   --lg-tab-width: min(9.5rem, calc((100vw - 48px) / 2));

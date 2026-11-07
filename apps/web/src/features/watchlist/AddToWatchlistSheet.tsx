@@ -1,22 +1,21 @@
-import type { CatalogTitle } from "@annamour/protocol";
-import { ChevronLeft, Heart, Plus } from "lucide-react";
-import { useId, useMemo, useState } from "react";
-import { joinNames } from "../../lib/format.ts";
+import { type CatalogTitle, type Circle, circleTitle, othersIn } from "@annamour/protocol";
+import { Check, ChevronLeft, Heart, Plus } from "lucide-react";
+import { useEffect, useId, useState } from "react";
+import { BubbleStack } from "../../ui/BubbleStack.tsx";
 import { Button, Input } from "../../ui/controls.tsx";
+import { cx } from "../../ui/cx.ts";
 import { Field } from "../../ui/Field.tsx";
 import { Poster } from "../../ui/Poster.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { ThreadSpinner } from "../../ui/ThreadSpinner.tsx";
 import { toast } from "../../ui/toast.ts";
+import { useAccount } from "../account/account.ts";
+import { loadCircles, shownCircle, useCircles } from "../circles/circles.ts";
 import { CatalogResults, describeTitle } from "../home/create/CatalogResults.tsx";
 import { useCatalogSearch } from "../home/create/useCatalogSearch.ts";
-import { rankPeople } from "../sessions/session-rules.ts";
-import { useSessions } from "../sessions/sessions.ts";
-import { useLoadSessions } from "../sessions/useLoadSessions.ts";
-import { PersonFilter } from "./PersonFilter.tsx";
 import { addTitle } from "./watchlist.ts";
 
-/** « Ajouter à notre liste »: find a title, then pick who it is for. */
+/** « Ajouter à notre liste »: find a title, then the circle it goes to. */
 export function AddToWatchlistSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [title, setTitle] = useState<CatalogTitle | null>(null);
   const close = () => {
@@ -66,25 +65,27 @@ function SearchStep({ onPick }: { onPick: (title: CatalogTitle) => void }) {
   );
 }
 
-/** Who sees it: « Tout le monde » (no one picked) or the people picked among those I watched with. */
+/**
+ * Which circle it goes to: the one on screen, preselected. Without any circle
+ * yet, it is for « Tout le monde » (everyone I will watch with).
+ */
 function ShareStep({ title, onBack, onDone }: { title: CatalogTitle; onBack: () => void; onDone: () => void }) {
-  useLoadSessions();
-  const sessions = useSessions((s) => s.sessions);
-  const people = useMemo(() => rankPeople(sessions), [sessions]);
-  const [picked, setPicked] = useState<string[]>([]);
+  useEffect(() => void loadCircles(), []);
+  const me = useAccount((s) => s.account?.id ?? "");
+  const circles = useCircles((s) => s.circles);
+  const shown = useCircles((s) => shownCircle(s));
+  const [picked, setPicked] = useState<string | null>(shown ?? circles[0]?.id ?? null);
   const [want, setWant] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const names = people.filter((p) => picked.includes(p.accountId)).map((p) => p.name);
-  const toggle = (id: string | null) =>
-    setPicked(id === null ? [] : picked.includes(id) ? picked.filter((p) => p !== id) : [...picked, id]);
+  const circle = circles.find((c) => c.id === picked);
 
   const add = async () => {
     setBusy(true);
     setError(null);
     try {
-      await addTitle({ title, shareWith: picked.length ? picked : "everyone", want });
-      toast({ message: `« ${title.title} » ajouté à la liste` });
+      await addTitle({ title, shareWith: "everyone", want, ...(circle ? { circleId: circle.id } : {}) });
+      toast({ message: `« ${title.title} » ajouté à ${circle ? circleTitle(circle, me) : "la liste"}` });
       onDone();
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Ça n'a pas marché. Réessaie.");
@@ -101,16 +102,18 @@ function ShareStep({ title, onBack, onDone }: { title: CatalogTitle; onBack: () 
           <span className="block text-xs text-fg-muted">{describeTitle(title)}</span>
         </span>
       </div>
-      <Field label="Avec qui ?">
-        <PersonFilter people={people} selected={null} multiple={picked} onSelect={toggle} legend="Avec qui ?" />
-      </Field>
-      <p className="text-sm text-fg-muted">
-        {people.length === 0
-          ? "Tu le partageras avec les gens avec qui tu regardes des séances."
-          : names.length > 1
-            ? `${joinNames(names)} le verront dans leur liste, et pourront le lancer ou dire en avoir envie.`
-            : `${names[0] ?? "Tout le monde"} le verra dans sa liste, et pourra le lancer ou dire en avoir envie.`}
-      </p>
+      {circles.length > 0 ? (
+        <fieldset className="grid gap-2 border-0 p-0">
+          <legend className="mb-2 text-sm font-semibold text-fg-muted">Dans quel cercle ?</legend>
+          {circles.map((c) => (
+            <CircleOption key={c.id} circle={c} me={me} picked={picked === c.id} onPick={() => setPicked(c.id)} />
+          ))}
+        </fieldset>
+      ) : (
+        <p className="text-sm text-fg-muted">
+          Tout le monde avec qui tu regardes le verra, et pourra le lancer ou dire en avoir envie.
+        </p>
+      )}
       <Button
         icon={<Heart className={want ? "fill-current text-accent" : undefined} />}
         aria-pressed={want}
@@ -126,9 +129,37 @@ function ShareStep({ title, onBack, onDone }: { title: CatalogTitle; onBack: () 
           Autre titre
         </Button>
         <Button variant="filled" icon={<Plus />} disabled={busy} onClick={() => void add()}>
-          {busy ? "Un instant…" : names.length ? `Ajouter pour ${joinNames(names)}` : "Ajouter"}
+          {busy ? "Un instant…" : circle ? `Ajouter à ${circleTitle(circle, me)}` : "Ajouter"}
         </Button>
       </Sheet.Actions>
     </div>
+  );
+}
+
+function CircleOption({
+  circle,
+  me,
+  picked,
+  onPick,
+}: {
+  circle: Circle;
+  me: string;
+  picked: boolean;
+  onPick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={picked}
+      onClick={onPick}
+      className={cx(
+        "surface-tile flex min-h-11 w-full cursor-pointer items-center gap-3 px-3.5 py-2.5 text-left",
+        picked && "ring-2 ring-accent",
+      )}
+    >
+      <BubbleStack people={othersIn(circle, me).map((p) => ({ id: p.accountId, name: p.name, color: p.color }))} />
+      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-fg">{circleTitle(circle, me)}</span>
+      {picked ? <Check aria-hidden className="size-4 text-accent" /> : null}
+    </button>
   );
 }
