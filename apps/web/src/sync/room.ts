@@ -1,4 +1,4 @@
-import type { ErrorCode, Member, PlaybackAction, PlaybackState, RoomSnapshot } from "@annamour/protocol";
+import type { ErrorCode, Member, PlaybackAction, PlaybackState, Readying, RoomSnapshot } from "@annamour/protocol";
 import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { currentIdentity } from "./identity.ts";
@@ -27,6 +27,8 @@ export interface RoomState {
   /** The séance moved to another episode: who did it (absent when the room did, e.g. everyone left). */
   episodeEvent: { by: string | undefined; seq: number } | null;
   error: { code: ErrorCode; message: string } | null;
+  /** Set while the room waits for every device to download a little before starting. */
+  readying: Readying | null;
 }
 
 const empty: RoomState = {
@@ -34,6 +36,7 @@ const empty: RoomState = {
   you: null,
   room: null,
   members: [],
+  readying: null,
   playback: null,
   lastEvent: null,
   episodeEvent: null,
@@ -56,8 +59,12 @@ export function bindRoom(client: SyncClient): () => void {
           room: message.room,
           members: message.room.members,
           playback: message.room.playback,
+          readying: message.room.readying ?? null,
           error: null,
         });
+        break;
+      case "readying":
+        useRoom.setState({ readying: message.readying });
         break;
       case "playback":
         useRoom.setState({
@@ -75,6 +82,7 @@ export function bindRoom(client: SyncClient): () => void {
           room: message.room,
           members: message.room.members,
           playback: message.room.playback,
+          readying: message.room.readying ?? null,
           ...(moved ? { episodeEvent: { by: message.by, seq: ++seq } } : {}),
         });
         break;

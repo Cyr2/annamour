@@ -190,6 +190,20 @@ describe("room store", () => {
     unbind();
   });
 
+  it("knows when the room waits for everyone's lead before starting, from any message that says so", () => {
+    const unbind = bindRoom(client);
+    client.connect();
+    socket().open();
+    const waiting = { target: 30, until: 5000 };
+    socket().receive({ type: "welcome", you: "m1", room: { ...room, readying: waiting }, serverTime: 0 });
+    expect(useRoom.getState().readying).toEqual(waiting);
+    socket().receive({ type: "readying", readying: null });
+    expect(useRoom.getState().readying).toBeNull();
+    socket().receive({ type: "room", room: { ...room, readying: waiting } });
+    expect(useRoom.getState().readying).toEqual(waiting);
+    unbind();
+  });
+
   it("floats reactions with the sender's name and colour, mine on the right", () => {
     const unbind = bindRoom(client);
     client.connect();
