@@ -245,7 +245,7 @@ export class Room {
         this.setProgress(episodeResumed(this.progress), memberId);
         return;
       case "buffering":
-        this.onBuffering(participant, message.buffering, now);
+        this.onBuffering(participant, message.buffering, now, message.position);
         return;
       case "react":
         if (now - participant.lastReactionAt < REACTION_COOLDOWN_MS) return;
@@ -302,12 +302,15 @@ export class Room {
     }
   }
 
-  private onBuffering(participant: Participant, buffering: boolean, now: number): void {
+  private onBuffering(participant: Participant, buffering: boolean, now: number, position?: number): void {
     if (participant.buffering === buffering) return;
     participant.buffering = buffering;
     if (buffering && this.playback.status === "playing") {
       this.resumeAfterBuffer = true;
-      this.setPlayback(pause(this.playback, now), "wait", participant.id);
+      // Wait where the stuck device is: the others step back a few seconds into what they
+      // already have, rather than it jumping ahead into what it has not downloaded yet.
+      const stuckAt = position === undefined ? undefined : Math.min(position, this.positionAt(now));
+      this.setPlayback(pause(this.playback, now, stuckAt), "wait", participant.id);
     }
     this.broadcastMembers();
     this.maybeResume(now);

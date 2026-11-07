@@ -19,10 +19,18 @@ export class FakeVideo extends EventTarget {
   src = "";
   volume = 1;
   muted = false;
+  /** What is downloaded; everything unless a test says otherwise. */
+  bufferedRanges: Array<[number, number]> = [[0, 7826]];
   /** Set to make the next play() fail like an autoplay refusal. */
   refusePlay = false;
   readonly calls: string[] = [];
   private attributes = new Map<string, string>();
+
+  get buffered(): Pick<TimeRanges, "length" | "start" | "end"> {
+    const ranges = this.bufferedRanges;
+    const at = (i: number) => ranges[i] ?? [0, 0];
+    return { length: ranges.length, start: (i) => at(i)[0], end: (i) => at(i)[1] };
+  }
 
   canPlayType(): string {
     return "maybe";

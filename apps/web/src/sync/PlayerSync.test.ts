@@ -109,13 +109,26 @@ describe("PlayerSync", () => {
     expect(video.playbackRate).toBe(1);
   });
 
-  it("reports buffering while it should be playing, then reports it is ready", () => {
+  it("catches up by speed rather than jumping past what is downloaded", () => {
+    start();
+    sync.setPlayback(playing(10));
+    client.now = 2000;
+    vi.advanceTimersByTime(1600);
+    // 5 s behind, and the shared position is not downloaded yet.
+    video.currentTime = 7;
+    video.bufferedRanges = [[0, 9]];
+    vi.advanceTimersByTime(500);
+    expect(video.currentTime).toBe(7);
+    expect(video.playbackRate).toBe(1.05);
+  });
+
+  it("reports a lasting stall with where it is stuck, then reports it is ready", () => {
     start();
     sync.setPlayback(playing(10));
     video.readyState = 2;
     video.fire("waiting");
-    vi.advanceTimersByTime(500);
-    expect(client.of("buffering")).toEqual([{ type: "buffering", buffering: true }]);
+    vi.advanceTimersByTime(2100);
+    expect(client.of("buffering")).toEqual([{ type: "buffering", buffering: true, position: video.currentTime }]);
     expect(lastState()?.buffering).toBe(true);
 
     video.readyState = 4;
@@ -124,14 +137,45 @@ describe("PlayerSync", () => {
     expect(client.of("buffering").at(-1)).toEqual({ type: "buffering", buffering: false });
   });
 
+  it("keeps a short stall to itself instead of pausing the room", () => {
+    start();
+    sync.setPlayback(playing(10));
+    video.readyState = 2;
+    video.fire("waiting");
+    vi.advanceTimersByTime(1000);
+    video.readyState = 4;
+    video.fire("canplay");
+    vi.advanceTimersByTime(3000);
+    expect(client.of("buffering")).toEqual([]);
+  });
+
+  it("holds the room until a real lead is downloaded, not just the first frames", () => {
+    start();
+    sync.setPlayback(playing(10));
+    video.readyState = 2;
+    video.fire("waiting");
+    vi.advanceTimersByTime(2100);
+    // The room waits; the first frames come back but barely anything is downloaded ahead.
+    sync.setPlayback(paused(video.currentTime));
+    video.bufferedRanges = [[0, video.currentTime + 3]];
+    video.readyState = 4;
+    video.fire("canplay");
+    vi.advanceTimersByTime(2000);
+    expect(client.of("buffering").filter((m) => !m.buffering)).toEqual([]);
+
+    video.bufferedRanges = [[0, video.currentTime + 20]];
+    vi.advanceTimersByTime(1000);
+    expect(client.of("buffering").at(-1)).toEqual({ type: "buffering", buffering: false });
+  });
+
   it("reports buffering again after a reconnection, since the server forgot it", () => {
     start();
     sync.setPlayback(playing(10));
     video.readyState = 2;
     video.fire("waiting");
-    vi.advanceTimersByTime(500);
+    vi.advanceTimersByTime(2100);
     client.reopen();
-    vi.advanceTimersByTime(500);
+    vi.advanceTimersByTime(2100);
     expect(client.of("buffering").filter((m) => m.buffering)).toHaveLength(2);
   });
 

@@ -1,5 +1,14 @@
-import { type AudioTrack, correct, type PlaybackState, positionAt } from "@annamour/protocol";
+import {
+  type AudioTrack,
+  bufferedAhead,
+  correct,
+  type PlaybackState,
+  positionAt,
+  readyToResume,
+  STALL_GRACE_MS,
+} from "@annamour/protocol";
 import type Hls from "hls.js";
+import { hlsConfig } from "./hls-config.ts";
 import type { SyncClient } from "./SyncClient.ts";
 
 /*
@@ -34,7 +43,8 @@ export const initialPlayerSyncState: PlayerSyncState = {
 };
 
 const LOOP_MS = 500;
-const BUFFERING_DEBOUNCE_MS = 400;
+/** Letting go of the room is quick; holding it waits for STALL_GRACE_MS. */
+const READY_DEBOUNCE_MS = 400;
 /** While paused, how far off we tolerate before seeking (s). */
 const PAUSED_TOLERANCE = 0.15;
 /** A seek we didn't make is only a "user seek" if it lands this far from the shared position (s). */
@@ -47,6 +57,12 @@ const EXPECT_SEEK_MS = 5000;
 /** How long our own optimistic state wins before the server's echo (ms). */
 const OPTIMISTIC_MS = 2000;
 const MAX_FATAL_RECOVERIES = 3;
+/**
+ * The lead a seek takes while playing is learned, but capped: on a slow link a
+ * seek takes long to land, and leading by that much would jump past what is
+ * downloaded and stall again.
+ */
+const MAX_SEEK_LEAD = 0.5;
 
 const HAVE_METADATA = 1;
 const HAVE_FUTURE_DATA = 3;
@@ -219,12 +235,7 @@ export class PlayerSync {
     }
 
     const playback = this.effective();
-    const hls = new HlsClass({
-      enableWorker: true,
-      backBufferLength: 60,
-      maxBufferLength: 30,
-      startPosition: playback ? this.target(playback) : -1,
-    });
+    const hls = new HlsClass(hlsConfig(playback ? this.target(playback) : -1));
     this.hls = hls;
     this.fatalRecoveries = 0;
     hls.on(HlsClass.Events.ERROR, (_event, data) => {
@@ -351,7 +362,11 @@ export class PlayerSync {
   }
 
   private correctDrift(target: number): void {
-    const correction = correct(this.video.currentTime, target);
+    const video = this.video;
+    const correction = correct(video.currentTime, target, {
+      correcting: video.playbackRate !== 1,
+      targetBuffered: bufferedAhead(this.bufferedRanges(), target) > 0,
+    });
     if (correction.kind === "seek") {
       this.setRate(1);
       this.doSeek(correction.to + this.seekLead);
@@ -430,7 +445,7 @@ export class PlayerSync {
     if (now() < this.expectSeekUntil) {
       this.expectSeekUntil = 0;
       const landed = (now() - this.seekIssuedAt) / 1000;
-      this.seekLead = Math.min(2, Math.max(0, this.seekLead * 0.7 + landed * 0.3));
+      this.seekLead = Math.min(MAX_SEEK_LEAD, Math.max(0, this.seekLead * 0.7 + landed * 0.3));
       return;
     }
     if (!this.armed) return;
@@ -464,26 +479,43 @@ export class PlayerSync {
     const video = this.video;
     const playback = this.effective();
     const starving = video.seeking || video.readyState < HAVE_FUTURE_DATA;
-    // Report while we're meant to be playing; once reported, keep it up until
-    // we're ready, even if the room paused to wait for us.
+    // Report a stall while we're meant to be playing; once reported, hold the
+    // room until a real lead is downloaded, not just the first frames back.
     const desired =
       this.sourceReady &&
       !this.state.blocked &&
       !video.ended &&
       playback !== null &&
-      starving &&
-      (playback.status === "playing" || this.bufferingSent);
+      (this.bufferingSent ? !this.hasLead() : starving && playback.status === "playing");
 
     this.update({ buffering: starving && this.sourceReady && playback?.status === "playing" });
     if (desired === this.bufferingDesired) return;
     this.bufferingDesired = desired;
     clearTimeout(this.bufferingTimer);
-    this.bufferingTimer = setTimeout(() => {
-      const value = this.bufferingDesired;
-      if (value === this.bufferingSent) return;
-      if (this.client.send({ type: "buffering", buffering: value })) this.bufferingSent = value;
-    }, BUFFERING_DEBOUNCE_MS);
+    // A short stall stays local: the room only waits for one that lasts.
+    this.bufferingTimer = setTimeout(this.reportBuffering, desired ? STALL_GRACE_MS : READY_DEBOUNCE_MS);
   };
+
+  private readonly reportBuffering = (): void => {
+    const buffering = this.bufferingDesired;
+    if (buffering === this.bufferingSent) return;
+    const position = this.video.currentTime;
+    if (this.client.send({ type: "buffering", buffering, ...(buffering ? { position } : {}) })) {
+      this.bufferingSent = buffering;
+    }
+  };
+
+  /** Enough is downloaded past the current position to play on without stalling soon. */
+  private hasLead(): boolean {
+    const video = this.video;
+    const duration = Number.isFinite(video.duration) ? video.duration : Number.POSITIVE_INFINITY;
+    return readyToResume(bufferedAhead(this.bufferedRanges(), video.currentTime), duration - video.currentTime);
+  }
+
+  private bufferedRanges(): Array<[number, number]> {
+    const { buffered } = this.video;
+    return Array.from({ length: buffered.length }, (_, i): [number, number] => [buffered.start(i), buffered.end(i)]);
+  }
 
   private update(patch: Partial<PlayerSyncState>): void {
     const next = { ...this.state, ...patch };

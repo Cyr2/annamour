@@ -103,7 +103,8 @@ export const ClientMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("play"), position: z.optional(Position) }),
   z.object({ type: z.literal("pause"), position: z.optional(Position) }),
   z.object({ type: z.literal("seek"), position: Position }),
-  z.object({ type: z.literal("buffering"), buffering: z.boolean() }),
+  /** `position`: where this device is stuck, so the room waits there instead of sending it ahead into nothing. */
+  z.object({ type: z.literal("buffering"), buffering: z.boolean(), position: z.optional(Position) }),
   z.object({ type: z.literal("react"), emoji: Reaction }),
   /** This device reached the end of `episode`. */
   z.object({ type: z.literal("ended"), episode: EpisodeIndex }),
