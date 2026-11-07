@@ -43,6 +43,8 @@ export interface ServerConfig {
    * on a real iPad.
    */
   hevcFull: boolean;
+  /** What the lighter qualities of every séance may take on disk together, in GB (MEDIA_MAX_GB). */
+  mediaMaxGb: number;
 }
 
 const DEFAULT_TRANSCODE_WORKERS = 2;
@@ -53,6 +55,16 @@ function transcodeWorkers(value: string | undefined): number {
   if (!Number.isInteger(workers) || workers < 0 || workers > 16)
     throw new ConfigError("TRANSCODE_WORKERS is a whole number from 0 (off) to 16.");
   return workers;
+}
+
+const DEFAULT_MEDIA_MAX_GB = 50;
+
+function mediaMaxGb(value: string | undefined): number {
+  if (value === undefined || value.trim() === "") return DEFAULT_MEDIA_MAX_GB;
+  const gb = Number(value);
+  if (!Number.isFinite(gb) || gb < 1 || gb > 100_000)
+    throw new ConfigError("MEDIA_MAX_GB is a number of gigabytes from 1 to 100000.");
+  return gb;
 }
 
 function nakaBridge(env: NodeJS.ProcessEnv): ServerConfig["nakaBridge"] {
@@ -93,6 +105,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     hevc: switchedOn(env.HEVC),
     allowLocalMedia: allowLocalMedia(env, production),
     hevcFull: switchedOn(env.HEVC) && switchedOn(env.HEVC_FULL),
+    mediaMaxGb: mediaMaxGb(env.MEDIA_MAX_GB),
   };
 }
 
