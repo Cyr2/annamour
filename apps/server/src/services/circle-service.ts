@@ -88,8 +88,19 @@ export class CircleService {
     const current = circles.roomCircle(code);
     if (current && people.every((id) => circles.isMember(current, id))) return;
     if (people.length < 2) return;
-    const circleId = circles.findByMembers(people) ?? this.newCircle(people);
-    circles.setRoomCircle(code, circleId);
+    const existing = circles.findByMembers(people);
+    // People join a séance seconds apart: the circle the first ones formed grows instead of staying behind.
+    const forming = current && circles.isForming(current, code) ? current : undefined;
+    if (forming && !existing) {
+      this.grow(forming, people);
+      return;
+    }
+    circles.setRoomCircle(code, existing ?? this.newCircle(people));
+    if (forming) circles.remove(forming);
+  }
+
+  private grow(circleId: string, people: readonly string[]): void {
+    for (const accountId of people) this.repositories.circles.addMember(circleId, accountId, this.now());
   }
 
   /** Séances made before circles existed find theirs (run once at start, harmless after). */
