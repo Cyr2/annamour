@@ -86,6 +86,8 @@ const EXPECT_SEEK_MS = 5000;
 /** How long our own optimistic state wins before the server's echo (ms). */
 const OPTIMISTIC_MS = 2000;
 const MAX_FATAL_RECOVERIES = 3;
+/** Our player on an Apple device that has not started after this long gives way to Safari's (ms). */
+const OWN_PLAYER_STARTUP_MS = 30_000;
 /**
  * The lead a seek takes while playing is learned, but capped: on a slow link a
  * seek takes long to land, and leading by that much would jump past what is
@@ -123,6 +125,9 @@ export class PlayerSync {
   private nativeFailed = false;
   /** This source's HEVC ladder failed in Media Source: H.264 from then on. */
   private hevcFailed = false;
+  /** Our player failed on this Apple device: Safari's own plays from then on, for the whole séance. */
+  private ownPlayerFailed = false;
+  private startupTimer: ReturnType<typeof setTimeout> | undefined;
   private fatalRecoveries = 0;
   /** Element events only count as a person's actions once the source has settled (first canplay). */
   private armed = false;
@@ -263,9 +268,23 @@ export class PlayerSync {
     return true;
   }
 
-  /** hls.js rather than Safari's own player: the film is on the device, or this device chose it. */
+  /** hls.js rather than Safari's own player: the film is on the device, or this device uses ours (and it has not failed here). */
   private wantsOwnPlayer(src: string): boolean {
-    return this.fromDevice(src) || this.ownPlayer();
+    return this.fromDevice(src) || (this.ownPlayer() && !this.ownPlayerFailed);
+  }
+
+  /**
+   * Our player failed on this Apple device (or never started): the film goes on
+   * with Safari's own player, at the same place, without a word. True if it did.
+   */
+  private fallBackToSafari(src: string): boolean {
+    const native = this.video.canPlayType("application/vnd.apple.mpegurl") !== "";
+    if (!native || !isApple() || this.fromDevice(src) || !this.ownPlayer() || this.ownPlayerFailed) return false;
+    this.ownPlayerFailed = true;
+    const token = ++this.sourceToken;
+    this.teardownSource();
+    void this.attach(src, token);
+    return true;
   }
 
   /** The film was just downloaded (or removed): switch to the player that can read it from the device. */
@@ -317,21 +336,10 @@ export class PlayerSync {
     hls.on(HlsClass.Events.ERROR, (_event, data) => {
       if (!data.fatal || hls !== this.hls) return;
       // HEVC this Media Source claimed but cannot play: the same film in H.264 rather than an error.
-      if (hevc && data.type === HlsClass.ErrorTypes.MEDIA_ERROR) {
-        this.dropHevcLadder(src);
-        return;
-      }
-      if (this.fatalRecoveries++ >= MAX_FATAL_RECOVERIES) {
-        this.update({ error: "La vidéo ne se charge plus. Vérifiez la connexion." });
-        hls.destroy();
-        this.hls = null;
-        this.sourceReady = false;
-        return;
-      }
-      if (data.type === HlsClass.ErrorTypes.NETWORK_ERROR) hls.startLoad();
-      else if (data.type === HlsClass.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
-      else this.update({ error: "Lecture impossible." });
+      if (hevc && data.type === HlsClass.ErrorTypes.MEDIA_ERROR) this.dropHevcLadder(src);
+      else this.onFatalError(hls, data.type, HlsClass.ErrorTypes, src);
     });
+    this.giveWayIfNotStarted(hls, src);
     hls.on(HlsClass.Events.AUDIO_TRACKS_UPDATED, this.applyAudio);
     hls.on(HlsClass.Events.FRAG_BUFFERED, () => {
       this.fatalRecoveries = 0;
@@ -340,6 +348,35 @@ export class PlayerSync {
     hls.attachMedia(video);
     this.sourceReady = true;
     this.update({ engine: "hls.js", error: null });
+  }
+
+  /** A fatal hls.js error: recover a few times, then Safari's player on an Apple device, else say so. */
+  private onFatalError(
+    hls: Hls,
+    type: string,
+    types: { NETWORK_ERROR: string; MEDIA_ERROR: string },
+    src: string,
+  ): void {
+    if (this.fatalRecoveries++ >= MAX_FATAL_RECOVERIES) {
+      if (this.fallBackToSafari(src)) return;
+      this.update({ error: "La vidéo ne se charge plus. Vérifiez la connexion." });
+      hls.destroy();
+      this.hls = null;
+      this.sourceReady = false;
+      return;
+    }
+    if (type === types.NETWORK_ERROR) hls.startLoad();
+    else if (type === types.MEDIA_ERROR) hls.recoverMediaError();
+    else if (!this.fallBackToSafari(src)) this.update({ error: "Lecture impossible." });
+  }
+
+  /** On an Apple device, our player that has not started after a while gives way to Safari's. */
+  private giveWayIfNotStarted(hls: Hls, src: string): void {
+    if (!this.ownPlayer() || !isApple() || this.fromDevice(src)) return;
+    clearTimeout(this.startupTimer);
+    this.startupTimer = setTimeout(() => {
+      if (hls === this.hls && !this.armed) this.fallBackToSafari(src);
+    }, OWN_PLAYER_STARTUP_MS);
   }
 
   /** Streamed through our player (not from the device), on a device that decodes HEVC, which has not failed it. */
@@ -361,6 +398,7 @@ export class PlayerSync {
   }
 
   private teardownSource(): void {
+    clearTimeout(this.startupTimer);
     this.sourceReady = false;
     this.armed = false;
     // Unloading a playing element fires "pause": that's us, not the person.

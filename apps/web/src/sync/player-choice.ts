@@ -23,9 +23,13 @@ export function rememberPlayerChoice(search: string): void {
   if (asked.success) writeStored(STORAGE_KEY, asked.data);
 }
 
-/** This device's player on Apple hardware: Safari's own unless our player was chosen. */
-export function playerChoice(): PlayerChoice {
-  return readStored(STORAGE_KEY, Choice) ?? "safari";
+/**
+ * This device's player: what was chosen, or else ours on an iPad (its minutes
+ * of lead are what a weak link needs; PlayerSync falls back to Safari's if it
+ * fails) and Safari's own everywhere else.
+ */
+export function playerChoice(offered: () => boolean = offersPlayerChoice): PlayerChoice {
+  return readStored(STORAGE_KEY, Choice) ?? (offered() ? "annamour" : "safari");
 }
 
 export function setPlayerChoice(choice: PlayerChoice): void {

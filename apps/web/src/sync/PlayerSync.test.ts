@@ -103,6 +103,39 @@ describe("PlayerSync", () => {
     hlsCalls.supported = true;
   });
 
+  describe("our player on an iPad, which gives way to Safari's if it fails", () => {
+    const ours = () =>
+      new PlayerSync(video.asElement(), client.asClient(), (s) => states.push(s), { ownPlayer: () => true });
+    const fatal = (type: string) => hlsCalls.handlers.get("error")?.("error", { fatal: true, type });
+
+    it("goes on with Safari's player, without a word, when ours keeps failing", async () => {
+      sync = ours();
+      sync.setSource("/api/rooms/YWEK/hls/master.m3u8");
+      await vi.waitFor(() => expect(lastState()?.engine).toBe("hls.js"));
+      for (let i = 0; i < 4; i++) fatal("network");
+      await vi.waitFor(() => expect(lastState()?.engine).toBe("native"));
+      expect(lastState()?.error).toBeNull();
+      expect(video.src).toBe("/api/rooms/YWEK/hls/master.m3u8");
+    });
+
+    it("gives way when ours has not started after 30 s", async () => {
+      sync = ours();
+      sync.setSource("/api/rooms/YWEK/hls/master.m3u8");
+      await vi.waitFor(() => expect(lastState()?.engine).toBe("hls.js"));
+      vi.advanceTimersByTime(30_000);
+      await vi.waitFor(() => expect(lastState()?.engine).toBe("native"));
+    });
+
+    it("stays with ours once it has started", async () => {
+      sync = ours();
+      sync.setSource("/api/rooms/YWEK/hls/master.m3u8");
+      await vi.waitFor(() => expect(lastState()?.engine).toBe("hls.js"));
+      video.fire("canplay");
+      vi.advanceTimersByTime(60_000);
+      expect(lastState()?.engine).toBe("hls.js");
+    });
+  });
+
   describe("the complete HEVC ladder", () => {
     const SRC = "/api/rooms/YWEK/hls/master.m3u8";
     const withOptions = (options: ConstructorParameters<typeof PlayerSync>[3]) => {

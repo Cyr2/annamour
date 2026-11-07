@@ -28,7 +28,8 @@ export function PlayerChoiceCard() {
       </div>
       <p className="text-sm text-pretty text-fg-muted">
         Garde environ 5 minutes de film d'avance sur cet iPad, bien plus que le lecteur de Safari : une baisse de réseau
-        passe sans couper la séance. AirPlay n'est pas disponible avec ce lecteur. Prend effet au prochain film.
+        passe sans couper la séance. En cas de souci, la vidéo repasse toute seule au lecteur de Safari. Désactive-le
+        pour AirPlay. Prend effet au prochain film.
       </p>
     </Surface>
   );

@@ -4,8 +4,15 @@ import { offersPlayerChoice, playerChoice, rememberPlayerChoice, setPlayerChoice
 beforeEach(() => localStorage.clear());
 
 describe("which player an Apple device uses", () => {
-  it("is Safari's own until another one is chosen", () => {
+  it("is Safari's own until another one is chosen, away from an iPad", () => {
     expect(playerChoice()).toBe("safari");
+  });
+
+  it("is ours by default on an iPad, unless Safari's was chosen there", () => {
+    const iPad = () => true;
+    expect(playerChoice(iPad)).toBe("annamour");
+    setPlayerChoice("safari");
+    expect(playerChoice(iPad)).toBe("safari");
   });
 
   it("remembers our player once opened with ?lecteur=annamour, and Safari's again with ?lecteur=safari", () => {
