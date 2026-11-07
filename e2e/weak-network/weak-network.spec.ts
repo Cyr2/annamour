@@ -1,4 +1,4 @@
-import { type Browser, expect, type Page, test } from "@playwright/test";
+import { type Browser, type CDPSession, expect, type Page, test } from "@playwright/test";
 import { createSession, onboard, videoTime } from "../tests/helpers.ts";
 import { ffmpegInstalled } from "./media.ts";
 
@@ -40,9 +40,16 @@ async function viewer(browser: Browser): Promise<Page> {
   return context.newPage();
 }
 
+/** One DevTools session per page: a second one would not override the first one's conditions. */
+const sessions = new WeakMap<Page, CDPSession>();
+
 async function throttle(page: Page, kbps: number) {
-  const cdp = await page.context().newCDPSession(page);
-  await cdp.send("Network.enable");
+  let cdp = sessions.get(page);
+  if (!cdp) {
+    cdp = await page.context().newCDPSession(page);
+    await cdp.send("Network.enable");
+    sessions.set(page, cdp);
+  }
   await cdp.send("Network.emulateNetworkConditions", {
     offline: false,
     latency: LATENCY_MS,
