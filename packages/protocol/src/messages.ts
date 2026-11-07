@@ -30,8 +30,13 @@ export const Member = z.object({
   name: z.string(),
   color: BubbleColor,
   buffering: z.boolean(),
+  /** Seconds downloaded ahead, while the room waits to start together (see readying.ts). */
+  lead: z.optional(z.number()),
 });
 export type Member = z.infer<typeof Member>;
+
+/** The room waits for every device to have some film ahead before starting (see readying.ts). */
+export const ReadyingSchema = z.object({ target: z.number(), until: z.number() });
 
 export const AudioTrack = z.object({ id: z.string(), label: z.string(), language: z.optional(z.string()) });
 export type AudioTrack = z.infer<typeof AudioTrack>;
@@ -78,6 +83,8 @@ export const RoomSnapshot = z.object({
   finished: z.boolean(),
   /** Server time at which the next episode starts for everyone; null when no countdown runs. */
   countdownUntil: z.nullable(z.number()),
+  /** Set while the room waits for everyone's lead before starting. */
+  readying: z.optional(ReadyingSchema),
 });
 export type RoomSnapshot = z.infer<typeof RoomSnapshot>;
 
@@ -105,6 +112,8 @@ export const ClientMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("seek"), position: Position }),
   /** `position`: where this device is stuck, so the room waits there instead of sending it ahead into nothing. */
   z.object({ type: z.literal("buffering"), buffering: z.boolean(), position: z.optional(Position) }),
+  /** While paused: how many seconds this device has downloaded ahead (to start together, see readying.ts). */
+  z.object({ type: z.literal("lead"), seconds: z.number().check(z.gte(0), z.lte(60 * 60)) }),
   z.object({ type: z.literal("react"), emoji: Reaction }),
   /** This device reached the end of `episode`. */
   z.object({ type: z.literal("ended"), episode: EpisodeIndex }),
@@ -135,6 +144,8 @@ export const ServerMessage = z.discriminatedUnion("type", [
     by: z.optional(z.string()),
   }),
   z.object({ type: z.literal("members"), members: z.array(Member) }),
+  /** The room starts (or stops) waiting for everyone's lead before the film starts. */
+  z.object({ type: z.literal("readying"), readying: z.nullable(ReadyingSchema) }),
   /** The episodes changed (one added or removed, the countdown, the next one started): the whole room again. */
   z.object({ type: z.literal("room"), room: RoomSnapshot, by: z.optional(z.string()) }),
   /** Shown to everyone in the room, the sender included. */

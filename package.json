@@ -15,6 +15,7 @@
     "lint": "biome check .",
     "format": "biome check --write .",
     "e2e": "pnpm --filter @annamour/e2e e2e",
+    "e2e:reseau-faible": "pnpm --filter @annamour/e2e e2e:reseau-faible",
     "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "devDependencies": {

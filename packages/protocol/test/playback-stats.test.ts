@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { addHeightTime, deviceKind, MAX_HEIGHT_BUCKETS, PlaybackReport, rebufferRatio } from "../src/playback-stats.ts";
+import {
+  addHeightTime,
+  addLeadTime,
+  deviceKind,
+  LEAD_BUCKETS,
+  leadBucket,
+  MAX_HEIGHT_BUCKETS,
+  median,
+  PlaybackReport,
+  rebufferRatio,
+} from "../src/playback-stats.ts";
 
 const report = {
   viewingId: "v-12345678",
@@ -26,6 +36,50 @@ describe("a playback report", () => {
     expect(PlaybackReport.safeParse({ ...report, device: "Toaster" }).success).toBe(false);
     const tooMany = Array.from({ length: MAX_HEIGHT_BUCKETS + 1 }, (_, i) => ({ height: i, seconds: 1 }));
     expect(PlaybackReport.safeParse({ ...report, heights: tooMany }).success).toBe(false);
+  });
+});
+
+describe("the finer measures of a report", () => {
+  const finer = {
+    leadSeconds: [10, 20, 30, 40, 50, 60],
+    leadMedian: 42.5,
+    qualitySwitches: 4,
+    waitSeconds: 65,
+    afterSeekStallCount: 1,
+  };
+
+  it("are optional, so older pages and kept reports still read", () => {
+    expect(PlaybackReport.safeParse(report).success).toBe(true);
+    expect(PlaybackReport.parse({ ...report, ...finer })).toMatchObject(finer);
+  });
+
+  it("are refused when malformed", () => {
+    expect(PlaybackReport.safeParse({ ...report, leadSeconds: [1, 2, 3] }).success).toBe(false);
+    expect(PlaybackReport.safeParse({ ...report, leadSeconds: [1, 2, 3, 4, 5, -6] }).success).toBe(false);
+    expect(PlaybackReport.safeParse({ ...report, qualitySwitches: 0.5 }).success).toBe(false);
+    expect(PlaybackReport.safeParse({ ...report, waitSeconds: -1 }).success).toBe(false);
+    expect(PlaybackReport.safeParse({ ...report, afterSeekStallCount: -1 }).success).toBe(false);
+  });
+});
+
+describe("the forward lead while playing", () => {
+  it("falls in six buckets, each from its lower bound", () => {
+    expect([0, 4.9, 5, 14.9, 15, 30, 59, 60, 179.9, 180, 900].map(leadBucket)).toEqual([
+      0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5,
+    ]);
+    expect(LEAD_BUCKETS).toHaveLength(6);
+  });
+
+  it("adds played seconds to its bucket, starting from nothing", () => {
+    const once = addLeadTime([], 3, 2);
+    expect(once).toEqual([2, 0, 0, 0, 0, 0]);
+    expect(addLeadTime(once, 200, 2)).toEqual([2, 0, 0, 0, 0, 2]);
+  });
+
+  it("has a middle value, between the two middle ones for an even count", () => {
+    expect(median([])).toBeNull();
+    expect(median([30, 10, 20])).toBe(20);
+    expect(median([40, 10, 20, 30])).toBe(25);
   });
 });
 
