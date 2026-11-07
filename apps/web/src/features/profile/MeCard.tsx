@@ -9,11 +9,13 @@ import { PresenceBubble } from "../../ui/PresenceBubble.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import { toast } from "../../ui/toast.ts";
 import { updateProfile } from "../account/account.ts";
+import { useTv } from "../tv/tv-context.ts";
 
 /** My bubble, prénom and colour, saved on the account (the prénom when the field is left). */
 export function MeCard({ account }: { account: Account }) {
   const [name, setName] = useState(account.name);
   const [color, setColor] = useState<BubbleColor>(account.color);
+  const tv = useTv();
 
   const saveName = async () => {
     const parsed = Name.safeParse(name);
@@ -43,26 +45,46 @@ export function MeCard({ account }: { account: Account }) {
     }
   };
 
+  const nameField = (
+    <Field label="Ton prénom" htmlFor="profile-name" className="w-full">
+      <Input
+        id="profile-name"
+        value={name}
+        onValueChange={setName}
+        onBlur={() => void saveName()}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") event.currentTarget.blur();
+        }}
+        maxLength={24}
+        autoComplete="given-name"
+        enterKeyHint="done"
+      />
+    </Field>
+  );
+  const colorField = (
+    <Field label="Couleur de ta bulle" className="w-full">
+      <ColorPicker value={color} onValueChange={(next) => void saveColor(next)} label="Couleur de ta bulle" />
+    </Field>
+  );
+
+  // A TV fits the whole profile on one screen: the bubble beside the prénom, no footnote.
+  if (tv) {
+    return (
+      <Surface className="surface-panel grid gap-4 p-5">
+        <div className="flex items-end gap-4">
+          <PresenceBubble name={name.trim() || "?"} color={color} size="lg" />
+          {nameField}
+        </div>
+        {colorField}
+      </Surface>
+    );
+  }
+
   return (
     <Surface className="surface-panel grid justify-items-center gap-5 p-4 text-center sm:p-6">
       <PresenceBubble name={name.trim() || "?"} color={color} size="xl" />
-      <Field label="Ton prénom" htmlFor="profile-name" className="w-full">
-        <Input
-          id="profile-name"
-          value={name}
-          onValueChange={setName}
-          onBlur={() => void saveName()}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") event.currentTarget.blur();
-          }}
-          maxLength={24}
-          autoComplete="given-name"
-          enterKeyHint="done"
-        />
-      </Field>
-      <Field label="Couleur de ta bulle" className="w-full">
-        <ColorPicker value={color} onValueChange={(next) => void saveColor(next)} label="Couleur de ta bulle" />
-      </Field>
+      {nameField}
+      {colorField}
       <p className="text-xs text-fg-subtle">Enregistré sur ton compte, sans mot de passe.</p>
     </Surface>
   );

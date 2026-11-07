@@ -90,7 +90,11 @@ export function SessionRow({ session, me, now, onRemove, primary = false }: Sess
         )}
       >
         <SessionDetails session={session} me={me} now={now} />
-        <div className="flex items-center gap-2 justify-self-end" data-tv-primary={primary ? "" : undefined}>
+        <div
+          // A TV's focus ring and lift reach out around a button: keep them off the next one.
+          className={cx("flex items-center justify-self-end", tv ? "gap-6" : "gap-2")}
+          data-tv-primary={primary ? "" : undefined}
+        >
           <OpenSessionLink session={session} size={tv ? "large" : "regular"} />
           {tv ? (
             <RemoveButton session={session} onRemove={onRemove} />

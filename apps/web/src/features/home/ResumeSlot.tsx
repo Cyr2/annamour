@@ -2,7 +2,6 @@ import { ChevronRight, Play } from "lucide-react";
 import { m } from "motion/react";
 import { useMemo } from "react";
 import { spring } from "../../lib/motion.ts";
-import { cx } from "../../ui/cx.ts";
 import { GlassLink } from "../../ui/GlassLink.tsx";
 import { Progress } from "../../ui/Progress.tsx";
 import { latestUnfinished, progressOf, resumeLine } from "../sessions/session-rules.ts";
@@ -10,7 +9,7 @@ import { useSessions } from "../sessions/sessions.ts";
 import { useLoadSessions } from "../sessions/useLoadSessions.ts";
 
 /** « Reprendre »: the last unfinished session, reopened for everyone at its saved position. Hidden when there is none. */
-export function ResumeSlot({ className = "mt-6" }: { className?: string }) {
+export function ResumeSlot({ className = "mt-6 w-[min(28.75rem,100%)]" }: { className?: string }) {
   useLoadSessions();
   const sessions = useSessions((s) => s.sessions);
   const session = useMemo(() => latestUnfinished(sessions), [sessions]);
@@ -21,7 +20,7 @@ export function ResumeSlot({ className = "mt-6" }: { className?: string }) {
     <m.div
       // The TV starts on this card when there is one (see features/tv/focus-engine.ts).
       data-tv-primary="2"
-      className={cx("w-[min(28.75rem,100%)]", className)}
+      className={className}
       initial={{ opacity: 0, y: 16, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ ...spring.ui, delay: 0.15 }}

@@ -6,6 +6,7 @@ import { HeartBadge } from "../../ui/HeartBadge.tsx";
 import { PresenceBubble } from "../../ui/PresenceBubble.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import type { Person } from "../sessions/session-rules.ts";
+import { useTv } from "../tv/tv-context.ts";
 
 interface PeopleRowProps {
   people: readonly Person[];
@@ -18,10 +19,17 @@ interface PeopleRowProps {
 
 /** « Avec qui je regarde »: one row of bubbles, everyone once, most shared first. Tapping one filters the list. */
 export function PeopleRow({ people, favoriteId, totalSessions, selected, onSelect }: PeopleRowProps) {
+  const tv = useTv();
   return (
     <Surface className="surface-panel grid gap-3 p-4 sm:p-5">
       <h2 className="type-heading">Avec qui je regarde</h2>
-      <fieldset className="-mx-1 flex min-w-0 gap-1 overflow-x-auto border-0 p-0 pb-1">
+      <fieldset
+        className={cx(
+          "flex min-w-0 overflow-x-auto border-0 [scrollbar-width:none]",
+          // The row scrolls, so it clips what overflows it: a TV's focus ring and lift need room all around.
+          tv ? "-m-3 scroll-p-3 gap-3 p-3" : "-mx-1 gap-1 p-0 pb-1",
+        )}
+      >
         <legend className="sr-only">Filtrer mes séances par personne</legend>
         <PersonChip
           label="Tout le monde"

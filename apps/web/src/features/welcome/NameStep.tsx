@@ -8,10 +8,16 @@ import { ColorPicker } from "../../ui/ColorPicker.tsx";
 import { Button, Input } from "../../ui/controls.tsx";
 import { Field } from "../../ui/Field.tsx";
 import { PresenceBubble } from "../../ui/PresenceBubble.tsx";
-import { createAccount } from "../account/account.ts";
+import { createAccount, updateProfile } from "../account/account.ts";
+
+interface NameStepProps {
+  /** Set when coming back to this step: the account exists, so only its name and colour change. */
+  existingKey: AccountKey | null;
+  onDone: (key: AccountKey) => void;
+}
 
 /** Step 1: what the others will see on your bubble. Submitting creates the account. */
-export function NameStep({ onCreated }: { onCreated: (key: AccountKey) => void }) {
+export function NameStep({ existingKey, onDone }: NameStepProps) {
   const [name, setName] = useState(useIdentity.getState().name);
   const [color, setColor] = useState<BubbleColor>(useIdentity.getState().color);
   const [busy, setBusy] = useState(false);
@@ -24,7 +30,12 @@ export function NameStep({ onCreated }: { onCreated: (key: AccountKey) => void }
     setBusy(true);
     setError(null);
     try {
-      onCreated(await createAccount(parsed.data, color));
+      if (existingKey) {
+        await updateProfile({ name: parsed.data, color });
+        onDone(existingKey);
+      } else {
+        onDone(await createAccount(parsed.data, color));
+      }
     } catch (failure) {
       setError(errorMessage(failure));
       setBusy(false);

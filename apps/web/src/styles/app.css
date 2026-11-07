@@ -97,6 +97,32 @@
     overscroll-behavior-y: none;
   }
 
+  /*
+   * An app, not a web page: a long press on a link, a button or an image opens
+   * no browser menu (iOS's callout here; Android's in lib/native-feel.ts), and
+   * on a touch screen it selects no text by accident. Fields stay selectable,
+   * and so does what is meant to be copied (`select-all`, `select-text`).
+   */
+  a,
+  button,
+  img,
+  svg {
+    -webkit-touch-callout: none;
+    -webkit-user-drag: none;
+  }
+
+  @media (hover: none) {
+    body {
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    :is(input, textarea, [contenteditable="true"]) {
+      -webkit-user-select: text;
+      user-select: text;
+    }
+  }
+
   h1,
   h2,
   h3 {

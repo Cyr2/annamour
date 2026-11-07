@@ -17,19 +17,24 @@ import { SessionHistory } from "./SessionHistory.tsx";
  * On a phone: me, then my séances, then the account settings. Wide: me and
  * the account on the left. On a TV, seen from the sofa: my séances first and
  * widest on the left, where the remote starts, me and the account in a
- * narrower column on the right; ← → moves between the two.
+ * narrower column on the right; ← → moves between the two. The TV screen
+ * never scrolls: only the list of séances does, inside its column.
  */
 const LAYOUT = {
   phone: {
+    page: "min-h-dvh",
     main: "gap-4 py-6 sm:gap-6 lg:grid-cols-[380px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:gap-8",
     me: "lg:col-start-1 lg:row-start-1",
     sessions: "mt-2 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0",
     account: "lg:col-start-1 lg:row-start-2",
   },
   tv: {
-    main: "grid-cols-[minmax(0,1fr)_25rem] grid-rows-[auto_1fr] gap-x-10 gap-y-6 py-4",
+    page: "h-dvh overflow-hidden",
+    main: "min-h-0 grid-cols-[minmax(0,1fr)_26rem] grid-rows-[auto_minmax(0,1fr)] gap-x-10 gap-y-5 pt-4",
     me: "col-start-2 row-start-1",
-    sessions: "col-start-1 row-span-2 row-start-1",
+    // The only part that scrolls, inside its column: room around for the focus ring.
+    sessions:
+      "col-start-1 row-span-2 row-start-1 -m-6 h-[calc(100%+3rem)] scroll-p-6 overflow-y-auto p-6 [scrollbar-width:none] [mask-image:linear-gradient(to_bottom,black_calc(100%-1.5rem),transparent)]",
     account: "col-start-2 row-start-2",
   },
 } as const;
@@ -39,7 +44,7 @@ export function ProfileScreen() {
   const account = useAccount((s) => s.account);
   const layout = LAYOUT[useTv() ? "tv" : "phone"];
   return (
-    <div className="safe-area mx-auto flex min-h-dvh max-w-[1240px] flex-col">
+    <div className={cx("safe-area mx-auto flex max-w-[1240px] flex-col", layout.page)}>
       <ScreenTopBar title={<h1 className="truncate">Profil</h1>} />
       {account ? (
         <main className={cx("grid flex-1 items-start", layout.main)}>
