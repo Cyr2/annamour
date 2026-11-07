@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import { sessionPath } from "../../sync/restart.ts";
 import { companionsLabel, progressOf, remainingLabel, sessionTitle } from "../sessions/session-rules.ts";
 
-/** « Autres en cours »: the séances left unfinished besides the one offered first, wide and side by side. */
+/** « Autres en cours »: the séances left unfinished besides the one offered first, as posters like the list's. */
 export function OngoingShelf({ sessions }: { sessions: SessionSummary[] }) {
   if (sessions.length === 0) return null;
   return (
@@ -14,7 +14,7 @@ export function OngoingShelf({ sessions }: { sessions: SessionSummary[] }) {
       </h2>
       <ul className="-mx-1 flex gap-3 overflow-x-auto px-1 py-2 [scrollbar-width:none]">
         {sessions.map((session) => (
-          <li key={session.code} className="w-56 shrink-0">
+          <li key={session.code} className="w-[7.5rem] shrink-0">
             <OngoingTile session={session} />
           </li>
         ))}
@@ -33,10 +33,10 @@ function OngoingTile({ session }: { session: SessionSummary }) {
     <Link href={sessionPath(session.code)} className="grid gap-2 rounded-control text-left">
       <span
         aria-hidden
-        className="relative block aspect-video overflow-hidden rounded-control"
+        className="relative block aspect-[2/3] w-full overflow-hidden rounded-control"
         style={{ background: "var(--am-poster-glow), var(--am-poster)" }}
       >
-        <span className="absolute bottom-3 left-3 grid size-11 place-items-center rounded-full bg-scrim text-fg">
+        <span className="absolute inset-0 m-auto grid size-11 place-items-center rounded-full bg-scrim text-fg">
           <Play className="ml-0.5 size-4 fill-current" />
         </span>
         <span className="absolute inset-x-0 bottom-0 h-1 bg-fill-strong">
