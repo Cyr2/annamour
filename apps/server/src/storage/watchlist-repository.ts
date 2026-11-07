@@ -15,6 +15,8 @@ export interface NewWatchlistItem {
   everyone: boolean;
   /** Those who already say « J'ai envie ». */
   wantedBy: readonly string[];
+  /** The circle it belongs to: everyone in it sees it. */
+  circleId?: string;
 }
 
 /**
@@ -28,6 +30,9 @@ const AUDIENCE = `audience (item_id, account_id) AS (
     JOIN participations author ON author.account_id = i.added_by AND author.hidden = 0
     JOIN participations seen ON seen.room_code = author.room_code
   WHERE i.everyone = 1
+  UNION
+  SELECT i.id, cm.account_id FROM watchlist_items i
+    JOIN circle_members cm ON cm.circle_id = i.circle_id
 )`;
 
 const ItemRow = z.object({
@@ -36,6 +41,7 @@ const ItemRow = z.object({
   added_by: z.string(),
   added_at: z.number(),
   watched_at: z.number().nullable(),
+  circle_id: z.string().nullable(),
 });
 
 const PersonRow = z.object({
@@ -58,9 +64,18 @@ export class WatchlistRepository {
   insert(item: NewWatchlistItem): void {
     this.db
       .prepare(
-        "INSERT INTO watchlist_items (id, catalog_key, title, added_by, added_at, everyone) VALUES (?, ?, ?, ?, ?, ?)",
+        `INSERT INTO watchlist_items (id, catalog_key, title, added_by, added_at, everyone, circle_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(item.id, item.catalogKey, JSON.stringify(item.title), item.addedBy, item.addedAt, item.everyone ? 1 : 0);
+      .run(
+        item.id,
+        item.catalogKey,
+        JSON.stringify(item.title),
+        item.addedBy,
+        item.addedAt,
+        item.everyone ? 1 : 0,
+        item.circleId ?? null,
+      );
     for (const accountId of item.memberIds) this.addMember(item.id, accountId, item.wantedBy.includes(accountId));
   }
 
@@ -83,15 +98,15 @@ export class WatchlistRepository {
     return row !== undefined;
   }
 
-  /** The item of this title still to watch that `accountId` already sees, if any. */
-  findToWatch(accountId: string, catalogKey: string): string | undefined {
+  /** The item of this title still to watch that `accountId` already sees (in this circle, if one is given). */
+  findToWatch(accountId: string, catalogKey: string, circleId?: string): string | undefined {
     const row = this.db
       .prepare(
         `WITH ${AUDIENCE}
          SELECT i.id FROM watchlist_items i JOIN audience a ON a.item_id = i.id
-         WHERE a.account_id = ? AND i.catalog_key = ? AND i.watched_at IS NULL`,
+         WHERE a.account_id = ? AND i.catalog_key = ? AND i.watched_at IS NULL AND (? IS NULL OR i.circle_id = ?)`,
       )
-      .get(accountId, catalogKey);
+      .get(accountId, catalogKey, circleId ?? null, circleId ?? null);
     return parseOptionalRow(z.object({ id: z.string() }), row)?.id;
   }
 
@@ -121,7 +136,7 @@ export class WatchlistRepository {
       this.db
         .prepare(
           `WITH ${AUDIENCE}
-           SELECT i.id, i.title, i.added_by, i.added_at, i.watched_at FROM watchlist_items i
+           SELECT i.id, i.title, i.added_by, i.added_at, i.watched_at, i.circle_id FROM watchlist_items i
            WHERE i.id IN (SELECT item_id FROM audience WHERE account_id = ?)
            ORDER BY i.added_at DESC`,
         )
@@ -144,6 +159,7 @@ export class WatchlistRepository {
           .sort((a, b) => Number(b.account_id === row.added_by) - Number(a.account_id === row.added_by))
           .map(toParticipant),
         wantedBy: audience.filter((p) => p.wants === 1).map((p) => p.account_id),
+        ...(row.circle_id === null ? {} : { circleId: row.circle_id }),
       };
     });
   }

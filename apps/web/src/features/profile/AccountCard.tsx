@@ -6,6 +6,7 @@ import { passkeysSupported } from "../../api/passkeys.ts";
 import { Surface } from "../../ui/Surface.tsx";
 import { toast } from "../../ui/toast.ts";
 import { logout, registerPasskey, useAccount } from "../account/account.ts";
+import { resetCircles } from "../circles/circles.ts";
 import { resetSessions } from "../sessions/sessions.ts";
 import { useTv } from "../tv/tv-context.ts";
 import { resetWatchlist } from "../watchlist/watchlist.ts";
@@ -27,6 +28,7 @@ export function AccountCard() {
       await logout();
       resetSessions();
       resetWatchlist();
+      resetCircles();
       navigate("/bienvenue", { replace: true });
     } catch (failure) {
       toast({ message: errorMessage(failure) });

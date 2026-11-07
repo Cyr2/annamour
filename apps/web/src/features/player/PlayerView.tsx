@@ -10,6 +10,7 @@ import { ControlsBar } from "./ControlsBar.tsx";
 import { EpisodeLayer, useEpisodeOver, useSkipNext } from "./EpisodeLayer.tsx";
 import { FloatingReactions } from "./FloatingReactions.tsx";
 import { leaveFullscreen, toggleFullscreen } from "./fullscreen.ts";
+import { PlayerMoreSheet } from "./PlayerMoreSheet.tsx";
 import { BlockedNotice, CenterPlay, PlayerError, ReadyBanner, VideoLoading, WaitBanner } from "./PlayerOverlays.tsx";
 import { PlayerTopBar } from "./PlayerTopBar.tsx";
 import { filmIsOn } from "./readying-rules.ts";
@@ -45,6 +46,7 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
   const [reactionsOpen, setReactionsOpen] = useState(false);
   const [tracksOpen, setTracksOpen] = useState(false);
   const [upNextOpen, setUpNextOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   // The end screen of an episode takes over: its own buttons, the remote moving between them.
   const over = useEpisodeOver();
   const { loading, slowest, calm } = useWaitingForOthers(you, { active, over });
@@ -78,7 +80,7 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
     onHide: () => setReactionsOpen(false),
     onLeave: () => navigate("/"),
   });
-  const sheetOpen = tracksOpen || upNextOpen;
+  const sheetOpen = tracksOpen || upNextOpen || moreOpen;
   const hidden = useControlsHidden({
     tv,
     active,
@@ -143,6 +145,7 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
           onReact={react}
           onOpenTracks={() => setTracksOpen(true)}
           onOpenUpNext={() => setUpNextOpen(true)}
+          onOpenMore={() => setMoreOpen(true)}
           onSkipNext={skipNext}
           onFullscreen={fullscreen}
         />
@@ -160,6 +163,14 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
         upNextOpen={upNextOpen}
         onUpNextOpenChange={setUpNextOpen}
         onWatchAgain={() => controls.seek(0) && controls.play()}
+      />
+      <PlayerMoreSheet
+        open={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        onOpenTracks={() => setTracksOpen(true)}
+        onOpenUpNext={() => setUpNextOpen(true)}
+        onSkipNext={skipNext}
+        onFullscreen={fullscreen}
       />
       <TracksSheet open={tracksOpen} onClose={() => setTracksOpen(false)} code={code} media={media} />
     </section>

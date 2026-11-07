@@ -4,7 +4,7 @@ import { BadRequestError, NotFoundError } from "../errors.ts";
 import type { Repositories } from "../storage/repositories.ts";
 
 export interface WatchlistServiceOptions {
-  repositories: Pick<Repositories, "watchlist" | "participations">;
+  repositories: Pick<Repositories, "watchlist" | "participations" | "circles">;
   now: () => number;
   newId?: () => string;
 }
@@ -38,6 +38,7 @@ export class WatchlistService {
    * Returns the item's id.
    */
   add(accountId: string, request: AddToWatchlistRequest): string {
+    if (request.circleId !== undefined) return this.addToCircle(accountId, request, request.circleId);
     const { watchlist, participations } = this.repositories;
     // « Tout le monde » is not a list of names taken now: it follows the author's history (see the repository).
     const everyone = request.shareWith === "everyone";
@@ -64,6 +65,32 @@ export class WatchlistService {
       memberIds,
       everyone,
       wantedBy: request.want ? [accountId] : [],
+    });
+    return id;
+  }
+
+  /** A title for a circle: everyone in it sees it, those who join it later too. Once per circle. */
+  private addToCircle(accountId: string, request: AddToWatchlistRequest, circleId: string): string {
+    const { watchlist, circles } = this.repositories;
+    if (!circles.isMember(circleId, accountId))
+      throw new NotFoundError("Ce cercle n'existe plus, ou tu n'en fais plus partie.");
+    const key = catalogKey(request.title);
+    const existing = watchlist.findToWatch(accountId, key, circleId);
+    if (existing) {
+      if (request.want) watchlist.setWant(existing, accountId, true);
+      return existing;
+    }
+    const id = this.newId();
+    watchlist.insert({
+      id,
+      catalogKey: key,
+      title: request.title,
+      addedBy: accountId,
+      addedAt: this.now(),
+      memberIds: [accountId],
+      everyone: false,
+      wantedBy: request.want ? [accountId] : [],
+      circleId,
     });
     return id;
   }

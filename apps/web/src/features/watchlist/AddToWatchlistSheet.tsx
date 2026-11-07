@@ -8,28 +8,28 @@ import { Poster } from "../../ui/Poster.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { ThreadSpinner } from "../../ui/ThreadSpinner.tsx";
 import { toast } from "../../ui/toast.ts";
+import { CircleShareStep } from "../circles/CircleShareStep.tsx";
 import { CatalogResults, describeTitle } from "../home/create/CatalogResults.tsx";
 import { useCatalogSearch } from "../home/create/useCatalogSearch.ts";
 import { rankPeople } from "../sessions/session-rules.ts";
 import { useSessions } from "../sessions/sessions.ts";
 import { useLoadSessions } from "../sessions/useLoadSessions.ts";
+import { useCircleUi } from "../ui-version/ui-version.ts";
 import { PersonFilter } from "./PersonFilter.tsx";
 import { addTitle } from "./watchlist.ts";
 
-/** « Ajouter à notre liste »: find a title, then pick who it is for. */
+/** « Ajouter à notre liste »: find a title, then pick who it is for (or, in the circles interface, which circle). */
 export function AddToWatchlistSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [title, setTitle] = useState<CatalogTitle | null>(null);
+  const circles = useCircleUi();
+  const Share = circles ? CircleShareStep : ShareStep;
   const close = () => {
     setTitle(null);
     onClose();
   };
   return (
     <Sheet open={open} onClose={close} title={title ? "Ajouter à notre liste" : "Ajouter un titre"}>
-      {title ? (
-        <ShareStep title={title} onBack={() => setTitle(null)} onDone={close} />
-      ) : (
-        <SearchStep onPick={setTitle} />
-      )}
+      {title ? <Share title={title} onBack={() => setTitle(null)} onDone={close} /> : <SearchStep onPick={setTitle} />}
     </Sheet>
   );
 }

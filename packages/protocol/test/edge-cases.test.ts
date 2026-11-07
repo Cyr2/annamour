@@ -5,6 +5,8 @@ import {
   parseServerMessage,
   play,
   positionAt,
+  REACTIONS,
+  Reaction,
   RoomCode,
   sampleFrom,
   seek,
@@ -57,13 +59,21 @@ describe("playback edge cases", () => {
 describe("server messages", () => {
   it("parses known messages and rejects anything else", () => {
     expect(parseServerMessage(JSON.stringify({ type: "pong", t0: 1, ts: 2 }))).toEqual({ type: "pong", t0: 1, ts: 2 });
-    expect(parseServerMessage(JSON.stringify({ type: "reaction", by: "m1", emoji: "🔥" }))).toEqual({
+    expect(parseServerMessage(JSON.stringify({ type: "reaction", by: "m1", emoji: "💀" }))).toEqual({
       type: "reaction",
       by: "m1",
-      emoji: "🔥",
+      emoji: "💀",
     });
     expect(parseServerMessage(JSON.stringify({ type: "teleport" }))).toBeNull();
     expect(parseServerMessage("not json")).toBeNull();
+  });
+});
+
+describe("reactions", () => {
+  it("offer ten, from tender to teasing, and only those", () => {
+    expect(REACTIONS).toEqual(["❤️", "🥰", "😻", "🥺", "🤭", "😏", "😱", "🫪", "💀", "🤡"]);
+    expect(Reaction.safeParse("🔥").success).toBe(false);
+    expect(Reaction.safeParse("🫪").success).toBe(true);
   });
 });
 

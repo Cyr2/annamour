@@ -107,3 +107,9 @@ export class UsedTvCodeError extends UserFacingError {
     super("Ce code a déjà servi. Si la TV n'est pas connectée, affiches-en un nouveau.", 409);
   }
 }
+
+export class InvalidCircleInviteError extends UserFacingError {
+  constructor() {
+    super("Ce lien d'invitation a expiré. Demande-en un nouveau à quelqu'un du cercle.", 410);
+  }
+}

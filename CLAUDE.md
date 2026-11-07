@@ -20,7 +20,7 @@ Watch-together PWA : deux personnes à distance regardent la même vidéo HLS, s
 ## Exigences produit validées sur la maquette
 
 - **Maquette de référence (validée)** : `docs/maquette.html` (ouvrir dans un navigateur). Écrans : 1er lancement, accueil, salon, rejoindre, lecteur, profil. Le logo y est provisoire.
-- **Réactions** : 6 émojis seulement (`REACTIONS`), menu dans la barre du lecteur, l'émoji s'envole chez tout le monde avec le prénom.
+- **Réactions** : 10 émojis seulement (`REACTIONS`, de la tendresse à la moquerie), menu dans la barre du lecteur, l'émoji s'envole chez tout le monde avec le prénom.
 - **Séances persistantes** : on regarde parfois un film en plusieurs soirs, à plusieurs jours d'intervalle.
   - Serveur : persister les salons (playlists en cache, sous-titres, titre, dernière position) dans SQLite (`node:sqlite`, intégré à Node) sur un volume Coolify ; garder un salon au moins 60 jours après sa dernière utilisation ; position sauvegardée à chaque pause et quand le salon se vide.
   - Carte « Reprendre » sur l'accueil ; reprise : rouvrir une séance remet tout le monde à la position enregistrée.

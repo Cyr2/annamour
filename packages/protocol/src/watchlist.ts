@@ -24,6 +24,8 @@ export const WatchlistItem = z.object({
   sharedWith: z.array(Participant),
   /** Account ids of those who said « J'ai envie ». */
   wantedBy: z.array(z.string()),
+  /** The circle it belongs to; absent for a title shared the older way (people or « Tout le monde »). */
+  circleId: z.optional(z.string()),
 });
 export type WatchlistItem = z.infer<typeof WatchlistItem>;
 
@@ -39,6 +41,8 @@ export const AddToWatchlistRequest = z.object({
   ]),
   /** The author says « J'ai envie » too. */
   want: z.boolean(),
+  /** The circle it goes to: everyone in it sees it (then `shareWith` is not used). */
+  circleId: z.optional(z.string()),
 });
 export type AddToWatchlistRequest = z.infer<typeof AddToWatchlistRequest>;
 

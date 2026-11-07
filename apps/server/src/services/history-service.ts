@@ -7,6 +7,8 @@ export interface HistoryServiceOptions {
   repositories: Pick<Repositories, "participations">;
   store: RoomStore;
   now: () => number;
+  /** Someone with an account is now in this séance (its circle follows, see CircleService.syncRoom). */
+  onParticipation?: (roomCode: string) => void;
 }
 
 /** The sessions each account took part in: the same session shows up for everyone in it. */
@@ -14,15 +16,18 @@ export class HistoryService {
   private readonly repositories: HistoryServiceOptions["repositories"];
   private readonly store: RoomStore;
   private readonly now: () => number;
+  private readonly onParticipation: (roomCode: string) => void;
 
-  constructor({ repositories, store, now }: HistoryServiceOptions) {
+  constructor({ repositories, store, now, onParticipation = () => {} }: HistoryServiceOptions) {
     this.repositories = repositories;
     this.store = store;
     this.now = now;
+    this.onParticipation = onParticipation;
   }
 
   recordParticipation(roomCode: string, accountId: string): void {
     this.repositories.participations.record(roomCode, accountId, this.now());
+    this.onParticipation(roomCode);
   }
 
   list(accountId: string): SessionSummary[] {
@@ -40,6 +45,7 @@ export class HistoryService {
         count: room.episode.count,
         ...(room.episode.label === undefined ? {} : { label: room.episode.label }),
       },
+      ...(room.circleId === undefined ? {} : { circleId: room.circleId }),
     }));
   }
 

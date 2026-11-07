@@ -121,6 +121,29 @@ const MIGRATIONS: readonly string[] = [
   );
   CREATE INDEX IF NOT EXISTS playback_reports_room ON playback_reports (room_code, updated_at);
   `,
+  // Circles: the groups of people one watches with. Séances and watchlist titles belong to one; members
+  // stay when a séance leaves someone's history; an invitation link (stored hashed) lets someone in.
+  `
+  CREATE TABLE circles (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    created_at INTEGER NOT NULL
+  );
+  CREATE TABLE circle_members (
+    circle_id TEXT NOT NULL REFERENCES circles (id) ON DELETE CASCADE,
+    account_id TEXT NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    joined_at INTEGER NOT NULL,
+    PRIMARY KEY (circle_id, account_id)
+  );
+  CREATE INDEX circle_members_account_id ON circle_members (account_id);
+  CREATE TABLE circle_invites (
+    token_hash TEXT PRIMARY KEY,
+    circle_id TEXT NOT NULL REFERENCES circles (id) ON DELETE CASCADE,
+    expires_at INTEGER NOT NULL
+  );
+  ALTER TABLE rooms ADD COLUMN circle_id TEXT REFERENCES circles (id) ON DELETE SET NULL;
+  ALTER TABLE watchlist_items ADD COLUMN circle_id TEXT REFERENCES circles (id) ON DELETE CASCADE;
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;
@@ -131,9 +154,13 @@ function schemaVersion(db: DatabaseSync): number {
   return UserVersion.parse(db.prepare("PRAGMA user_version").get()).user_version;
 }
 
-/** Runs the migrations this database has not seen yet, each in its own transaction. */
-export function migrate(db: DatabaseSync): void {
-  for (let version = schemaVersion(db); version < MIGRATIONS.length; version++) {
+/**
+ * Runs the migrations this database has not seen yet, each in its own
+ * transaction, up to `target` (all of them by default; tests stop earlier to
+ * build a database as it was).
+ */
+export function migrate(db: DatabaseSync, target = MIGRATIONS.length): void {
+  for (let version = schemaVersion(db); version < target; version++) {
     db.exec("BEGIN");
     try {
       db.exec(MIGRATIONS[version] ?? "");

@@ -6,7 +6,7 @@ import { LinkForm } from "./LinkForm.tsx";
 import { ReadyStep } from "./ReadyStep.tsx";
 import { useCreateSession } from "./useCreateSession.ts";
 
-/* « Créer une séance »: find a title by name (or paste a link), we import it, then choose how you watch. */
+/* « Créer une séance »: find a title by name (or paste a link), we import it, then choose how you watch (or, in the circles interface, the salon opens). */
 
 export function CreateSessionSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { state, prepare, prepareFromCatalog, reset } = useCreateSession();
@@ -18,10 +18,8 @@ export function CreateSessionSheet({ open, onClose }: { open: boolean; onClose: 
     setByLink(false);
   };
 
-  const title = state.step === "ready" ? "C'est prêt" : "Nouvelle séance";
-
   return (
-    <Sheet open={open} onClose={close} title={title}>
+    <Sheet open={open} onClose={close} title={state.step === "ready" ? "C'est prêt" : "Nouvelle séance"}>
       {state.step === "link" && !byLink ? (
         <CatalogForm
           error={state.error}
