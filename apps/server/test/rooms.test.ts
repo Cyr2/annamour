@@ -272,3 +272,134 @@ describe("starting together", () => {
     expect(room.snapshot().readying).toBeUndefined();
   });
 });
+
+describe("starting together, with a dropped link", () => {
+  const leadOf = (room: ReturnType<typeof setup>["room"], id: string) => room.members().find((m) => m.id === id)?.lead;
+
+  it("starts at once when the device it waited for loses its link, without saying it left", () => {
+    const { room, b, idA, idB } = setup();
+    room.handle(idB, { type: "lead", seconds: 5 }, 1000);
+    room.handle(idA, { type: "play", position: 0 }, 1500);
+    expect(room.playback.status).toBe("paused");
+    room.disconnected(idB, b.connection, 2000);
+    expect(room.playback).toMatchObject({ status: "playing", position: 0, at: 2000 });
+    expect(room.snapshot().readying).toBeUndefined();
+    expect(room.size).toBe(2);
+  });
+
+  it("does not wait for a device whose link is down, not even the few seconds a silent one gets", () => {
+    const { room, b, idA, idB } = setup();
+    room.handle(idB, { type: "lead", seconds: 5 }, 1000);
+    room.disconnected(idB, b.connection, 1200);
+    room.handle(idA, { type: "play", position: 0 }, 1500);
+    expect(room.playback).toMatchObject({ status: "playing", at: 1500 });
+  });
+
+  it("waits for a member who comes back, and no longer shows their stale lead meanwhile", () => {
+    const { room, b, idA, idB } = setup();
+    const leo = fakeConnection();
+    const idC = required(room.join("client-cccc", "Léo", "mint", leo.connection, 0), "Léo to join");
+    room.handle(idB, { type: "lead", seconds: 5 }, 1000);
+    room.handle(idC, { type: "lead", seconds: 8 }, 1000);
+    room.handle(idA, { type: "play", position: 0 }, 1500);
+    room.disconnected(idB, b.connection, 2000);
+    expect(room.playback.status).toBe("paused"); // still waiting for Léo
+    expect(leadOf(room, idB)).toBeUndefined();
+
+    expect(room.join("client-bbbb", "Anna", "lilac", fakeConnection().connection, 2500)).toBe(idB);
+    room.handle(idB, { type: "lead", seconds: 6 }, 2600);
+    room.handle(idC, { type: "lead", seconds: 31 }, 3000);
+    expect(room.playback.status).toBe("paused"); // now waiting for Anna again
+    expect(leadOf(room, idB)).toBe(6);
+    room.handle(idB, { type: "lead", seconds: 30 }, 3500);
+    expect(room.playback).toMatchObject({ status: "playing", at: 3500 });
+  });
+
+  it("does not start for nobody when every link dropped", () => {
+    const { room, a, b, idA, idB } = setup();
+    room.handle(idB, { type: "lead", seconds: 5 }, 1000);
+    room.handle(idA, { type: "play", position: 0 }, 1500);
+    room.disconnected(idA, a.connection, 2000);
+    room.disconnected(idB, b.connection, 2100);
+    expect(room.playback.status).toBe("paused");
+  });
+});
+
+describe("a jump while the film plays", () => {
+  const lastOf = (inbox: ServerMessage[], type: ServerMessage["type"]) => inbox.findLast((m) => m.type === type);
+
+  /** Both devices told their lead at the start, then the film played. */
+  function playing() {
+    const context = setup();
+    const { room, idA, idB } = context;
+    room.handle(idA, { type: "lead", seconds: 40 }, 500);
+    room.handle(idB, { type: "lead", seconds: 40 }, 500);
+    room.handle(idA, { type: "play", position: 0 }, 1000);
+    expect(room.playback.status).toBe("playing");
+    return context;
+  }
+
+  it("waits at the new position for everyone's lead, told as a jump, then plays on by itself", () => {
+    const { room, b, idA, idB } = playing();
+    room.handle(idA, { type: "seek", position: 60 }, 5000);
+    expect(room.playback).toMatchObject({ status: "paused", position: 60 });
+    expect(lastOf(b.inbox, "playback")).toMatchObject({ action: "seek", by: idA, playback: { position: 60 } });
+    expect(b.inbox.some((m) => m.type === "playback" && m.action === "pause")).toBe(false);
+    expect(lastOf(b.inbox, "readying")).toEqual({ type: "readying", readying: { target: 30, until: 30_000 } });
+
+    room.handle(idA, { type: "lead", seconds: 35 }, 5100);
+    room.handle(idB, { type: "lead", seconds: 12 }, 5200);
+    expect(room.playback.status).toBe("paused");
+    room.handle(idB, { type: "lead", seconds: 30 }, 6000);
+    expect(room.playback).toMatchObject({ status: "playing", position: 60, at: 6000 });
+    expect(lastOf(b.inbox, "readying")).toEqual({ type: "readying", readying: null });
+  });
+
+  it("resumes as soon as everyone answers when the new position was already downloaded", () => {
+    const { room, idA, idB } = playing();
+    room.handle(idA, { type: "seek", position: 20 }, 5000);
+    room.handle(idA, { type: "lead", seconds: 300 }, 5050);
+    room.handle(idB, { type: "lead", seconds: 280 }, 5080);
+    expect(room.playback).toMatchObject({ status: "playing", position: 20, at: 5080 });
+  });
+
+  it("starts first, then ends the wait, so nobody sees the film simply paused in between", () => {
+    const { room, b, idA, idB } = playing();
+    room.handle(idA, { type: "seek", position: 20 }, 5000);
+    room.handle(idA, { type: "lead", seconds: 300 }, 5050);
+    room.handle(idB, { type: "lead", seconds: 280 }, 5080);
+    const kinds = b.inbox.map((m) => m.type);
+    expect(kinds.lastIndexOf("playback")).toBeLessThan(kinds.lastIndexOf("readying"));
+  });
+
+  it("plays straight on when nobody reports a lead (older apps): no pause at all", () => {
+    const { room, b, idA } = setup();
+    room.handle(idA, { type: "play", position: 0 }, 1000);
+    room.handle(idA, { type: "seek", position: 60 }, 5000);
+    expect(room.playback).toMatchObject({ status: "playing", position: 60, at: 5000 });
+    expect(b.inbox.some((m) => m.type === "readying")).toBe(false);
+  });
+
+  it("plays straight on near the very end: there is nothing left to download", () => {
+    const { room, idA } = playing();
+    room.handle(idA, { type: "seek", position: 99.8 }, 5000);
+    expect(room.playback).toMatchObject({ status: "playing", position: 99.8 });
+  });
+
+  it("does not wait for a device that loses its link during the wait", () => {
+    const { room, b, idA, idB } = playing();
+    room.handle(idA, { type: "seek", position: 60 }, 5000);
+    room.handle(idA, { type: "lead", seconds: 35 }, 5100);
+    room.handle(idB, { type: "lead", seconds: 2 }, 5200);
+    room.disconnected(idB, b.connection, 6000);
+    expect(room.playback).toMatchObject({ status: "playing", position: 60, at: 6000 });
+  });
+
+  it("still only moves the position of a paused film", () => {
+    const { room, idA } = playing();
+    room.handle(idA, { type: "pause" }, 2000);
+    room.handle(idA, { type: "seek", position: 60 }, 3000);
+    expect(room.playback).toMatchObject({ status: "paused", position: 60 });
+    expect(room.snapshot().readying).toBeUndefined();
+  });
+});

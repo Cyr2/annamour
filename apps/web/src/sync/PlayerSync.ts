@@ -198,6 +198,8 @@ export class PlayerSync {
     if (playback === this.playback) return;
     this.playback = playback;
     this.optimistic = null; // the server has spoken
+    // Paused again, maybe elsewhere (a jump while playing waits there): the room forgot our lead, tell it at once.
+    if (playback?.status === "paused") this.lastLead = null;
     if (playback?.status === "paused" && this.state.blocked) this.update({ blocked: false });
     this.tick();
   }

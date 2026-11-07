@@ -1,6 +1,6 @@
 /**
- * Starting together: the film (at its start, on resume, on a new episode)
- * only starts once every device has some of it downloaded ahead. A weak link
+ * Starting together: the film (at its start, on resume, on a new episode,
+ * after a jump) only starts once every device has some of it downloaded ahead. A weak link
  * that starts on an empty buffer stalls within the first minute, and a stall
  * pauses everyone for twenty seconds; a few seconds of waiting up front is
  * far less disruptive.
@@ -58,6 +58,42 @@ export function isReady(lead: DeviceLead | undefined, target: number, now: numbe
 /** Everyone is ready, or the wait has lasted long enough. */
 export function readyToStart(leads: ReadonlyArray<DeviceLead | undefined>, readying: Readying, now: number): boolean {
   return now >= readying.until || leads.every((lead) => isReady(lead, readying.target, now));
+}
+
+/** One device as the room sees it when deciding whether to start. */
+export interface DeviceReadiness {
+  lead: DeviceLead | undefined;
+  /** Its link dropped and it has not come back (yet). */
+  linkDown: boolean;
+}
+
+/**
+ * The leads the room waits on. A device whose link is down is not waited
+ * for at all: it may never come back, and what it last said is stale. Once
+ * back, it reports again and is waited for like the others.
+ */
+export function awaitedLeads(devices: ReadonlyArray<DeviceReadiness>): Array<DeviceLead | undefined> {
+  return devices.map((device) => (device.linkDown ? undefined : device.lead));
+}
+
+/**
+ * The wait before playing from `position`, or null when the film can start
+ * at once (everyone already has the lead, or nobody reports one: no pause
+ * for nothing). Used on play, on a jump while playing, and on a new episode.
+ */
+export function readyingFrom(
+  leads: ReadonlyArray<DeviceLead | undefined>,
+  position: number,
+  duration: number | undefined,
+  now: number,
+): Readying | null {
+  const readying = { target: readyTarget(position, duration), until: now + READY_MAX_WAIT_MS };
+  return readyToStart(leads, readying, now) ? null : readying;
+}
+
+/** What a device had downloaded ahead was for another moment: it must say again, and is waited for meanwhile. */
+export function forgottenLead(lead: DeviceLead | undefined, now: number): DeviceLead | undefined {
+  return lead ? { seconds: 0, grewAt: now } : undefined;
 }
 
 /** A new report: the lead's growth time moves only when it actually grew. */
