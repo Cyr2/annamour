@@ -6,6 +6,7 @@ import { bridgeFetcher, NakaCatalog } from "./catalog/naka-catalog.ts";
 import { loadConfig } from "./config.ts";
 import { describeMedia, ffmpegAudioEncoder, ffmpegAvailable, ffmpegEncoder, firstTimestamp } from "./media/ffmpeg.ts";
 import { segmentSource } from "./media/segment-source.ts";
+import { BYTES_PER_GB } from "./media/storage-cap.ts";
 import { Transcoder } from "./media/transcoder.ts";
 import { attachRealtime } from "./realtime.ts";
 import { CHECKPOINT_INTERVAL_MS } from "./room-store.ts";
@@ -28,6 +29,7 @@ const services = createServices({
   pepper: config.pepper,
   fetchText,
   relyingParty: config.relyingParty,
+  mediaMaxBytes: config.mediaMaxGb * BYTES_PER_GB,
   ...(nakaBridge ? { catalog: new NakaCatalog(bridgeFetcher(nakaBridge.url, nakaBridge.secret)) } : {}),
   ...(transcoder
     ? {

@@ -18,6 +18,16 @@ describe("server configuration", () => {
     expect(() => loadConfig({ TRANSCODE_WORKERS: "64" })).toThrow(ConfigError);
   });
 
+  it("caps the lighter qualities at 50 GB on disk unless told otherwise", () => {
+    expect(loadConfig({}).mediaMaxGb).toBe(50);
+    expect(loadConfig({ MEDIA_MAX_GB: " " }).mediaMaxGb).toBe(50);
+    expect(loadConfig({ MEDIA_MAX_GB: "120" }).mediaMaxGb).toBe(120);
+    expect(loadConfig({ MEDIA_MAX_GB: "7.5" }).mediaMaxGb).toBe(7.5);
+    expect(() => loadConfig({ MEDIA_MAX_GB: "plenty" })).toThrow(/MEDIA_MAX_GB/);
+    expect(() => loadConfig({ MEDIA_MAX_GB: "0" })).toThrow(ConfigError);
+    expect(() => loadConfig({ MEDIA_MAX_GB: "-3" })).toThrow(ConfigError);
+  });
+
   it("keeps the lighter audio off unless asked for", () => {
     expect(loadConfig({}).lightAudio).toBe(false);
     expect(loadConfig({ LIGHT_AUDIO: "on" }).lightAudio).toBe(true);

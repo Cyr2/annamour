@@ -11,6 +11,7 @@ import {
   sourceVariant,
   withLowQualities,
 } from "../media/ladder.ts";
+import { BYTES_PER_GB, formatGb, roomsToEvict } from "../media/storage-cap.ts";
 import { probeTimeline, type TimelineProbe } from "../media/timeline-probe.ts";
 import type { AudioTrack, Track, Transcoder, VideoTrack } from "../media/transcoder.ts";
 import type { RoomStore } from "../room-store.ts";
@@ -21,6 +22,10 @@ export const PREP_TARGET_SECONDS = 60;
 const NEXT_EPISODE_SEGMENTS = 6;
 /** Encoded files are kept this long after a séance was last watched, then deleted. */
 export const KEEP_AFTER_LAST_USE_MS = 6 * 60 * 60 * 1000;
+/** A séance watched this recently is never deleted to stay under the disk cap (a pause is not the end). */
+export const IN_USE_MS = 60 * 60 * 1000;
+/** The disk cap when none is configured (MEDIA_MAX_GB). */
+const DEFAULT_MAX_BYTES = 50 * BYTES_PER_GB;
 const SEGMENT_FILE = /^(\d{5})\.(ts|aac)$/;
 
 /** A lighter track and the source playlist it follows (same segments, same durations). */
@@ -53,6 +58,8 @@ export interface LowQualityServiceOptions {
   now: () => number;
   /** Logs how each film's source audio lines up with its video, once. */
   probe?: TimelineProbe;
+  /** What every séance's lighter qualities may take on disk together, before the oldest go. */
+  maxBytes?: number;
   log?: (message: string) => void;
 }
 
@@ -69,13 +76,22 @@ export class LowQualityService {
   private readonly plans = new Map<string, FilmPlan | null>();
   private readonly lastUse = new Map<string, number>();
   private readonly probe: TimelineProbe | undefined;
+  private readonly maxBytes: number;
   private readonly log: (message: string) => void;
 
-  constructor({ store, transcoder, now, probe, log = console.info }: LowQualityServiceOptions) {
+  constructor({
+    store,
+    transcoder,
+    now,
+    probe,
+    maxBytes = DEFAULT_MAX_BYTES,
+    log = console.info,
+  }: LowQualityServiceOptions) {
     this.store = store;
     this.transcoder = transcoder;
     this.now = now;
     this.probe = probe;
+    this.maxBytes = maxBytes;
     this.log = log;
   }
 
@@ -124,11 +140,33 @@ export class LowQualityService {
     return { available: true, readySeconds, targetSeconds: target };
   }
 
-  /** Deletes the encoded files of séances nobody has watched for a while. */
+  /**
+   * Deletes the encoded files of séances nobody has watched for a while, then
+   * of the least recently watched ones while all of them take more than the cap.
+   */
   async sweep(): Promise<void> {
     const now = this.now();
     for (const [code, at] of this.lastUse) if (now - at > KEEP_AFTER_LAST_USE_MS) this.forget(code);
     await this.transcoder?.sweep((code) => this.lastUse.has(code));
+    await this.keepUnderCap(now);
+  }
+
+  /** Whole séances go, never part of one: a séance kept is always complete (its init files included). */
+  private async keepUnderCap(now: number): Promise<void> {
+    if (!this.transcoder) return;
+    const rooms = [...(await this.transcoder.usage())].map(([code, bytes]) => {
+      const lastUse = this.lastUse.get(code) ?? 0;
+      return { code, bytes, lastUse, inUse: now - lastUse < IN_USE_MS };
+    });
+    const evicted = roomsToEvict(rooms, this.maxBytes);
+    for (const code of evicted) this.forget(code);
+    if (evicted.length > 0) await this.transcoder.sweep((code) => this.lastUse.has(code));
+    const kept = rooms.filter((room) => !evicted.includes(room.code));
+    const total = kept.reduce((sum, room) => sum + room.bytes, 0);
+    const deleted = evicted.length > 0 ? `, ${evicted.length} older séance(s) deleted to stay under it` : "";
+    this.log(
+      `Lighter qualities on disk: ${formatGb(total)} for ${kept.length} séance(s), cap ${formatGb(this.maxBytes)}${deleted}`,
+    );
   }
 
   private forget(code: string): void {
