@@ -83,8 +83,8 @@ export type RoomSnapshot = z.infer<typeof RoomSnapshot>;
 
 export const Name = z.string().check(z.trim(), z.minLength(1), z.maxLength(24));
 
-/** A deliberately short set: reactions should stay light on top of a film. */
-export const REACTIONS = ["❤️", "😂", "😮", "😭", "🔥", "🍿"] as const;
+/** A short set, light on top of a film, from tender to teasing: love, then shyness and mischief, then shock, then laughing at the film. */
+export const REACTIONS = ["❤️", "🥰", "😻", "🥺", "🤭", "😏", "😱", "🫪", "💀", "🤡"] as const;
 export const Reaction = z.enum(REACTIONS);
 export type Reaction = z.infer<typeof Reaction>;
 /** Minimum delay between two reactions from the same person, in ms. */

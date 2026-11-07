@@ -132,10 +132,10 @@ describe("Room", () => {
     expect(a.last()).toEqual({ type: "reaction", by: idA, emoji: "❤️" });
     expect(b.last()).toEqual({ type: "reaction", by: idA, emoji: "❤️" });
     const before = b.inbox.length;
-    room.handle(idA, { type: "react", emoji: "🔥" }, 1100);
+    room.handle(idA, { type: "react", emoji: "💀" }, 1100);
     expect(b.inbox.length).toBe(before);
-    room.handle(idA, { type: "react", emoji: "🔥" }, 1400);
-    expect(b.last()).toEqual({ type: "reaction", by: idA, emoji: "🔥" });
+    room.handle(idA, { type: "react", emoji: "💀" }, 1400);
+    expect(b.last()).toEqual({ type: "reaction", by: idA, emoji: "💀" });
   });
 
   it("refuses members beyond the limit", () => {
