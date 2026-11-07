@@ -33,7 +33,7 @@ export function EpisodeEndScreen({ end, room, client, onWatchAgain, onAddNext }:
   const tv = useTv();
   const panel = useRef<HTMLDivElement>(null);
   const next = episodeName(room.episodes, room.current + 1);
-  const startNext = () => client?.send({ type: "nextEpisode", episode: room.current });
+  const startNext = () => client?.send({ type: "playEpisode", from: room.current, to: room.current + 1 });
 
   // The remote lands on the main choice, again when the screen changes (the countdown declined, say).
   useEffect(() => {

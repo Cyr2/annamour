@@ -7,7 +7,7 @@ import type { PlayerSyncHandle } from "../../sync/usePlayerSync.ts";
 import { cx } from "../../ui/cx.ts";
 import { useTv } from "../tv/tv-context.ts";
 import { ControlsBar } from "./ControlsBar.tsx";
-import { EpisodeLayer, useEpisodeOver } from "./EpisodeLayer.tsx";
+import { EpisodeLayer, useEpisodeOver, useSkipNext } from "./EpisodeLayer.tsx";
 import { FloatingReactions } from "./FloatingReactions.tsx";
 import { leaveFullscreen, toggleFullscreen } from "./fullscreen.ts";
 import { BlockedNotice, CenterPlay, PlayerError, WaitBanner } from "./PlayerOverlays.tsx";
@@ -48,6 +48,7 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
   const [upNextOpen, setUpNextOpen] = useState(false);
   // The end screen of an episode takes over: its own buttons, the remote moving between them.
   const over = useEpisodeOver();
+  const skipNext = useSkipNext(client);
   const [, navigate] = useLocation();
   const controlsLayer = useRef<HTMLDivElement>(null);
   const { controls } = player;
@@ -141,6 +142,7 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
           onReact={react}
           onOpenTracks={() => setTracksOpen(true)}
           onOpenUpNext={() => setUpNextOpen(true)}
+          onSkipNext={skipNext}
           onFullscreen={fullscreen}
         />
       </div>

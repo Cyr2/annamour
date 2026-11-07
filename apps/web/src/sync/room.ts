@@ -24,6 +24,8 @@ export interface RoomState {
   /** Authoritative playback, owned by the server. */
   playback: PlaybackState | null;
   lastEvent: PlaybackEvent | null;
+  /** The séance moved to another episode: who did it (absent when the room did, e.g. everyone left). */
+  episodeEvent: { by: string | undefined; seq: number } | null;
   error: { code: ErrorCode; message: string } | null;
 }
 
@@ -34,6 +36,7 @@ const empty: RoomState = {
   members: [],
   playback: null,
   lastEvent: null,
+  episodeEvent: null,
   error: null,
 };
 
@@ -66,9 +69,16 @@ export function bindRoom(client: SyncClient): () => void {
         useRoom.setState({ members: message.members });
         break;
       // Episodes changed: the whole room again, its playback included (a new episode starts at 0).
-      case "room":
-        useRoom.setState({ room: message.room, members: message.room.members, playback: message.room.playback });
+      case "room": {
+        const moved = useRoom.getState().room?.current !== message.room.current;
+        useRoom.setState({
+          room: message.room,
+          members: message.room.members,
+          playback: message.room.playback,
+          ...(moved ? { episodeEvent: { by: message.by, seq: ++seq } } : {}),
+        });
         break;
+      }
       case "error":
         useRoom.setState({ error: { code: message.code, message: message.message } });
         break;

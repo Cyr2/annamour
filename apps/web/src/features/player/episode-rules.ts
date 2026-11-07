@@ -1,6 +1,6 @@
 import { type EpisodeInfo, nextEpisodeLabel, type RoomSnapshot } from "@annamour/protocol";
 
-/* What the player shows around episodes: the end screen, the countdown, the « À suivre » list. */
+/* What the player shows around episodes: the end screen, the countdown, the « Épisodes » list. */
 
 /** Which end screen to show, if any (see the mockup « Épisode suivant »). */
 export type EpisodeEnd = "countdown" | "next-ready" | "nothing-next" | null;
@@ -16,6 +16,14 @@ export function episodeEndOf(
 /** Whole seconds left before the next episode starts by itself (never below 0). */
 export function secondsLeft(countdownUntil: number, serverNow: number): number {
   return Math.max(0, Math.ceil((countdownUntil - serverNow) / 1000));
+}
+
+/** Where an episode stands for the séance: before the one on screen (ticked), that one, or still to come. */
+export type EpisodeState = "watched" | "current" | "upcoming";
+
+export function episodeState(index: number, current: number): EpisodeState {
+  if (index === current) return "current";
+  return index < current ? "watched" : "upcoming";
 }
 
 /** « S2 · É5 », or « Épisode 5 » for an episode without a label. */
