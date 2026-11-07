@@ -11,9 +11,12 @@ import { detectTvMode } from "./features/tv/tv-mode.ts";
 import { startAppUpdates } from "./lib/app-update.ts";
 import { spring } from "./lib/motion.ts";
 import { suppressTouchLinkMenus } from "./lib/native-feel.ts";
+import { rememberPlayerChoice } from "./sync/player-choice.ts";
 
 startAppUpdates();
 suppressTouchLinkMenus();
+// `?lecteur=annamour` / `?lecteur=safari`: which player this device keeps using (see sync/player-choice.ts).
+rememberPlayerChoice(window.location.search);
 
 /** Motion's engines are not needed for the first paint: they arrive in their own chunk. */
 const loadMotionFeatures = () => import("./lib/motion-features.ts").then((m) => m.default);
