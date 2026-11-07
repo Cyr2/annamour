@@ -71,6 +71,8 @@ export class PlayerSync {
   private sourceToken = 0;
   private sourceReady = false;
   private hls: Hls | null = null;
+  /** Safari's own player refused this source: hls.js (Media Source, on recent iPads too) gets a go. */
+  private nativeFailed = false;
   private fatalRecoveries = 0;
   /** Element events only count as a person's actions once the source has settled (first canplay). */
   private armed = false;
@@ -154,6 +156,7 @@ export class PlayerSync {
   setSource(src: string | null): void {
     if (src === this.src) return;
     this.src = src;
+    this.nativeFailed = false;
     const token = ++this.sourceToken;
     this.teardownSource();
     if (!src) return;
@@ -203,7 +206,7 @@ export class PlayerSync {
     const video = this.video;
     const native = video.canPlayType("application/vnd.apple.mpegurl") !== "";
     // Safari (incl. iPad) gets native HLS: AirPlay, PiP, fullscreen and battery all work best.
-    if (native && isApple()) {
+    if (native && isApple() && !this.nativeFailed) {
       this.attachNative(src);
       return;
     }
@@ -439,8 +442,16 @@ export class PlayerSync {
 
   private readonly onMediaError = (): void => {
     // hls.js reports and recovers its own errors.
-    if (this.hls) return;
-    if (this.sourceReady) this.update({ error: "Lecture impossible." });
+    if (this.hls || !this.sourceReady || !this.src) return;
+    if (this.state.engine === "native" && !this.nativeFailed) {
+      // Rather than a black screen: some streams Safari refuses still play through hls.js.
+      this.nativeFailed = true;
+      const token = ++this.sourceToken;
+      this.teardownSource();
+      void this.attach(this.src, token);
+      return;
+    }
+    this.update({ error: "Cette vidéo ne se lit pas sur cet appareil. Essaie un autre lien ou un autre appareil." });
   };
 
   private readonly onVisibility = (): void => {

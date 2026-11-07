@@ -10,7 +10,7 @@ import { ControlsBar } from "./ControlsBar.tsx";
 import { EpisodeLayer, useEpisodeOver, useSkipNext } from "./EpisodeLayer.tsx";
 import { FloatingReactions } from "./FloatingReactions.tsx";
 import { leaveFullscreen, toggleFullscreen } from "./fullscreen.ts";
-import { BlockedNotice, CenterPlay, PlayerError, WaitBanner } from "./PlayerOverlays.tsx";
+import { BlockedNotice, CenterPlay, PlayerError, VideoLoading, WaitBanner } from "./PlayerOverlays.tsx";
 import { PlayerTopBar } from "./PlayerTopBar.tsx";
 import { SeekBadge } from "./SeekBadge.tsx";
 import { TracksSheet } from "./TracksSheet.tsx";
@@ -84,7 +84,8 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
     active,
     playing,
     over,
-    busy: reactionsOpen || sheetOpen,
+    // An error keeps them up: the way out (back arrow) must stay in sight.
+    busy: reactionsOpen || sheetOpen || player.error !== null,
     remoteShown: remote.shown,
   });
   usePlayerKeyboard(active && !sheetOpen && !over && !tv, { toggle, seekBy, toggleMute, fullscreen });
@@ -152,6 +153,7 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
       />
       {tv ? <SeekBadge flash={remote.seek} /> : null}
       <WaitBanner members={loading} />
+      <VideoLoading visible={active && player.buffering && !player.error && !player.blocked && !over} />
       {active && player.blocked ? <BlockedNotice onUnlock={controls.unlock} /> : null}
       {player.error ? <PlayerError message={player.error} /> : null}
       <EpisodeLayer

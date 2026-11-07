@@ -6,6 +6,7 @@ import { exit, spring } from "../../lib/motion.ts";
 import { Button } from "../../ui/controls.tsx";
 import { PresenceBubble } from "../../ui/PresenceBubble.tsx";
 import { Surface } from "../../ui/Surface.tsx";
+import { ThreadSpinner } from "../../ui/ThreadSpinner.tsx";
 
 /** Centred over the film, above the controls' layer. */
 const CENTRED = "absolute top-1/2 left-1/2 z-10 -translate-1/2";
@@ -77,5 +78,25 @@ export function PlayerError({ message }: { message: string }) {
         {message}
       </Surface>
     </div>
+  );
+}
+
+/** This device is still fetching the film: said over the black frame, so it never looks like nothing is happening. */
+export function VideoLoading({ visible }: { visible: boolean }) {
+  return (
+    <AnimatePresence>
+      {visible ? (
+        <m.div
+          role="status"
+          className={`${CENTRED} pointer-events-none flex items-center gap-3 text-sm font-semibold text-fg-muted`}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, transition: { delay: 0.6 } }}
+          exit={{ opacity: 0, transition: exit.quick }}
+        >
+          <ThreadSpinner />
+          Chargement de la vidéo…
+        </m.div>
+      ) : null}
+    </AnimatePresence>
   );
 }

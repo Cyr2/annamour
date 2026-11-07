@@ -3,6 +3,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PlayerSync, type PlayerSyncState } from "./PlayerSync.ts";
 import { FakeClient, FakeVideo } from "./test-doubles.ts";
 
+/** A stand-in for hls.js: records what the player asks of it. */
+const hlsCalls = vi.hoisted(() => ({ loaded: [] as string[], supported: true }));
+vi.mock("hls.js", () => {
+  class FakeHls {
+    static isSupported = () => hlsCalls.supported;
+    static Events = { ERROR: "error", AUDIO_TRACKS_UPDATED: "audio", FRAG_BUFFERED: "frag" };
+    static ErrorTypes = { NETWORK_ERROR: "network", MEDIA_ERROR: "media" };
+    audioTracks = [];
+    on() {}
+    loadSource(src: string) {
+      hlsCalls.loaded.push(src);
+    }
+    attachMedia() {}
+    destroy() {}
+  }
+  return { default: FakeHls };
+});
+
 const playing = (position: number, at = 0): PlaybackState => ({ status: "playing", position, at });
 const paused = (position: number, at = 0): PlaybackState => ({ status: "paused", position, at });
 
@@ -38,6 +56,13 @@ describe("PlayerSync", () => {
     start();
     expect(video.src).toBe("/api/rooms/YWEK/hls/master.m3u8");
     expect(lastState()?.engine).toBe("native");
+  });
+
+  it("falls back to hls.js when Safari's own player refuses the stream, instead of a black screen", async () => {
+    start();
+    video.fire("error");
+    await vi.waitFor(() => expect(hlsCalls.loaded).toContain("/api/rooms/YWEK/hls/master.m3u8"));
+    expect(lastState()).toMatchObject({ engine: "hls.js", error: null });
   });
 
   it("sits on the shared position while the room is paused", () => {
@@ -167,9 +192,13 @@ describe("PlayerSync", () => {
     expect(lastState()?.engine).toBeNull();
   });
 
-  it("reports a media error", () => {
+  it("says plainly when neither Safari nor hls.js can read the video", async () => {
+    hlsCalls.supported = false;
     start();
     video.fire("error");
-    expect(lastState()?.error).toBe("Lecture impossible.");
+    await vi.waitFor(() => expect(video.src).toBe("/api/rooms/YWEK/hls/master.m3u8"));
+    video.fire("error");
+    expect(lastState()?.error).toMatch(/ne se lit pas sur cet appareil/);
+    hlsCalls.supported = true;
   });
 });

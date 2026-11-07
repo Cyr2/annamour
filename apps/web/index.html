@@ -11,7 +11,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Annamour" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- Versioned: iOS keeps a home-screen icon in cache for a long time under the same address. -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-v2.png" />
     <!-- Who this device is: asked while the scripts download, not after (the account gate waits for it). -->
     <link rel="preload" href="/api/me" as="fetch" crossorigin />
     <title>Annamour</title>
