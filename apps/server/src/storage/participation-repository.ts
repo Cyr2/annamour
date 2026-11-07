@@ -82,12 +82,16 @@ export class ParticipationRepository {
   }
 
   /** The other people of each visible room of this account, by room code, in joining order. */
-  /** Everyone this account was ever in a séance with: the only people it can share a watchlist title with. */
+  /**
+   * The people of this account's visible history (séances it removed no longer count): the only people
+   * it can share a watchlist title with, the same ones its profile shows.
+   */
   companionIds(accountId: string): string[] {
     const rows = this.db
       .prepare(
         `SELECT DISTINCT p.account_id FROM participations p
-         WHERE p.account_id <> ? AND p.room_code IN (SELECT room_code FROM participations WHERE account_id = ?)`,
+         WHERE p.account_id <> ?
+           AND p.room_code IN (SELECT room_code FROM participations WHERE account_id = ? AND hidden = 0)`,
       )
       .all(accountId, accountId);
     return parseRows(z.object({ account_id: z.string() }), rows).map((row) => row.account_id);

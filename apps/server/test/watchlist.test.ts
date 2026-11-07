@@ -37,7 +37,7 @@ function setup() {
     app.request(path(template, id), jsonRequest("PATCH", body, { cookie }));
   const remove = (cookie: string, id: string) =>
     app.request(path(WATCHLIST_API.item, id), { method: "DELETE", headers: { cookie } });
-  return { app, clock, account, watchTogether, add, list, put, remove };
+  return { app, services, clock, account, watchTogether, add, list, put, remove };
 }
 
 describe("the shared watchlist", () => {
@@ -81,6 +81,20 @@ describe("the shared watchlist", () => {
     const refused = await add(darius.cookie, { title: film, shareWith: [stranger.id], want: true });
     expect(refused.status).toBe(400);
     expect(await list(stranger.cookie)).toEqual([]);
+  });
+
+  it("forgets the people of séances I removed from my history: no sharing with them any more", async () => {
+    const { account, add, list, services } = setup();
+    const darius = await account("Darius");
+    const lea = await account("Léa");
+    const room = services.store.create("Film", media, 1000);
+    services.history.recordParticipation(room.code, darius.id);
+    services.history.recordParticipation(room.code, lea.id);
+    services.history.hide(room.code, darius.id);
+
+    expect((await add(darius.cookie, { title: film, shareWith: [lea.id], want: true })).status).toBe(400);
+    await add(darius.cookie, { title: series, shareWith: "everyone", want: true });
+    expect(await list(lea.cookie)).toEqual([]);
   });
 
   it("keeps a title once: adding it again shares the same one and counts the wish", async () => {

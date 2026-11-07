@@ -5,12 +5,15 @@ import { relativeDay } from "../sessions/session-rules.ts";
 
 /* What the watchlist says, in French: who is in it, who wants what, who added it, when it was watched. */
 
-/** The people of my list (never me), the most shared with first: the filter bubbles. */
-export function peopleOf(items: readonly WatchlistItem[], me: string): Participant[] {
+/**
+ * The filter bubbles: the people of my list (never me) who are also in my history, the most shared
+ * with first. Someone whose séances I removed no longer shows, as on my profile.
+ */
+export function peopleOf(items: readonly WatchlistItem[], me: string, known: ReadonlySet<string>): Participant[] {
   const counts = new Map<string, { person: Participant; count: number }>();
   for (const item of items) {
     for (const person of item.sharedWith) {
-      if (person.accountId === me) continue;
+      if (person.accountId === me || !known.has(person.accountId)) continue;
       const entry = counts.get(person.accountId) ?? { person, count: 0 };
       counts.set(person.accountId, { ...entry, count: entry.count + 1 });
     }
