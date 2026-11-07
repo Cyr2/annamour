@@ -4,6 +4,7 @@ import { isFilmDownloaded, onFilmsChanged } from "./film-cache.ts";
 import { initialPlayerSyncState, PlayerSync, type PlayerSyncState } from "./PlayerSync.ts";
 import { type RoomState, useRoom } from "./room.ts";
 import type { SyncClient } from "./SyncClient.ts";
+import { usePlaybackStats } from "./usePlaybackStats.ts";
 
 export interface PlayerControls {
   /** Each returns false when offline (nothing was sent, nothing changed). */
@@ -39,6 +40,7 @@ const offline: PlayerControls = {
 export function usePlayerSync(video: HTMLVideoElement | null, client: SyncClient | null): PlayerSyncHandle {
   const [state, setState] = useState<PlayerSyncState>(initialPlayerSyncState);
   const [engine, setEngine] = useState<PlayerSync | null>(null);
+  usePlaybackStats(video, client, state.engine);
 
   useEffect(() => {
     if (!video || !client) return;

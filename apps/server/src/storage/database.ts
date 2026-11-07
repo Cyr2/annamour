@@ -111,6 +111,16 @@ const MIGRATIONS: readonly string[] = [
   UPDATE watchlist_items SET everyone = 1
   WHERE (SELECT COUNT(*) FROM watchlist_members m WHERE m.item_id = watchlist_items.id) = 1;
   `,
+  // How well each device played each séance (one row per page load, updated as it grows), kept 30 days.
+  `
+  CREATE TABLE IF NOT EXISTS playback_reports (
+    viewing_id TEXT PRIMARY KEY,
+    room_code TEXT NOT NULL,
+    report TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS playback_reports_room ON playback_reports (room_code, updated_at);
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

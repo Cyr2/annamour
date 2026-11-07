@@ -10,6 +10,7 @@ import { catalogRoutes } from "./routes/catalog.ts";
 import { passkeyRoutes } from "./routes/passkey.ts";
 import { roomRoutes } from "./routes/rooms.ts";
 import { sessionRoutes } from "./routes/sessions.ts";
+import { statsRoutes } from "./routes/stats.ts";
 import { tvPairingRoutes } from "./routes/tv-pairing.ts";
 import { watchlistRoutes } from "./routes/watchlist.ts";
 import type { Services } from "./services/services.ts";
@@ -70,6 +71,7 @@ export function createApp(services: Services, { webDist, production = false }: A
   app.route("/", sessionRoutes(deps));
   app.route("/", tvPairingRoutes(deps));
   app.route("/", watchlistRoutes(deps));
+  app.route("/", statsRoutes(deps));
   app.all("/api/*", (c) => c.json({ error: "Not found" }, 404));
 
   if (webDist) serveWebApp(app, webDist);

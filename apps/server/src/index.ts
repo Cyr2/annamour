@@ -61,6 +61,7 @@ const sweeper = setInterval(() => {
   services.store.sweep(Date.now());
   services.accounts.sweep();
   services.tvPairings.sweep();
+  services.playbackStats.sweep();
   void services.lowQualities.sweep().catch((error: unknown) => console.warn("Media sweep failed", error));
 }, SWEEP_INTERVAL_MS);
 // Encodes left from before a restart are not tracked any more: free their space.

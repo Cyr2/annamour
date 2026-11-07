@@ -12,6 +12,7 @@ export default defineConfig({
         "**/*.test.ts",
         // React glue around tested engines; exercised through the screens.
         "src/sync/usePlayerSync.ts",
+        "src/sync/usePlaybackStats.ts",
         "src/features/**/use*.ts",
         "src/lib/motion.ts",
         // Glue around the service worker (a build-time virtual module); its rule is in reload-policy.ts.
