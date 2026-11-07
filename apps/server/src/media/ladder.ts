@@ -6,7 +6,8 @@
  * rung is made by us, segment by segment, on exactly the source's segment
  * boundaries (same count, same durations, same timestamps), so players switch
  * between rungs seamlessly. Apple's authoring spec wants the first variant
- * listed to suit a cellular link: the lightest-but-one goes first.
+ * listed to suit a cellular link (~1 Mb/s): 480p goes first, players then
+ * move up or down on their own.
  */
 export interface Rung {
   name: RungName;
@@ -14,18 +15,25 @@ export interface Rung {
   crf: number;
   maxrateKbps: number;
   bufsizeKbps: number;
+  /** H.264 level: 540p is past level 3.0's frame size. */
+  level: "3.0" | "3.1";
 }
 
-export type RungName = "q480" | "q360";
+export type RungName = "q540" | "q480" | "q360" | "q234";
 
+/** In the order they are listed in the master (see above). */
 export const RUNGS: readonly Rung[] = [
-  { name: "q480", height: 480, crf: 23, maxrateKbps: 1000, bufsizeKbps: 2000 },
-  { name: "q360", height: 360, crf: 24, maxrateKbps: 550, bufsizeKbps: 1100 },
+  { name: "q480", height: 480, crf: 23, maxrateKbps: 1000, bufsizeKbps: 2000, level: "3.0" },
+  { name: "q540", height: 540, crf: 22, maxrateKbps: 1600, bufsizeKbps: 3200, level: "3.1" },
+  { name: "q360", height: 360, crf: 24, maxrateKbps: 550, bufsizeKbps: 1100, level: "3.0" },
+  // The last resort for a collapsing link (Apple asks for a cellular variant this light).
+  { name: "q234", height: 234, crf: 27, maxrateKbps: 150, bufsizeKbps: 300, level: "3.0" },
 ];
 
 /** What a separate or muxed AAC track adds to a rung's declared bitrate. */
 const AUDIO_KBPS = 160;
-const VIDEO_CODEC = "avc1.64001e"; // H.264 High, level 3.0: every iPhone and browser
+/** H.264 High profile at the rung's level: what every iPhone and browser decodes. */
+const VIDEO_CODEC: Record<Rung["level"], string> = { "3.0": "avc1.64001e", "3.1": "avc1.64001f" };
 
 export function rungNamed(name: string): Rung | undefined {
   return RUNGS.find((rung) => rung.name === name);
@@ -79,7 +87,8 @@ function streamInf(source: SourceVariant, rung: Rung): string {
   const audioCodec = attribute(source.info, "CODECS")
     ?.split(",")
     .find((codec) => codec.startsWith("mp4a"));
-  const codecs = audioCodec ? `${VIDEO_CODEC},${audioCodec}` : VIDEO_CODEC;
+  const video = VIDEO_CODEC[rung.level];
+  const codecs = audioCodec ? `${video},${audioCodec}` : video;
   const parts = [
     `BANDWIDTH=${(rung.maxrateKbps + AUDIO_KBPS) * 1000}`,
     `AVERAGE-BANDWIDTH=${Math.round(rung.maxrateKbps * 0.8 + AUDIO_KBPS) * 1000}`,
@@ -98,6 +107,13 @@ export function withLowQualities(master: string, source: SourceVariant, rungs: r
   if (rungs.length === 0) return master;
   const added = rungs.map((rung) => streamInf(source, rung)).join("\n");
   return master.replace(source.info, `${added}\n${source.info}`);
+}
+
+/** The playlist names of the master's separate audio renditions, in order. */
+export function audioRenditions(master: string): string[] {
+  return lines(master)
+    .filter((line) => line.startsWith("#EXT-X-MEDIA") && attribute(line, "TYPE") === "AUDIO")
+    .flatMap((line) => attribute(line, "URI") ?? []);
 }
 
 /** Absolute URLs of the source's segments, in order. */

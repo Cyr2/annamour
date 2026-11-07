@@ -38,7 +38,7 @@ export function encodeArguments(input: string, outputs: ReadonlyArray<{ rung: Ru
     "-profile:v",
     "high",
     "-level:v",
-    "3.0",
+    rung.level,
     "-pix_fmt",
     "yuv420p",
     "-crf",
@@ -85,6 +85,23 @@ export const ffmpegEncoder: SegmentEncoder = (input, outputs) =>
     child.on("error", (cause) => reject(new EncodeError(`ffmpeg could not start: ${cause.message}`)));
     child.on("close", (code) => (code === 0 ? resolve() : reject(new EncodeError(`ffmpeg exited ${code}: ${errors}`))));
   });
+
+/** When a media file's first packet plays (seconds), as ffprobe reads it; undefined if it cannot. */
+export function firstTimestamp(file: string): Promise<number | undefined> {
+  return new Promise((resolve) => {
+    const args = ["-v", "error", "-show_entries", "packet=pts_time", "-read_intervals", "%+#1", "-of", "csv=p=0", file];
+    const child = spawn("ffprobe", args, { stdio: ["ignore", "pipe", "ignore"] });
+    let out = "";
+    child.stdout.on("data", (chunk: Buffer) => {
+      out += chunk.toString();
+    });
+    child.on("error", () => resolve(undefined));
+    child.on("close", () => {
+      const value = Number.parseFloat(out);
+      resolve(Number.isFinite(value) ? value : undefined);
+    });
+  });
+}
 
 /** True when ffmpeg is installed: without it, séances simply keep their single quality. */
 export function ffmpegAvailable(): Promise<boolean> {

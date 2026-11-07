@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { Catalog } from "../catalog/naka-catalog.ts";
+import type { TimelineProbe } from "../media/timeline-probe.ts";
 import type { Transcoder } from "../media/transcoder.ts";
 import { RoomStore } from "../room-store.ts";
 import { safeFetchText, type TextFetcher } from "../safe-fetch.ts";
@@ -31,6 +32,8 @@ export interface ServiceOptions {
   catalog?: Catalog;
   /** Makes lighter qualities of each film (needs ffmpeg); absent, séances keep their source's only quality. */
   transcoder?: Transcoder;
+  /** Logs how each film's source audio lines up with its video. */
+  timelineProbe?: TimelineProbe;
 }
 
 export interface Services {
@@ -53,7 +56,22 @@ export function createServices(options: ServiceOptions): Services {
   const store = new RoomStore(repositories.rooms, { now, random: options.random });
   const history = new HistoryService({ repositories, store, now });
   const accounts = new AccountService({ repositories, pepper, now, randomInt: options.randomInt });
-  const rooms = new RoomService({ store, history, fetchText, now });
+  const lowQualities = new LowQualityService({
+    store,
+    transcoder: options.transcoder,
+    now,
+    ...(options.timelineProbe ? { probe: options.timelineProbe } : {}),
+  });
+  // A new séance starts being prepared at once: by the time someone opens it, the first minute is ready.
+  const rooms = new RoomService({
+    store,
+    history,
+    fetchText,
+    now,
+    onCreated: (code) => {
+      lowQualities.prep(code).catch((error: unknown) => console.warn("Could not start preparing", code, error));
+    },
+  });
   return {
     store,
     history,
@@ -63,7 +81,7 @@ export function createServices(options: ServiceOptions): Services {
     tvPairings: new TvPairingService({ repositories, accounts, now, randomInt: options.tvCodeRandomInt }),
     passkeys: new PasskeyService({ repositories, relyingParty, now, webAuthn: options.webAuthn }),
     watchlist: new WatchlistService({ repositories, now }),
-    lowQualities: new LowQualityService({ store, transcoder: options.transcoder, now }),
+    lowQualities,
     now,
   };
 }

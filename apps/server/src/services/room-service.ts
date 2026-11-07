@@ -13,6 +13,8 @@ export interface RoomServiceOptions {
   history: HistoryService;
   fetchText: TextFetcher;
   now: () => number;
+  /** Told of each new séance (to start preparing its lighter qualities before anyone opens it). */
+  onCreated?: (code: string) => void;
 }
 
 export class RoomService {
@@ -33,6 +35,7 @@ export class RoomService {
     const imported = await importHls(url, fetchText);
     const room = store.create(title ?? DEFAULT_ROOM_TITLE, imported, now(), first);
     if (accountId !== undefined) history.recordParticipation(room.code, accountId);
+    this.options.onCreated?.(room.code);
     return room;
   }
 

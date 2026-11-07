@@ -1,5 +1,6 @@
 import type { PrepStatus } from "@annamour/protocol";
 import {
+  audioRenditions,
   type Rung,
   rungNamed,
   rungPlaylist,
@@ -10,6 +11,7 @@ import {
   sourceVariant,
   withLowQualities,
 } from "../media/ladder.ts";
+import { probeTimeline, type TimelineProbe } from "../media/timeline-probe.ts";
 import type { Film, Transcoder } from "../media/transcoder.ts";
 import type { RoomStore } from "../room-store.ts";
 
@@ -25,6 +27,14 @@ interface FilmPlan {
   sourcePlaylist: string;
 }
 
+export interface LowQualityServiceOptions {
+  store: RoomStore;
+  transcoder: Transcoder | undefined;
+  now: () => number;
+  /** Logs how each film's source audio lines up with its video, once. */
+  probe?: TimelineProbe;
+}
+
 /**
  * Offers each séance's film in lighter qualities too (see media/), for
  * whoever watches on a weak link. Without a transcoder (no ffmpeg), séances
@@ -36,11 +46,13 @@ export class LowQualityService {
   private readonly now: () => number;
   private readonly plans = new Map<string, FilmPlan | null>();
   private readonly lastUse = new Map<string, number>();
+  private readonly probe: TimelineProbe | undefined;
 
-  constructor({ store, transcoder, now }: { store: RoomStore; transcoder: Transcoder | undefined; now: () => number }) {
+  constructor({ store, transcoder, now, probe }: LowQualityServiceOptions) {
     this.store = store;
     this.transcoder = transcoder;
     this.now = now;
+    this.probe = probe;
   }
 
   /** The master with our rungs, or a rung's playlist; undefined to serve the stored playlist as is. */
@@ -132,10 +144,30 @@ export class LowQualityService {
     if (!master || !source || !sourcePlaylist) return null;
     const rungs = rungsFor(source, sourcePlaylist);
     if (rungs.length === 0) return null;
+    this.probeOnce(master, sourcePlaylist, (uri) => playlists?.get(uri));
     return {
       film: { code, episode, segments: segmentSources(sourcePlaylist), rungs },
       master: withLowQualities(master, source, rungs),
       sourcePlaylist,
     };
+  }
+
+  /** Logs how the source's audio lines up with its video (see media/timeline-probe.ts), when it has separate audio. */
+  private probeOnce(master: string, sourcePlaylist: string, playlist: (uri: string) => string | undefined): void {
+    const audioUri = audioRenditions(master)[0];
+    const audioPlaylist = audioUri ? playlist(audioUri) : undefined;
+    if (!this.probe || !audioPlaylist) return;
+    const [video] = segmentSources(sourcePlaylist).slice(1, 2);
+    const [first, second] = segmentSources(audioPlaylist).slice(1, 3);
+    if (!video || !first || !second) return;
+    const segments = {
+      video,
+      videoDuration: segmentDurations(sourcePlaylist)[1] ?? 10,
+      audio: [first, second] as const,
+      audioDuration: segmentDurations(audioPlaylist)[1] ?? 10,
+    };
+    probeTimeline(this.probe, segments).catch((error: unknown) =>
+      this.probe?.log(`Source timeline probe failed: ${String(error)}`),
+    );
   }
 }
