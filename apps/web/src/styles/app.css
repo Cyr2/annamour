@@ -562,6 +562,15 @@ html[data-tv] :focus:not([tabindex="-1"]) {
   outline-offset: var(--am-tv-ring-offset);
 }
 
+/* A text field: the ring goes around the rounded field, not the bare input inside it (which overlapped the label). */
+html[data-tv] .lg-input input:focus {
+  outline: none;
+}
+html[data-tv] .lg-input:focus-within {
+  outline: var(--am-tv-ring) solid var(--am-tv-focus);
+  outline-offset: var(--am-tv-ring-offset);
+}
+
 /* A link on glass lifts with its glass; anything else lifts itself. */
 html[data-tv] :focus:not([tabindex="-1"], .lg-glass > *, .am-frost > *),
 html[data-tv] :is(.lg-glass, .am-frost):has(> :focus:not([tabindex="-1"])) {
