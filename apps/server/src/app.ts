@@ -33,6 +33,15 @@ function serveWebApp(app: Hono<AppEnv>, webDist: string): void {
     },
     serveStatic({ root: webDist }),
   );
+  // The service worker and the manifest decide which version the installed app runs: no cache may keep them,
+  // in the browser or at the CDN (Cloudflare held the old sw.js for hours, so the app never updated).
+  for (const path of ["/sw.js", "/manifest.webmanifest"]) {
+    app.use(path, async (c, next) => {
+      await next();
+      c.res.headers.set("cache-control", "no-cache");
+      c.res.headers.set("cdn-cache-control", "no-store");
+    });
+  }
   app.use("*", serveStatic({ root: webDist }));
   // SPA fallback for client routes only. A missing file (anything with an extension) is a 404: served the page
   // instead, a CDN keyed on the extension kept it for hours in place of a new home-screen icon.

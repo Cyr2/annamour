@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod/mini";
 import { formatClock, formatDuration, joinNames, plural } from "./format.ts";
+import { canReloadNow } from "./reload-policy.ts";
 import { readStored, removeStored, writeStored } from "./storage.ts";
 
 describe("formatting", () => {
@@ -55,5 +56,13 @@ describe("storage", () => {
     });
     expect(() => writeStored("k", 1)).not.toThrow();
     expect(() => removeStored("k")).not.toThrow();
+  });
+});
+
+describe("updating the installed app", () => {
+  it("switches to a new version anywhere but in a séance, never cutting a film", () => {
+    expect(canReloadNow("/")).toBe(true);
+    expect(canReloadNow("/a-regarder")).toBe(true);
+    expect(canReloadNow("/s/ABCD")).toBe(false);
   });
 });

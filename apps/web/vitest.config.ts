@@ -14,6 +14,8 @@ export default defineConfig({
         "src/sync/usePlayerSync.ts",
         "src/features/**/use*.ts",
         "src/lib/motion.ts",
+        // Glue around the service worker (a build-time virtual module); its rule is in reload-policy.ts.
+        "src/lib/app-update.ts",
       ],
       reporter: ["text-summary"],
       thresholds: { lines: 70, functions: 70, branches: 65, statements: 70 },

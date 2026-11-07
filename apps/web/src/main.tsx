@@ -2,17 +2,17 @@ import "./styles/fonts.css";
 import "glisse/styles.css";
 import "./styles/app.css";
 
-import { registerSW } from "virtual:pwa-register";
 import { LazyMotion, MotionConfig } from "motion/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.tsx";
 import { TvContext } from "./features/tv/tv-context.ts";
 import { detectTvMode } from "./features/tv/tv-mode.ts";
+import { startAppUpdates } from "./lib/app-update.ts";
 import { spring } from "./lib/motion.ts";
 import { suppressTouchLinkMenus } from "./lib/native-feel.ts";
 
-registerSW({ immediate: true });
+startAppUpdates();
 suppressTouchLinkMenus();
 
 /** Motion's engines are not needed for the first paint: they arrive in their own chunk. */
