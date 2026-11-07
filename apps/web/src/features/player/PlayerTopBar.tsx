@@ -13,6 +13,7 @@ export function PlayerTopBar({ code }: { code: string }) {
   const waiting = members.some((m) => m.buffering);
   const online = status === "open";
   const label = !online ? "Reconnexion…" : waiting ? "En attente" : "Synchro";
+  const together = members.length > 1;
 
   return (
     <div className="relative flex items-center gap-3">
@@ -22,10 +23,12 @@ export function PlayerTopBar({ code }: { code: string }) {
         <span className="text-xs font-semibold text-fg-muted">Séance {code}</span>
       </div>
       <Surface className="flex min-h-11 items-center gap-2.5 rounded-pill py-1 pr-3.5 pl-1.5">
-        {members.length > 1 ? (
-          <CompactPresence members={members} you={you} className="hidden min-w-[96px] sm:block" />
-        ) : null}
-        <span role="status" className="flex items-center gap-2 pl-2 text-xs font-semibold text-fg sm:pl-0">
+        {together ? <CompactPresence members={members} you={you} className="hidden min-w-[96px] sm:block" /> : null}
+        {/* The pill's left padding is sized for the bubbles: without them, the dot gets its own room. */}
+        <span
+          role="status"
+          className={cx("flex items-center gap-2 pl-2 text-xs font-semibold text-fg", together && "sm:pl-0")}
+        >
           <span aria-hidden className={cx("size-2 rounded-full", online && !waiting ? "bg-success" : "bg-waiting")} />
           {label}
         </span>

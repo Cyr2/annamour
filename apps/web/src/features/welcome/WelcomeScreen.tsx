@@ -5,10 +5,10 @@ import { useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { passkeysSupported } from "../../api/passkeys.ts";
 import { exit, spring } from "../../lib/motion.ts";
+import { BrandBar } from "../../ui/BrandBar.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { LinkButton } from "../../ui/LinkButton.tsx";
 import { StepDots } from "../../ui/StepDots.tsx";
-import { Wordmark } from "../../ui/Wordmark.tsx";
 import { safeNext } from "../account/AccountGate.tsx";
 import { KeyStep } from "./KeyStep.tsx";
 import { NameStep } from "./NameStep.tsx";
@@ -49,24 +49,25 @@ export function WelcomeScreen() {
 
   return (
     <div className="safe-area mx-auto flex min-h-dvh max-w-[1240px] flex-col">
-      <header className="flex min-h-12 items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          {previous ? (
+      <BrandBar
+        start={
+          previous ? (
             <IconButton
               variant="glass"
               label="Revenir à l'étape précédente"
               icon={<ChevronLeft />}
               onClick={() => go(previous)}
             />
-          ) : null}
-          <Wordmark />
-        </div>
-        {step === "name" && key === null ? (
-          <LinkButton href={`/cle${next === "/" ? "" : `?suite=${encodeURIComponent(next)}`}`} icon={<KeyRound />}>
-            J'ai déjà une clé
-          </LinkButton>
-        ) : null}
-      </header>
+          ) : null
+        }
+        end={
+          step === "name" && key === null ? (
+            <LinkButton href={`/cle${next === "/" ? "" : `?suite=${encodeURIComponent(next)}`}`} icon={<KeyRound />}>
+              J'ai déjà une clé
+            </LinkButton>
+          ) : null
+        }
+      />
       <main className="grid flex-1 place-items-center py-8 text-center">
         {/* Positioned, so the leaving step pops out in place while the next one slides in. */}
         <div className="relative grid w-[min(440px,100%)] justify-items-center gap-6">

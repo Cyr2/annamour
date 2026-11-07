@@ -4,10 +4,10 @@ import { lazy, Suspense, useState } from "react";
 import { useLocation } from "wouter";
 import { errorMessage } from "../../api/http.ts";
 import { fetchRoom } from "../../api/rooms.ts";
+import { BrandBar } from "../../ui/BrandBar.tsx";
 import { CodeInput } from "../../ui/CodeInput.tsx";
 import { Button } from "../../ui/controls.tsx";
 import { cx } from "../../ui/cx.ts";
-import { Wordmark } from "../../ui/Wordmark.tsx";
 import { useTv } from "../tv/tv-context.ts";
 
 /** Only a TV downloads its on-screen keyboard. */
@@ -52,9 +52,7 @@ export function JoinScreen() {
 
   return (
     <div className="safe-area mx-auto flex min-h-dvh max-w-[1240px] flex-col">
-      <header className="flex min-h-12 items-center">
-        <Wordmark />
-      </header>
+      <BrandBar />
       <main className="grid flex-1 place-items-center py-8 text-center">
         <form
           className={cx("grid justify-items-center gap-[22px]", tv ? "w-[min(40rem,100%)]" : "w-[min(28.75rem,100%)]")}
