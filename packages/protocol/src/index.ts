@@ -1,4 +1,5 @@
 export * from "./api.ts";
+export * from "./buffering.ts";
 export * from "./catalog.ts";
 export * from "./clock.ts";
 export * from "./drift.ts";

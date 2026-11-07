@@ -55,14 +55,21 @@ describe("clock", () => {
 });
 
 describe("drift", () => {
-  it("ignores tiny drift, nudges small drift, seeks large drift", () => {
-    expect(correct(10, 10.03).kind).toBe("none");
-    const ahead = correct(10, 10.3);
-    expect(ahead.kind).toBe("nudge");
-    expect(ahead.rate).toBeGreaterThan(1);
-    expect(ahead.rate).toBeLessThanOrEqual(1.05);
-    expect(correct(10, 9.7).rate).toBeLessThan(1);
-    expect(correct(10, 14)).toEqual({ kind: "seek", to: 14, rate: 1 });
+  it("leaves a small drift alone, then nudges the rate by a fixed, inaudible step", () => {
+    expect(correct(10, 10.2).kind).toBe("none");
+    expect(correct(10, 10.3)).toEqual({ kind: "nudge", rate: 1.05 });
+    expect(correct(10, 9.7)).toEqual({ kind: "nudge", rate: 0.95 });
+  });
+
+  it("keeps correcting until the drift is really gone, so the rate does not flap", () => {
+    expect(correct(10, 10.2, { correcting: true }).kind).toBe("nudge");
+    expect(correct(10, 10.05, { correcting: true }).kind).toBe("none");
+  });
+
+  it("seeks a large drift only into what is downloaded, unless it is too large to catch up by speed", () => {
+    expect(correct(10, 14, { targetBuffered: true })).toEqual({ kind: "seek", to: 14, rate: 1 });
+    expect(correct(10, 14).kind).toBe("nudge");
+    expect(correct(10, 20)).toEqual({ kind: "seek", to: 20, rate: 1 });
   });
 });
 

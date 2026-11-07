@@ -61,6 +61,20 @@ describe("Room", () => {
     expect(a.last()).toMatchObject({ type: "playback", action: "resume" });
   });
 
+  it("waits where the stuck member is, so the others step back instead of it jumping ahead", () => {
+    const { room, idA, idB } = setup();
+    room.handle(idA, { type: "play", position: 0 }, 0);
+    room.handle(idB, { type: "buffering", buffering: true, position: 7.5 }, 10_000);
+    expect(room.playback).toMatchObject({ status: "paused", position: 7.5 });
+  });
+
+  it("never waits ahead of the shared position, whatever a member claims", () => {
+    const { room, idA, idB } = setup();
+    room.handle(idA, { type: "play", position: 0 }, 0);
+    room.handle(idB, { type: "buffering", buffering: true, position: 600 }, 10_000);
+    expect(room.playback).toMatchObject({ status: "paused", position: 10 });
+  });
+
   it("does not resume after buffering if someone paused meanwhile", () => {
     const { room, idA, idB } = setup();
     room.handle(idA, { type: "play", position: 0 }, 0);
