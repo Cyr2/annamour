@@ -1,5 +1,5 @@
 import type { Reaction } from "@annamour/protocol";
-import { ListVideo, Maximize, Pause, Play, RotateCcw, RotateCw, SkipForward, Subtitles } from "lucide-react";
+import { Ellipsis, ListVideo, Maximize, Pause, Play, RotateCcw, RotateCw, SkipForward, Subtitles } from "lucide-react";
 import { formatClock } from "../../lib/format.ts";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { Surface } from "../../ui/Surface.tsx";
@@ -20,6 +20,8 @@ interface ControlsBarProps {
   onReact: (emoji: Reaction) => void;
   onOpenTracks: () => void;
   onOpenUpNext: () => void;
+  /** « ⋯ » on a phone held upright: tracks, episodes, sound and full screen. */
+  onOpenMore: () => void;
   /** Skips to the next episode for everyone; absent on the last one. */
   onSkipNext: (() => void) | undefined;
   onFullscreen: () => void;
@@ -29,7 +31,7 @@ interface ControlsBarProps {
  * The glass capsule floating over the film: the timeline between its two
  * clocks, then play, ±10 s and volume on the left; reactions, tracks and full
  * screen on the right, with « Épisode suivant » and « Épisodes » before it. On a
- * phone held upright they sit in two rows of four, each 44px wide.
+ * phone held upright, one row only: play, ±10 s, reactions and « ⋯ » for the rest.
  * On a TV (always full screen, volume on the remote) there is no full-screen
  * button, leaving the film is the top bar's back arrow (or Retour), and
  * play/pause is where the remote lands.
@@ -49,8 +51,8 @@ export function ControlsBar(props: ControlsBarProps) {
         <Scrubber clock={clock} onSeek={onSeek} className="flex-1" />
         <span>{formatClock(clock.duration)}</span>
       </div>
-      {/* A phone held upright fits 4 buttons of 44px a row: two rows there, one row from tablets and landscape on. */}
-      <div className="grid grid-cols-4 justify-items-center gap-y-1 sm:flex sm:items-center sm:justify-start sm:gap-1">
+      {/* A phone held upright keeps five buttons in one row; everything else waits behind « ⋯ ». */}
+      <div className="grid grid-cols-5 justify-items-center sm:flex sm:items-center sm:justify-start sm:gap-1">
         <IconButton
           label={playing ? "Pause" : "Lecture"}
           icon={playing ? <Pause /> : <Play />}
@@ -60,11 +62,17 @@ export function ControlsBar(props: ControlsBarProps) {
         />
         <IconButton label="Reculer de 10 secondes" icon={<RotateCcw />} onClick={() => skip(-SEEK_STEP)} />
         <IconButton label="Avancer de 10 secondes" icon={<RotateCw />} onClick={() => skip(SEEK_STEP)} />
-        <VolumeControl />
+        <div className="contents max-sm:hidden">
+          <VolumeControl />
+        </div>
         <span className="hidden flex-1 sm:block" />
         <ReactionPicker open={props.reactionsOpen} onOpenChange={props.onReactionsOpenChange} onReact={props.onReact} />
-        <IconButton label="Audio et sous-titres" icon={<Subtitles />} onClick={props.onOpenTracks} />
-        {/* A phone's bar is full: skipping is in « Épisodes » there. */}
+        <IconButton
+          label="Audio et sous-titres"
+          icon={<Subtitles />}
+          onClick={props.onOpenTracks}
+          className="max-sm:hidden"
+        />
         {props.onSkipNext ? (
           <IconButton
             label="Épisode suivant"
@@ -73,8 +81,11 @@ export function ControlsBar(props: ControlsBarProps) {
             className="max-sm:hidden"
           />
         ) : null}
-        <IconButton label="Épisodes" icon={<ListVideo />} onClick={props.onOpenUpNext} />
-        {tv ? null : <IconButton label="Plein écran" icon={<Maximize />} onClick={props.onFullscreen} />}
+        <IconButton label="Épisodes" icon={<ListVideo />} onClick={props.onOpenUpNext} className="max-sm:hidden" />
+        {tv ? null : (
+          <IconButton label="Plein écran" icon={<Maximize />} onClick={props.onFullscreen} className="max-sm:hidden" />
+        )}
+        <IconButton label="Plus d'options" icon={<Ellipsis />} onClick={props.onOpenMore} className="sm:hidden" />
       </div>
     </Surface>
   );
