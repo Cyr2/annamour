@@ -92,6 +92,7 @@ describe("serving the built app", () => {
     await mkdir(join(dist, "assets"));
     await writeFile(join(dist, "index.html"), "<!doctype html><title>Annamour</title>");
     await writeFile(join(dist, "assets", "app.js"), "console.info('hi')");
+    await writeFile(join(dist, "sw.js"), "self.addEventListener('install', () => {})");
   });
 
   afterAll(() => rm(dist, { recursive: true, force: true }));
@@ -119,6 +120,14 @@ describe("serving the built app", () => {
       expect(response.headers.get("content-type") ?? "", path).not.toContain("text/html");
     }
     expect((await app.request("/profil")).status).toBe(200);
+  });
+
+  it("never lets a cache keep the service worker, or the installed app would stay on an old version", async () => {
+    const app = createApp(testServices(), { webDist: dist });
+    const sw = await app.request("/sw.js");
+    expect(sw.status).toBe(200);
+    expect(sw.headers.get("cache-control")).toBe("no-cache");
+    expect(sw.headers.get("cdn-cache-control")).toBe("no-store");
   });
 
   it("gzips the app's scripts for browsers that accept it", async () => {

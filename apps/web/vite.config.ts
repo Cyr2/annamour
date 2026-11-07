@@ -12,7 +12,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: "autoUpdate",
+      // "prompt": the app chooses when to switch to a new version (never in the middle of a film, see lib/app-update.ts).
+      registerType: "prompt",
       includeAssets: ["icon.svg", "apple-touch-icon-v2.png"],
       manifest: {
         name: "Annamour",
