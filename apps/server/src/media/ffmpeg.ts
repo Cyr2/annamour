@@ -15,7 +15,7 @@ export class EncodeError extends Error {
 }
 
 /** Each segment starts on a key frame, then one every 2 s (Apple's spec), wherever the clock starts. */
-const KEY_FRAMES = "expr:if(isnan(prev_forced_t),1,gte(t,prev_forced_t+2))";
+export const KEY_FRAMES = "expr:if(isnan(prev_forced_t),1,gte(t,prev_forced_t+2))";
 /** Threads per ffmpeg: a few encodes run side by side on the server. */
 const THREADS = "4";
 
@@ -78,7 +78,7 @@ export function encodeArguments(input: string, outputs: ReadonlyArray<{ rung: Ru
   ];
 }
 
-function ffmpeg(args: readonly string[]): Promise<void> {
+export function ffmpeg(args: readonly string[]): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn("ffmpeg", args, { stdio: ["ignore", "ignore", "pipe"] });
     let errors = "";
@@ -105,7 +105,7 @@ export interface AudioSegments {
 /** Re-encodes one packed-audio segment lighter, frame for frame on the source's timing (see adts.ts). */
 export type AudioSegmentEncoder = (segments: AudioSegments, workDir: string) => Promise<Uint8Array>;
 
-const QUIET = ["-hide_banner", "-loglevel", "error", "-y"];
+export const QUIET = ["-hide_banner", "-loglevel", "error", "-y"];
 
 /**
  * A source audio segment as ADTS frames. Packed ADTS is split as is; an
@@ -122,7 +122,11 @@ async function sourceFrames(bytes: Uint8Array, workDir: string, name: string) {
   return { container, segment: splitAdts(await readFile(adts)), start: await firstTimestamp(ts) };
 }
 
-export const ffmpegAudioEncoder: AudioSegmentEncoder = async ({ previous, current, next }, workDir) => {
+/**
+ * The lighter AAC frames of one source audio segment, cut on its sample grid
+ * (see adts.ts), with what is needed to put them back on its clock.
+ */
+export async function lighterAudioFrames({ previous, current, next }: AudioSegments, workDir: string) {
   const source = await sourceFrames(current, workDir, "current");
   const neighbour = async (bytes: Uint8Array | undefined, name: string) =>
     bytes ? (await sourceFrames(bytes, workDir, name)).segment.frames : [];
@@ -143,10 +147,14 @@ export const ffmpegAudioEncoder: AudioSegmentEncoder = async ({ previous, curren
     "adts",
     outFile,
   ]);
-  const kept = cut(splitAdts(await readFile(outFile)).frames, input);
+  return { frames: cut(splitAdts(await readFile(outFile)).frames, input), source };
+}
+
+export const ffmpegAudioEncoder: AudioSegmentEncoder = async (segments, workDir) => {
+  const { frames, source } = await lighterAudioFrames(segments, workDir);
   // Packed audio: the source's timestamp tag, if it has one, goes back in front.
-  if (source.container === "adts") return joinBytes([source.segment.id3, ...kept]);
-  return asTransportStream(kept, source.start, workDir);
+  if (source.container === "adts") return joinBytes([source.segment.id3, ...frames]);
+  return asTransportStream(frames, source.start, workDir);
 };
 
 /** The lighter frames back in MPEG-TS, starting at the very instant the source segment does. */

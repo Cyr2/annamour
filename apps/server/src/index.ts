@@ -5,6 +5,7 @@ import { createApp } from "./app.ts";
 import { bridgeFetcher, NakaCatalog } from "./catalog/naka-catalog.ts";
 import { loadConfig } from "./config.ts";
 import { describeMedia, ffmpegAudioEncoder, ffmpegAvailable, ffmpegEncoder, firstTimestamp } from "./media/ffmpeg.ts";
+import { checkHevcSegment, ffmpegHevcEncoder, fmp4AudioEncoder, x265Available } from "./media/hevc-ffmpeg.ts";
 import { segmentSource } from "./media/segment-source.ts";
 import { Transcoder } from "./media/transcoder.ts";
 import { attachRealtime } from "./realtime.ts";
@@ -50,11 +51,14 @@ async function lowQualityTranscoder(): Promise<Transcoder | undefined> {
   }
   const dir = join(config.dataDir, "media");
   mkdirSync(dir, { recursive: true });
+  const hevc = config.hevc && (await x265Available());
+  if (config.hevc && !hevc) console.info("HEVC off: this ffmpeg has no libx265");
   return new Transcoder({
     dir,
     source: segmentSource(fetchBytes, nakaBridge),
     encode: ffmpegEncoder,
     ...(config.lightAudio ? { encodeAudio: ffmpegAudioEncoder } : {}),
+    ...(hevc ? { hevc: { encode: ffmpegHevcEncoder, check: checkHevcSegment, encodeAudio: fmp4AudioEncoder } } : {}),
     workers: config.transcodeWorkers,
   });
 }

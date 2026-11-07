@@ -27,6 +27,12 @@ export interface ServerConfig {
    */
   lightAudio: boolean;
   /**
+   * HEVC rungs for Apple players (HEVC=on). Off by default: Safari's HEVC rules
+   * cannot be checked without a real Apple device, so it is switched on by hand
+   * and tried on an iPad first.
+   */
+  hevc: boolean;
+  /**
    * Films may come from localhost over http (E2E_ALLOW_LOCAL_MEDIA=1): only
    * for the end-to-end tests' fake CDN; refused in production.
    */
@@ -52,6 +58,9 @@ function nakaBridge(env: NodeJS.ProcessEnv): ServerConfig["nakaBridge"] {
   return { url, secret };
 }
 
+/** A feature switch: on only when set to "on". */
+const switchedOn = (value: string | undefined) => value?.trim().toLowerCase() === "on";
+
 /** Only for local development and tests: production refuses to start without its own. */
 export const DEV_PEPPER = "annamour-dev-pepper-not-secret";
 
@@ -74,7 +83,8 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     relyingParty: { id: env.RP_ID?.trim() || "localhost", name: "Annamour", origins: origins(env.ORIGIN) },
     nakaBridge: nakaBridge(env),
     transcodeWorkers: transcodeWorkers(env.TRANSCODE_WORKERS),
-    lightAudio: env.LIGHT_AUDIO?.trim().toLowerCase() === "on",
+    lightAudio: switchedOn(env.LIGHT_AUDIO),
+    hevc: switchedOn(env.HEVC),
     allowLocalMedia: allowLocalMedia(env, production),
   };
 }

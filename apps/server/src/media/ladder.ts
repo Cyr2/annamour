@@ -86,7 +86,7 @@ export function rungsFor(source: SourceVariant, sourcePlaylist: string): Rung[] 
   return RUNGS.filter((rung) => rung.height < source.height);
 }
 
-function evenWidth(source: SourceVariant, height: number): number {
+export function evenWidth(source: SourceVariant, height: number): number {
   return Math.round((source.width * height) / source.height / 2) * 2;
 }
 
@@ -210,7 +210,7 @@ export function segmentAt(sourcePlaylist: string, seconds: number): number {
   return Math.max(0, index - 1);
 }
 
-export function segmentFile(index: number, extension: "ts" | "aac" = "ts"): string {
+export function segmentFile(index: number, extension: "ts" | "aac" | "m4s" = "ts"): string {
   return `${String(index).padStart(5, "0")}.${extension}`;
 }
 

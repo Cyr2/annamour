@@ -160,8 +160,10 @@ describe("a séance's lighter qualities", () => {
   it("serve an encoded segment as video", async () => {
     const { app, create } = setup();
     const code = await create();
-    const segment = await app.request(`/api/rooms/${code}/e/0/hls/q480/00001.ts`);
-    expect(segment.status).toBe(200);
+    // Like a player: ask again while it is being made (the test's wait is short, CI machines are slow).
+    const fetchSegment = () => app.request(`/api/rooms/${code}/e/0/hls/q480/00001.ts`);
+    await expect.poll(async () => (await fetchSegment()).status, { timeout: 3000 }).toBe(200);
+    const segment = await fetchSegment();
     expect(segment.headers.get("content-type")).toBe("video/mp2t");
     expect(await segment.text()).toBe("video");
   });
