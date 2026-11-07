@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Logo A1 « le sourire », symbol only (brand/annamour-symbole.svg, viewBox 8 26 84 52). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="168dp"
+    android:height="104dp"
+    android:viewportWidth="84"
+    android:viewportHeight="52">
+    <group android:translateX="-8" android:translateY="-26">
+        <path
+            android:pathData="M20,44 C30,80 66,82 80,38"
+            android:strokeColor="@color/peche"
+            android:strokeLineCap="round"
+            android:strokeWidth="7.5" />
+        <path
+            android:fillColor="@color/peche"
+            android:pathData="M10,44 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0 Z" />
+        <path
+            android:fillColor="@color/peche_clair"
+            android:pathData="M72.5,38 a7.5,7.5 0 1,0 15,0 a7.5,7.5 0 1,0 -15,0 Z" />
+    </group>
+</vector>
