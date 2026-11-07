@@ -1,4 +1,7 @@
 import { spawn } from "node:child_process";
+import { readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { cut, joinBytes, overlapped, splitAdts } from "./adts.ts";
 import type { Rung } from "./ladder.ts";
 
 /** Makes the lighter rungs of one source segment. */
@@ -31,10 +34,10 @@ export function encodeArguments(input: string, outputs: ReadonlyArray<{ rung: Ru
     "copy",
     "-c:v",
     "libx264",
+    // ~5–10 % fewer bits than veryfast for the same picture, still ~10× faster than playback here;
+    // no "-tune film": its lighter deblocking shows as blocks at these bitrates.
     "-preset",
-    "veryfast",
-    "-tune",
-    "film",
+    "faster",
     "-profile:v",
     "high",
     "-level:v",
@@ -75,9 +78,9 @@ export function encodeArguments(input: string, outputs: ReadonlyArray<{ rung: Ru
   ];
 }
 
-export const ffmpegEncoder: SegmentEncoder = (input, outputs) =>
-  new Promise((resolve, reject) => {
-    const child = spawn("ffmpeg", encodeArguments(input, outputs), { stdio: ["ignore", "ignore", "pipe"] });
+function ffmpeg(args: readonly string[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("ffmpeg", args, { stdio: ["ignore", "ignore", "pipe"] });
     let errors = "";
     child.stderr.on("data", (chunk: Buffer) => {
       errors = (errors + chunk.toString()).slice(-2000);
@@ -85,6 +88,37 @@ export const ffmpegEncoder: SegmentEncoder = (input, outputs) =>
     child.on("error", (cause) => reject(new EncodeError(`ffmpeg could not start: ${cause.message}`)));
     child.on("close", (code) => (code === 0 ? resolve() : reject(new EncodeError(`ffmpeg exited ${code}: ${errors}`))));
   });
+}
+
+export const ffmpegEncoder: SegmentEncoder = (input, outputs) => ffmpeg(encodeArguments(input, outputs));
+
+/** The lighter audio of the low rungs: AAC-LC, the profile every player decodes (HE-AAC frames would not line up). */
+export const LOW_AUDIO_KBPS = 64;
+
+/** One packed-audio segment, with its neighbours when they exist, for its lighter re-encode. */
+export interface AudioSegments {
+  previous?: Uint8Array | undefined;
+  current: Uint8Array;
+  next?: Uint8Array | undefined;
+}
+
+/** Re-encodes one packed-audio segment lighter, frame for frame on the source's timing (see adts.ts). */
+export type AudioSegmentEncoder = (segments: AudioSegments, workDir: string) => Promise<Uint8Array>;
+
+export const ffmpegAudioEncoder: AudioSegmentEncoder = async ({ previous, current, next }, workDir) => {
+  const source = splitAdts(current);
+  const neighbour = (bytes: Uint8Array | undefined) => (bytes ? splitAdts(bytes).frames : []);
+  const input = overlapped(source.frames, neighbour(previous), neighbour(next));
+  const [inFile, outFile] = [join(workDir, "in.aac"), join(workDir, "out.aac")];
+  await writeFile(inFile, joinBytes(input.frames));
+  await ffmpeg([
+    ...["-hide_banner", "-loglevel", "error", "-y", "-f", "aac", "-i", inFile],
+    ...["-c:a", "aac", "-b:a", `${LOW_AUDIO_KBPS}k`, "-f", "adts", outFile],
+  ]);
+  const encoded = splitAdts(await readFile(outFile)).frames;
+  // The source's timestamp tag, if it has one, goes back in front: the timing is the source's.
+  return joinBytes([source.id3, ...cut(encoded, input)]);
+};
 
 /** When a media file's first packet plays (seconds), as ffprobe reads it; undefined if it cannot. */
 export function firstTimestamp(file: string): Promise<number | undefined> {

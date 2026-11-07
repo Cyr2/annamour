@@ -17,21 +17,25 @@ export interface Rung {
   bufsizeKbps: number;
   /** H.264 level: 540p is past level 3.0's frame size. */
   level: "3.0" | "3.1";
+  /** Plays with the lighter audio (when the source's audio can be made lighter): where it weighs the most. */
+  lightAudio: boolean;
 }
 
 export type RungName = "q540" | "q480" | "q360" | "q234";
 
 /** In the order they are listed in the master (see above). */
 export const RUNGS: readonly Rung[] = [
-  { name: "q480", height: 480, crf: 23, maxrateKbps: 1000, bufsizeKbps: 2000, level: "3.0" },
-  { name: "q540", height: 540, crf: 22, maxrateKbps: 1600, bufsizeKbps: 3200, level: "3.1" },
-  { name: "q360", height: 360, crf: 24, maxrateKbps: 550, bufsizeKbps: 1100, level: "3.0" },
-  // The last resort for a collapsing link (Apple asks for a cellular variant this light).
-  { name: "q234", height: 234, crf: 27, maxrateKbps: 150, bufsizeKbps: 300, level: "3.0" },
+  { name: "q480", height: 480, crf: 23, maxrateKbps: 1000, bufsizeKbps: 2000, level: "3.0", lightAudio: false },
+  { name: "q540", height: 540, crf: 22, maxrateKbps: 1600, bufsizeKbps: 3200, level: "3.1", lightAudio: false },
+  { name: "q360", height: 360, crf: 24, maxrateKbps: 550, bufsizeKbps: 1100, level: "3.0", lightAudio: true },
+  // The last resort for a collapsing link: with the lighter audio, under the 192 kb/s Apple asks for on cellular.
+  { name: "q234", height: 234, crf: 27, maxrateKbps: 120, bufsizeKbps: 240, level: "3.0", lightAudio: true },
 ];
 
-/** What a separate or muxed AAC track adds to a rung's declared bitrate. */
+/** What the source's AAC adds to a rung's declared bitrate (Naka's is ~141 kb/s). */
 const AUDIO_KBPS = 160;
+/** What the lighter audio adds (64 kb/s AAC and its framing). */
+const LIGHT_AUDIO_KBPS = 72;
 /** H.264 High profile at the rung's level: what every iPhone and browser decodes. */
 const VIDEO_CODEC: Record<Rung["level"], string> = { "3.0": "avc1.64001e", "3.1": "avc1.64001f" };
 
@@ -83,30 +87,90 @@ function evenWidth(source: SourceVariant, height: number): number {
   return Math.round((source.width * height) / source.height / 2) * 2;
 }
 
-function streamInf(source: SourceVariant, rung: Rung): string {
+function streamInf(source: SourceVariant, rung: Rung, lightAudio: LightAudio | undefined): string {
   const audioCodec = attribute(source.info, "CODECS")
     ?.split(",")
     .find((codec) => codec.startsWith("mp4a"));
   const video = VIDEO_CODEC[rung.level];
   const codecs = audioCodec ? `${video},${audioCodec}` : video;
+  const light = rung.lightAudio && lightAudio !== undefined;
+  const audioKbps = light ? LIGHT_AUDIO_KBPS : AUDIO_KBPS;
   const parts = [
-    `BANDWIDTH=${(rung.maxrateKbps + AUDIO_KBPS) * 1000}`,
-    `AVERAGE-BANDWIDTH=${Math.round(rung.maxrateKbps * 0.8 + AUDIO_KBPS) * 1000}`,
+    `BANDWIDTH=${(rung.maxrateKbps + audioKbps) * 1000}`,
+    `AVERAGE-BANDWIDTH=${Math.round(rung.maxrateKbps * 0.8 + audioKbps) * 1000}`,
     `RESOLUTION=${evenWidth(source, rung.height)}x${rung.height}`,
     `CODECS="${codecs}"`,
   ];
   const frameRate = attribute(source.info, "FRAME-RATE");
   if (frameRate) parts.push(`FRAME-RATE=${frameRate}`);
-  const audio = attribute(source.info, "AUDIO");
+  const audio = light ? lightAudio.group : attribute(source.info, "AUDIO");
   if (audio) parts.push(`AUDIO="${audio}"`);
   return `#EXT-X-STREAM-INF:${parts.join(",")}\n${rung.name}.m3u8`;
 }
 
-/** The master with our rungs listed before the source's own variant. */
-export function withLowQualities(master: string, source: SourceVariant, rungs: readonly Rung[]): string {
+/**
+ * The master with our rungs listed before the source's own variant, and the
+ * lighter audio group (same languages, same names) for the rungs that use it.
+ */
+export function withLowQualities(
+  master: string,
+  source: SourceVariant,
+  rungs: readonly Rung[],
+  lightAudio?: LightAudio,
+): string {
   if (rungs.length === 0) return master;
-  const added = rungs.map((rung) => streamInf(source, rung)).join("\n");
-  return master.replace(source.info, `${added}\n${source.info}`);
+  const added = rungs.map((rung) => streamInf(source, rung, lightAudio)).join("\n");
+  const media = lightAudio ? `${lightAudio.renditions.map((rendition) => rendition.line).join("\n")}\n` : "";
+  return master.replace(source.info, `${media}${added}\n${source.info}`);
+}
+
+/** The lighter audio group: one rendition per source language, re-encoded by us. */
+export interface LightAudio {
+  group: string;
+  renditions: ReadonlyArray<{
+    /** The track's name, its playlist and folder (e.g. "lo-a0"). */
+    name: string;
+    /** The source rendition's playlist name in the master. */
+    sourceUri: string;
+    /** Its #EXT-X-MEDIA line in our group. */
+    line: string;
+    /** Played first when nobody chose a language. */
+    isDefault: boolean;
+  }>;
+}
+
+const isPackedAudio = (segments: readonly string[]) =>
+  segments.length > 0 && segments.every((uri) => new URL(uri).pathname.endsWith(".aac"));
+
+/**
+ * The lighter audio the source allows: every audio rendition of the group its
+ * video plays with must be packed AAC (`.aac` segments, cut frame by frame in
+ * adts.ts), so each language gets its lighter twin.
+ */
+export function lightAudioFor(
+  master: string,
+  source: SourceVariant,
+  playlist: (uri: string) => string | undefined,
+): LightAudio | undefined {
+  const group = attribute(source.info, "AUDIO");
+  if (!group) return undefined;
+  const lightGroup = `${group}-lo`;
+  const sourceLines = lines(master).filter(
+    (line) =>
+      line.startsWith("#EXT-X-MEDIA") && attribute(line, "TYPE") === "AUDIO" && attribute(line, "GROUP-ID") === group,
+  );
+  const renditions = sourceLines.flatMap((line, i) => {
+    const sourceUri = attribute(line, "URI");
+    if (!sourceUri || !isPackedAudio(segmentSources(playlist(sourceUri) ?? ""))) return [];
+    const name = `lo-a${i}`;
+    const ours = line
+      .replace(/GROUP-ID="[^"]*"/, `GROUP-ID="${lightGroup}"`)
+      .replace(/URI="[^"]*"/, `URI="${name}.m3u8"`);
+    return [{ name, sourceUri, line: ours, isDefault: attribute(line, "DEFAULT") === "YES" }];
+  });
+  // Every language or none: a rung must offer the same choice as the source.
+  if (renditions.length === 0 || renditions.length !== sourceLines.length) return undefined;
+  return { group: lightGroup, renditions };
 }
 
 /** The playlist names of the master's separate audio renditions, in order. */
@@ -143,14 +207,14 @@ export function segmentAt(sourcePlaylist: string, seconds: number): number {
   return Math.max(0, index - 1);
 }
 
-export function segmentFile(index: number): string {
-  return `${String(index).padStart(5, "0")}.ts`;
+export function segmentFile(index: number, extension: "ts" | "aac" = "ts"): string {
+  return `${String(index).padStart(5, "0")}.${extension}`;
 }
 
-/** A rung's media playlist: the source's, with each segment pointing to our encode of it. */
-export function rungPlaylist(sourcePlaylist: string, rung: Rung): string {
+/** A lighter track's media playlist: the source's, with each segment pointing to our encode of it. */
+export function rungPlaylist(sourcePlaylist: string, name: string, extension: "ts" | "aac" = "ts"): string {
   let index = 0;
   return lines(sourcePlaylist)
-    .map((line) => (isUri(line) ? `${rung.name}/${segmentFile(index++)}` : line))
+    .map((line) => (isUri(line) ? `${name}/${segmentFile(index++, extension)}` : line))
     .join("\n");
 }

@@ -55,6 +55,13 @@ describe("which video files the bridge downloads", () => {
     expect((await handleBridgeRequest(get(media(SEGMENT)), deps(naka, 5, gate))).status).toBe(429);
   });
 
+  it("also caps the volume downloaded per minute, so small audio files do not count like video", async () => {
+    const { naka } = fakeNaka();
+    const gate = new MediaGate({ perMinute: 100, bytesPerMinute: 3 });
+    expect((await handleBridgeRequest(get(media(SEGMENT)), deps(naka, 5, gate))).status).toBe(200);
+    expect((await handleBridgeRequest(get(media(SEGMENT)), deps(naka, 5, gate))).status).toBe(429);
+  });
+
   it("downloads only a few segments at a time", async () => {
     let release = () => {};
     const slow: NakaCaller = {

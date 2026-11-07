@@ -22,7 +22,7 @@ const fetchText: TextFetcher = async (url) => {
   throw new FetchError("not found", 404);
 };
 
-function setup(withTranscoder = true, ahead = 0) {
+function setup(withTranscoder = true, ahead = 0, lighterAudio = false) {
   const dir = mkdtempSync(join(tmpdir(), "annamour-http-"));
   let slow = false;
   let encodes = 0;
@@ -35,6 +35,7 @@ function setup(withTranscoder = true, ahead = 0) {
       if (slow) await new Promise((resolve) => setTimeout(resolve, 200));
       for (const output of outputs) writeFileSync(output.path, "video");
     },
+    ...(lighterAudio ? { encodeAudio: async () => new TextEncoder().encode("light audio") } : {}),
     workers: 1,
     ahead,
     waitMs: 50,
@@ -58,6 +59,31 @@ describe("a séance's lighter qualities", () => {
     const { create, encodes } = setup(true, 60);
     await create();
     await expect.poll(encodes, { timeout: 2000 }).toBe(2);
+  });
+
+  it("come with a lighter audio in each language for the lightest rungs", async () => {
+    const { app, create } = setup(true, 0, true);
+    const code = await create();
+    const master = await (await app.request(`/api/rooms/${code}/e/0/hls/master.m3u8`)).text();
+    expect(master).toContain('GROUP-ID="a-lo",NAME="Français",URI="lo-a0.m3u8"');
+    expect(master).toMatch(/RESOLUTION=416x234[^\n]*AUDIO="a-lo"/);
+    const playlist = await (await app.request(`/api/rooms/${code}/e/0/hls/lo-a0.m3u8`)).text();
+    expect(playlist).toContain("lo-a0/00002.aac");
+    // Like a player, ask again while it is being made.
+    const fetchSegment = () => app.request(`/api/rooms/${code}/e/0/hls/lo-a0/00001.aac`);
+    await expect.poll(async () => (await fetchSegment()).status, { timeout: 2000 }).toBe(200);
+    const segment = await fetchSegment();
+    expect(segment.headers.get("content-type")).toBe("audio/aac");
+    expect(await segment.text()).toBe("light audio");
+    expect((await app.request(`/api/rooms/${code}/e/0/hls/lo-a0/00001.ts`)).status).toBe(404);
+  });
+
+  it("are only ready once the lighter audio is too", async () => {
+    const { app, create } = setup(true, 60, true);
+    const code = await create();
+    const prep = async () => (await (await app.request(`/api/rooms/${code}/prep`)).json()) as Record<string, number>;
+    // The video is 20 s long, its audio 30 s: the shorter decides.
+    await expect.poll(async () => (await prep()).readySeconds, { timeout: 2000 }).toBe(20);
   });
 
   it("log once how the source's audio lines up with its video", async () => {

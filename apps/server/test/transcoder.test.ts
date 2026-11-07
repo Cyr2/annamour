@@ -3,14 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SegmentEncoder } from "../src/media/ffmpeg.ts";
-import { RUNGS, rungNamed } from "../src/media/ladder.ts";
-import { type Film, Transcoder, type TranscoderOptions } from "../src/media/transcoder.ts";
+import { RUNGS } from "../src/media/ladder.ts";
+import { Transcoder, type TranscoderOptions, type VideoTrack } from "../src/media/transcoder.ts";
 
-const Q480 = rungNamed("q480");
-const Q360 = rungNamed("q360");
-if (!Q480 || !Q360) throw new Error("rungs");
+const Q480 = "q480";
+const Q360 = "q360";
 
-const film = (segments = 100): Film => ({
+const film = (segments = 100): VideoTrack => ({
+  kind: "video",
   code: "ABCD",
   episode: 0,
   segments: Array.from({ length: segments }, (_, i) => `https://cdn.test/seg-${i}.ts`),
@@ -113,6 +113,32 @@ describe("making a film's lighter qualities", () => {
     const { t } = transcoder({ ahead: 40, log });
     t.prepareFrom(film(), 0);
     await vi.waitFor(() => expect(log).toHaveBeenCalledWith(expect.stringMatching(/30 segments encoded/)));
+  });
+
+  it("makes a language's lighter audio from each segment and its neighbours, downloading each once", async () => {
+    const heard: string[] = [];
+    const { t, fetched } = transcoder({
+      ahead: 2,
+      encodeAudio: async ({ previous, current, next }) => {
+        const text = (bytes?: Uint8Array) => (bytes ? new TextDecoder().decode(bytes) : "-");
+        heard.push(`${text(previous)}|${text(current)}|${text(next)}`);
+        return new TextEncoder().encode(`light:${text(current)}`);
+      },
+    });
+    const audio = {
+      kind: "audio" as const,
+      code: "ABCD",
+      episode: 0,
+      name: "lo-a0",
+      segments: ["https://cdn.test/a0.aac", "https://cdn.test/a1.aac", "https://cdn.test/a2.aac"],
+    };
+    const path = await t.segment(audio, "lo-a0", 0);
+    expect(path).toBe(join(dir, "ABCD", "0", "lo-a0", "00000.aac"));
+    expect(readFileSync(path ?? "", "utf8")).toBe("light:/a0.aac");
+    await vi.waitFor(() => expect(heard).toContain("/a1.aac|/a2.aac|-"));
+    expect(heard[0]).toBe("-|/a0.aac|/a1.aac");
+    expect(fetched.toSorted()).toEqual(audio.segments);
+    expect(await t.segment(audio, "q480", 0)).toBeNull();
   });
 
   it("deletes the files of séances nobody watches any more", async () => {
