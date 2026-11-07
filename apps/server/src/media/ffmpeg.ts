@@ -137,6 +137,22 @@ export function firstTimestamp(file: string): Promise<number | undefined> {
   });
 }
 
+/** What ffprobe says a media file is (container, codec, rate, channels), for the server log. */
+export function describeMedia(file: string): Promise<string> {
+  return new Promise((resolve) => {
+    const entries = "format=format_name:stream=codec_type,codec_name,sample_rate,channels";
+    const child = spawn("ffprobe", ["-v", "error", "-show_entries", entries, "-of", "compact=p=0", file], {
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    let out = "";
+    child.stdout.on("data", (chunk: Buffer) => {
+      out += chunk.toString();
+    });
+    child.on("error", () => resolve("ffprobe unavailable"));
+    child.on("close", () => resolve(out.trim().replace(/\s+/g, " ") || "unreadable"));
+  });
+}
+
 /** True when ffmpeg is installed: without it, séances simply keep their single quality. */
 export function ffmpegAvailable(): Promise<boolean> {
   return new Promise((resolve) => {

@@ -91,8 +91,10 @@ describe("a séance's lighter qualities", () => {
     const code = await create();
     await app.request(`/api/rooms/${code}/e/0/hls/master.m3u8`);
     await app.request(`/api/rooms/${code}/prep`);
-    await expect.poll(() => probeLog.mock.calls.length).toBe(1);
+    // Two lines, once per film: the timeline, then what the audio file really is.
+    await expect.poll(() => probeLog.mock.calls.length).toBe(2);
     expect(probeLog.mock.calls[0]?.[0]).toMatch(/^Source timeline: video segment starts at 1.400 s/);
+    expect(probeLog.mock.calls[1]?.[0]).toMatch(/^Source audio file: starts with /);
   });
 
   it("are listed in its master, before the source's quality", async () => {

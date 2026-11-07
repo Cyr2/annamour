@@ -14,8 +14,12 @@ import type { SegmentSource } from "./segment-source.ts";
 export interface TimelineProbe {
   source: SegmentSource;
   firstTimestamp: (file: string) => Promise<number | undefined>;
+  /** What the audio file really is (container, codec): its `.aac` name proved misleading. */
+  describe?: (file: string) => Promise<string>;
   log: (message: string) => void;
 }
+
+const head = (bytes: Uint8Array) => Buffer.from(bytes.subarray(0, 12)).toString("hex");
 
 export interface ProbedSegments {
   video: string;
@@ -28,7 +32,10 @@ export interface ProbedSegments {
 const kbps = (bytes: number, seconds: number) => Math.round((bytes * 8) / seconds / 1000);
 const seconds = (value: number | undefined) => (value === undefined ? "none" : value.toFixed(3));
 
-export async function probeTimeline({ source, firstTimestamp, log }: TimelineProbe, segments: ProbedSegments) {
+export async function probeTimeline(
+  { source, firstTimestamp, describe, log }: TimelineProbe,
+  segments: ProbedSegments,
+) {
   const [video, first, second] = await Promise.all([
     source(new URL(segments.video)),
     source(new URL(segments.audio[0])),
@@ -48,6 +55,13 @@ export async function probeTimeline({ source, firstTimestamp, log }: TimelinePro
         `audio ${kbps(first.byteLength, segments.audioDuration)} kb/s`,
       ].join(" "),
     );
+    const audioFile = join(dir, "audio.bin");
+    await writeFile(audioFile, first);
+    const [audioStart, audioKind] = await Promise.all([
+      firstTimestamp(audioFile),
+      describe ? describe(audioFile) : Promise.resolve("not described"),
+    ]);
+    log(`Source audio file: starts with ${head(first)}, ${audioKind}, first timestamp ${seconds(audioStart)} s`);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

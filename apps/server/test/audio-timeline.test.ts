@@ -56,5 +56,30 @@ describe("the source timeline, in the server log", () => {
     expect(log).toHaveBeenCalledWith(
       "Source timeline: video segment starts at 11.410 s (3000 kb/s), audio ID3 timestamps 10.005 then 20.011 s, audio 0 kb/s",
     );
+    // And what the audio file really is, its first bytes included.
+    expect(log).toHaveBeenCalledWith(
+      "Source audio file: starts with 4944330400000000003f5052, not described, first timestamp 11.410 s",
+    );
+  });
+
+  it("describes the audio file with ffprobe when it can", async () => {
+    const log = vi.fn();
+    await probeTimeline(
+      {
+        source: async () => new Uint8Array([0x47, 0x40, 0x11]),
+        firstTimestamp: async () => undefined,
+        describe: async () => "format_name=mpegts",
+        log,
+      },
+      {
+        video: "https://cdn.test/v.ts",
+        videoDuration: 10,
+        audio: ["https://cdn.test/a.aac", "https://cdn.test/b.aac"],
+        audioDuration: 10,
+      },
+    );
+    expect(log).toHaveBeenLastCalledWith(
+      "Source audio file: starts with 474011, format_name=mpegts, first timestamp none s",
+    );
   });
 });
