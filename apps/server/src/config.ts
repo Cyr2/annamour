@@ -17,6 +17,17 @@ export interface ServerConfig {
   /** Secret mixed into every key hash; never stored next to the database. */
   pepper: string;
   relyingParty: RelyingParty;
+  /** naka-bridge, for searching films by name; absent, séances start from a pasted link. */
+  nakaBridge: { url: string; secret: string } | undefined;
+}
+
+function nakaBridge(env: NodeJS.ProcessEnv): ServerConfig["nakaBridge"] {
+  const url = env.NAKA_BRIDGE_URL?.trim();
+  const secret = env.NAKA_BRIDGE_SECRET?.trim();
+  if (!url && !secret) return undefined;
+  if (!url || !secret)
+    throw new ConfigError("NAKA_BRIDGE_URL and NAKA_BRIDGE_SECRET go together: set both or neither.");
+  return { url, secret };
 }
 
 /** Only for local development and tests: production refuses to start without its own. */
@@ -39,5 +50,6 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     dataDir: resolve(env.DATA_DIR ?? "./data"),
     pepper: pepper || DEV_PEPPER,
     relyingParty: { id: env.RP_ID?.trim() || "localhost", name: "Annamour", origins: origins(env.ORIGIN) },
+    nakaBridge: nakaBridge(env),
   };
 }

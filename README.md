@@ -56,12 +56,21 @@ Pour lancer le test de bout en bout contre une instance déployée, sans serveur
 4. **Stockage persistant** : ajouter un volume monté sur `/app/data`. Les séances (playlists en cache, sous-titres, dernière position) et les comptes y vivent dans SQLite (`annamour.db`) ; sans volume, tout est perdu à chaque redéploiement.
 5. Variables d'environnement :
 
-| Variable           | Obligatoire       | Rôle                                                                                                                                                                                                        |
-| ------------------ | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `KEY_PEPPER`       | oui               | Secret mêlé à l'empreinte des clés de 4 mots. Le serveur refuse de démarrer sans lui en production. Ne jamais le changer : toutes les clés deviendraient invalides. Générer avec `openssl rand -base64 32`. |
-| `RP_ID`            | pour les passkeys | Domaine définitif, sans protocole (ex. `annamour.mondomaine.fr`). Les passkeys y sont liées. Défaut : `localhost`.                                                                                          |
-| `ORIGIN`           | pour les passkeys | Adresse(s) de la PWA, séparées par des virgules (ex. `https://annamour.mondomaine.fr`). Défaut : `http://localhost:5173`.                                                                                   |
-| `DATA_DIR`         | non               | Dossier de la base SQLite. Défaut dans l'image : `/app/data`.                                                                                                                                               |
-| `PORT`, `WEB_DIST` | non               | Port d'écoute (`8787`) et dossier de la PWA construite : valeurs par défaut adaptées.                                                                                                                       |
+| Variable                                | Obligatoire       | Rôle                                                                                                                                                                                                        |
+| --------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `KEY_PEPPER`                            | oui               | Secret mêlé à l'empreinte des clés de 4 mots. Le serveur refuse de démarrer sans lui en production. Ne jamais le changer : toutes les clés deviendraient invalides. Générer avec `openssl rand -base64 32`. |
+| `RP_ID`                                 | pour les passkeys | Domaine définitif, sans protocole (ex. `annamour.mondomaine.fr`). Les passkeys y sont liées. Défaut : `localhost`.                                                                                          |
+| `ORIGIN`                                | pour les passkeys | Adresse(s) de la PWA, séparées par des virgules (ex. `https://annamour.mondomaine.fr`). Défaut : `http://localhost:5173`.                                                                                   |
+| `DATA_DIR`                              | non               | Dossier de la base SQLite. Défaut dans l'image : `/app/data`.                                                                                                                                               |
+| `PORT`, `WEB_DIST`                      | non               | Port d'écoute (`8787`) et dossier de la PWA construite : valeurs par défaut adaptées.                                                                                                                       |
+| `NAKA_BRIDGE_URL`, `NAKA_BRIDGE_SECRET` | pour la recherche | Adresse de `naka-bridge` sur le réseau Docker (`http://naka-bridge:3000`) et son secret partagé. Sans elles, « Nouvelle séance » demande un lien.                                                           |
 
 Le conteneur expose `/api/health` pour le healthcheck. Un salon est gardé 60 jours après sa dernière utilisation.
+
+### Recherche par titre (`apps/naka-bridge`)
+
+Pour taper le nom d'un film au lieu de coller un lien `.m3u8`, le serveur interroge Naka (accord de leur équipe, à condition de ne jamais surcharger leur site). Leur API est derrière Cloudflare, qui ne laisse passer qu'un vrai navigateur : `naka-bridge` garde un Chromium avec fenêtre (sous Xvfb) ouvert sur naka.cx et n'accepte que trois appels (recherche, saison, sources de lecture), au plus 20 par minute.
+
+1. Nouvelle ressource → ce dépôt → **Dockerfile** `apps/naka-bridge/Dockerfile`, port `3000`, **sans domaine**, alias réseau `naka-bridge`.
+2. Variables : `NAKA_TOKEN` (le `oat_…` de `nakastream-auth` dans le Local Storage de naka.cx), `NAKA_PROFILE` (l'id de `nakastream-profile`), `BRIDGE_SECRET` (`openssl rand -base64 32`). Changer de compte Naka = changer ces deux valeurs et redémarrer.
+3. Sur l'appli Annamour : `NAKA_BRIDGE_URL=http://naka-bridge:3000` et `NAKA_BRIDGE_SECRET` = le même secret.

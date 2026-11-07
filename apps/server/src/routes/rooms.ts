@@ -84,7 +84,7 @@ export function roomRoutes({ services }: RouteDeps) {
 }
 
 /** Waits for a stream import, turning the source's failures into a message for the person. */
-async function importing<T>(work: Promise<T>): Promise<T> {
+export async function importing<T>(work: Promise<T>): Promise<T> {
   try {
     return await work;
   } catch (error) {

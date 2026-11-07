@@ -3,7 +3,7 @@
  * so it is in French and says what to do next.
  */
 export class UserFacingError extends Error {
-  readonly status: 400 | 401 | 404 | 409 | 410 | 422 | 429;
+  readonly status: 400 | 401 | 404 | 409 | 410 | 422 | 429 | 502 | 503;
 
   constructor(message: string, status: UserFacingError["status"]) {
     super(message);
@@ -69,6 +69,36 @@ export class UnknownTvCodeError extends UserFacingError {
 export class ExpiredTvCodeError extends UserFacingError {
   constructor() {
     super("Ce code a expiré. Affiche un nouveau code sur la TV, puis réessaie.", 410);
+  }
+}
+
+export class CatalogUnavailableError extends UserFacingError {
+  constructor() {
+    super("La recherche n'est pas branchée sur ce serveur : colle le lien de la vidéo à la place.", 503);
+  }
+}
+
+export class CatalogUnreachableError extends UserFacingError {
+  constructor() {
+    super("Naka ne répond pas. Réessaie dans un instant, ou colle le lien de la vidéo.", 502);
+  }
+}
+
+export class CatalogAccountError extends UserFacingError {
+  constructor() {
+    super("Le compte Naka du serveur est déconnecté : mets à jour NAKA_TOKEN dans Coolify.", 502);
+  }
+}
+
+export class CatalogBusyError extends UserFacingError {
+  constructor() {
+    super("Beaucoup de recherches d'un coup : réessaie dans une minute.", 429);
+  }
+}
+
+export class NoVideoError extends UserFacingError {
+  constructor() {
+    super("Ce titre n'a pas encore de vidéo sur Naka. Choisis-en un autre.", 404);
   }
 }
 

@@ -1,8 +1,10 @@
 import type { DatabaseSync } from "node:sqlite";
+import type { Catalog } from "../catalog/naka-catalog.ts";
 import { RoomStore } from "../room-store.ts";
 import { safeFetchText, type TextFetcher } from "../safe-fetch.ts";
 import { createRepositories } from "../storage/repositories.ts";
 import { AccountService } from "./account-service.ts";
+import { CatalogService } from "./catalog-service.ts";
 import { HistoryService } from "./history-service.ts";
 import { PasskeyService, type RelyingParty, type WebAuthn } from "./passkey-service.ts";
 import { RoomService } from "./room-service.ts";
@@ -22,6 +24,8 @@ export interface ServiceOptions {
   /** TV pairing code draws (tests make them predictable). */
   tvCodeRandomInt?: RandomInt;
   webAuthn?: WebAuthn;
+  /** Films and series to search by name (Naka through naka-bridge); absent, séances start from a link. */
+  catalog?: Catalog;
 }
 
 export interface Services {
@@ -31,6 +35,7 @@ export interface Services {
   passkeys: PasskeyService;
   history: HistoryService;
   tvPairings: TvPairingService;
+  catalog: CatalogService;
   now: () => number;
 }
 
@@ -41,10 +46,12 @@ export function createServices(options: ServiceOptions): Services {
   const store = new RoomStore(repositories.rooms, { now, random: options.random });
   const history = new HistoryService({ repositories, store, now });
   const accounts = new AccountService({ repositories, pepper, now, randomInt: options.randomInt });
+  const rooms = new RoomService({ store, history, fetchText, now });
   return {
     store,
     history,
-    rooms: new RoomService({ store, history, fetchText, now }),
+    rooms,
+    catalog: new CatalogService({ catalog: options.catalog, rooms, now }),
     accounts,
     tvPairings: new TvPairingService({ repositories, accounts, now, randomInt: options.tvCodeRandomInt }),
     passkeys: new PasskeyService({ repositories, relyingParty, now, webAuthn: options.webAuthn }),

@@ -2,6 +2,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.ts";
+import { bridgeFetcher, NakaCatalog } from "./catalog/naka-catalog.ts";
 import { loadConfig } from "./config.ts";
 import { attachRealtime } from "./realtime.ts";
 import { CHECKPOINT_INTERVAL_MS } from "./room-store.ts";
@@ -13,7 +14,13 @@ const SWEEP_INTERVAL_MS = 10 * 60 * 1000;
 const config = loadConfig(process.env);
 mkdirSync(config.dataDir, { recursive: true });
 const db = openDatabase(join(config.dataDir, "annamour.db"));
-const services = createServices({ db, pepper: config.pepper, relyingParty: config.relyingParty });
+const { nakaBridge } = config;
+const services = createServices({
+  db,
+  pepper: config.pepper,
+  relyingParty: config.relyingParty,
+  ...(nakaBridge ? { catalog: new NakaCatalog(bridgeFetcher(nakaBridge.url, nakaBridge.secret)) } : {}),
+});
 const servesWeb = existsSync(config.webDist);
 const app = createApp(services, { production: config.production, ...(servesWeb ? { webDist: config.webDist } : {}) });
 
