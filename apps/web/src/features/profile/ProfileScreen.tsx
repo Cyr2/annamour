@@ -11,6 +11,7 @@ import { useTv } from "../tv/tv-context.ts";
 import { AccountCard } from "./AccountCard.tsx";
 import { MeCard } from "./MeCard.tsx";
 import { PeopleRow } from "./PeopleRow.tsx";
+import { PlayerChoiceCard } from "./PlayerChoiceCard.tsx";
 import { SessionHistory } from "./SessionHistory.tsx";
 
 /*
@@ -42,7 +43,8 @@ const LAYOUT = {
 /** Profile: my bubble and account on one side, who I watch with and my sessions on the other. */
 export function ProfileScreen() {
   const account = useAccount((s) => s.account);
-  const layout = LAYOUT[useTv() ? "tv" : "phone"];
+  const tv = useTv();
+  const layout = LAYOUT[tv ? "tv" : "phone"];
   return (
     <div className={cx("safe-area mx-auto flex w-full max-w-[1240px] flex-col", layout.page)}>
       <BrandBar />
@@ -56,8 +58,10 @@ export function ProfileScreen() {
           <div className={layout.sessions}>
             <Sessions account={account} />
           </div>
-          <div className={layout.account}>
+          <div className={cx("grid gap-4 sm:gap-6", layout.account)}>
             <AccountCard />
+            {/* Only on an iPhone or iPad (it renders nothing elsewhere, and a TV never shows it). */}
+            {tv ? null : <PlayerChoiceCard />}
           </div>
         </main>
       ) : null}
