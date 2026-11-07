@@ -3,6 +3,7 @@ import { Copy, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../ui/controls.tsx";
 import { cx } from "../../ui/cx.ts";
+import { useTv } from "../tv/tv-context.ts";
 
 const MASK = "••••••";
 
@@ -10,12 +11,15 @@ const MASK = "••••••";
 export function AccountKeyBox({ keyWords }: { keyWords: AccountKey | null }) {
   const [shown, setShown] = useState(false);
   const [copied, setCopied] = useState<"idle" | "done" | "failed">("idle");
+  const tv = useTv();
 
   if (!keyWords) {
     return (
       <p className="surface-tile p-4 text-sm text-pretty text-fg-muted">
-        Ta clé n'est pas enregistrée sur cet appareil : tu t'es connecté par QR code ou Face ID. Tu la retrouves sur
-        l'appareil où tu as créé ton compte.
+        {/* A TV is always linked from a phone: the short version keeps its profile on one screen. */}
+        {tv
+          ? "Ta clé reste sur l'appareil où tu as créé ton compte."
+          : "Ta clé n'est pas enregistrée sur cet appareil : tu t'es connecté par QR code ou Face ID. Tu la retrouves sur l'appareil où tu as créé ton compte."}
       </p>
     );
   }

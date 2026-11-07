@@ -1,11 +1,9 @@
 import type { SessionSummary } from "@annamour/protocol";
-import { LogIn } from "lucide-react";
 import { useMemo } from "react";
 import { plural } from "../../lib/format.ts";
 import { sessionPath } from "../../sync/restart.ts";
 import type { StackedPerson } from "../../ui/BubbleStack.tsx";
 import { GlassLink } from "../../ui/GlassLink.tsx";
-import { LinkButton } from "../../ui/LinkButton.tsx";
 import { useAccount } from "../account/account.ts";
 import { SessionDetails } from "../profile/SessionRow.tsx";
 import { isFinished } from "../sessions/session-rules.ts";
@@ -15,22 +13,16 @@ import { ResumeSlot } from "./ResumeSlot.tsx";
 const CREATE_HINT = "Pour créer une séance, colle le lien sur ton téléphone : elle apparaîtra ici.";
 
 /**
- * The home screen's lower half on a TV: joining with a code next to the
- * « Reprendre » card, then « Mes séances » as a row to browse with ← →.
+ * The home screen's lower half on a TV: the « Reprendre » card alone in the
+ * middle (joining with a code sits in the top bar), then « Mes séances » as a
+ * row to browse with ← →.
  * Creating a séance stays on the phone (pasting a link with a remote is no fun).
  */
 export function TvHomeShelf() {
   const sessions = useSessions((s) => s.sessions);
   return (
     <div className="grid w-full justify-items-center gap-6">
-      <div className="flex w-full flex-wrap items-center justify-center gap-6">
-        <div data-tv-primary>
-          <LinkButton href="/rejoindre" variant="filled" size="large" icon={<LogIn />}>
-            Rejoindre avec un code
-          </LinkButton>
-        </div>
-        <ResumeSlot className="" />
-      </div>
+      <ResumeSlot className="w-[min(36rem,100%)]" />
       {sessions.length > 0 ? (
         <TvSessions sessions={sessions} />
       ) : (
@@ -75,10 +67,11 @@ function TvSessionCard({ session, me }: { session: SessionSummary; me: StackedPe
     <GlassLink
       href={sessionPath(session.code, isFinished(session))}
       material="frost"
-      label={`${isFinished(session) ? "Revoir" : "Reprendre"} « ${session.title} »`}
       className="surface-panel w-[26rem]"
       linkClassName="block p-5 text-left"
     >
+      {/* Spoken first, then the card as seen: the name says what pressing OK does and still matches the screen. */}
+      <span className="sr-only">{isFinished(session) ? "Revoir : " : "Reprendre : "}</span>
       <SessionDetails session={session} me={me} now={Date.now()} />
     </GlassLink>
   );

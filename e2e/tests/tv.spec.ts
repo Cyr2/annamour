@@ -55,10 +55,10 @@ test("une TV se relie au compte d'un téléphone et rejoint une séance à la t�
   const roomUrl = await createSession(phone, "Soirée télé");
   const roomCode = roomUrl.slice(-4);
 
-  // The remote walks the home screen, then types the code on the on-screen keyboard.
-  await tv.keyboard.press("ArrowUp");
+  // The remote walks the top bar (Rejoindre, then the profile), then types the code on the on-screen keyboard.
+  await tv.keyboard.press("ArrowRight");
   await expect(tv.getByRole("link", { name: "Mon profil, Darius" })).toBeFocused();
-  await tv.keyboard.press("ArrowDown");
+  await tv.keyboard.press("ArrowLeft");
   await expect(join).toBeFocused();
   await tv.keyboard.press("Enter");
   await expect(tv).toHaveURL(/\/rejoindre$/);

@@ -10,8 +10,10 @@ import { App } from "./App.tsx";
 import { TvContext } from "./features/tv/tv-context.ts";
 import { detectTvMode } from "./features/tv/tv-mode.ts";
 import { spring } from "./lib/motion.ts";
+import { suppressTouchLinkMenus } from "./lib/native-feel.ts";
 
 registerSW({ immediate: true });
+suppressTouchLinkMenus();
 
 /** Motion's engines are not needed for the first paint: they arrive in their own chunk. */
 const loadMotionFeatures = () => import("./lib/motion-features.ts").then((m) => m.default);

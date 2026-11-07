@@ -32,7 +32,7 @@ export function AccountCard() {
   };
 
   return (
-    <Surface className="surface-panel grid gap-4 p-4 sm:p-6">
+    <Surface className={tv ? "surface-panel grid gap-3 p-5" : "surface-panel grid gap-4 p-4 sm:p-6"}>
       <div className="grid gap-1">
         <h2 className="type-heading">Ton compte</h2>
         <p className="text-sm text-fg-muted">Ta clé, c'est ton compte : pas d'email, pas de mot de passe.</p>
@@ -54,7 +54,8 @@ export function AccountCard() {
             onClick={() => setLinkingTv(true)}
           />
         )}
-        {passkeysSupported() ? <PasskeyRow /> : null}
+        {/* Face ID belongs to a phone or a computer, not to a TV. */}
+        {passkeysSupported() && !tv ? <PasskeyRow /> : null}
         {/* Leaving sits apart from the rest, so it is never tapped by mistake. */}
         <hr className="mx-2 my-1 border-line" />
         <AccountRow
