@@ -33,9 +33,11 @@ function serveWebApp(app: Hono<AppEnv>, webDist: string): void {
     serveStatic({ root: webDist }),
   );
   app.use("*", serveStatic({ root: webDist }));
-  // SPA fallback: every other path is a client route.
+  // SPA fallback for client routes only. A missing file (anything with an extension) is a 404: served the page
+  // instead, a CDN keyed on the extension kept it for hours in place of a new home-screen icon.
   let indexHtml: string | undefined;
   app.get("*", async (c) => {
+    if (/\.[a-z0-9]+$/i.test(new URL(c.req.url).pathname)) return c.notFound();
     indexHtml ??= await readFile(join(webDist, "index.html"), "utf8");
     return c.html(indexHtml, 200, { "cache-control": "no-cache" });
   });

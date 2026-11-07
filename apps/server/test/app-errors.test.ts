@@ -111,6 +111,16 @@ describe("serving the built app", () => {
     expect((await app.request("/api/health")).status).toBe(200);
   });
 
+  it("answers 404 for a missing file, never the page: a CDN would keep the page in place of an icon", async () => {
+    const app = createApp(testServices(), { webDist: dist });
+    for (const path of ["/apple-touch-icon-v9.png", "/assets/old-123.js", "/favicon.ico"]) {
+      const response = await app.request(path);
+      expect(response.status, path).toBe(404);
+      expect(response.headers.get("content-type") ?? "", path).not.toContain("text/html");
+    }
+    expect((await app.request("/profil")).status).toBe(200);
+  });
+
   it("gzips the app's scripts for browsers that accept it", async () => {
     await writeFile(join(dist, "assets", "big.js"), `console.info("${"annamour ".repeat(400)}")`);
     const app = createApp(testServices(), { webDist: dist });
