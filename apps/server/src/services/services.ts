@@ -7,6 +7,7 @@ import { safeFetchText, type TextFetcher } from "../safe-fetch.ts";
 import { createRepositories } from "../storage/repositories.ts";
 import { AccountService } from "./account-service.ts";
 import { CatalogService } from "./catalog-service.ts";
+import { CircleService } from "./circle-service.ts";
 import { HistoryService } from "./history-service.ts";
 import { LowQualityService } from "./low-quality-service.ts";
 import { PasskeyService, type RelyingParty, type WebAuthn } from "./passkey-service.ts";
@@ -46,6 +47,7 @@ export interface Services {
   tvPairings: TvPairingService;
   catalog: CatalogService;
   watchlist: WatchlistService;
+  circles: CircleService;
   lowQualities: LowQualityService;
   playbackStats: PlaybackStatsService;
   now: () => number;
@@ -56,7 +58,10 @@ export function createServices(options: ServiceOptions): Services {
   const { db, pepper, relyingParty, now = Date.now, fetchText = safeFetchText } = options;
   const repositories = createRepositories(db);
   const store = new RoomStore(repositories.rooms, { now, random: options.random });
-  const history = new HistoryService({ repositories, store, now });
+  const circles = new CircleService({ repositories, now });
+  // Séances made before circles existed find theirs.
+  circles.backfill();
+  const history = new HistoryService({ repositories, store, now, onParticipation: (code) => circles.syncRoom(code) });
   const accounts = new AccountService({ repositories, pepper, now, randomInt: options.randomInt });
   const lowQualities = new LowQualityService({
     store,
@@ -85,6 +90,7 @@ export function createServices(options: ServiceOptions): Services {
     tvPairings: new TvPairingService({ repositories, accounts, now, randomInt: options.tvCodeRandomInt }),
     passkeys: new PasskeyService({ repositories, relyingParty, now, webAuthn: options.webAuthn }),
     watchlist: new WatchlistService({ repositories, now }),
+    circles,
     playbackStats: new PlaybackStatsService({ repositories, now }),
     lowQualities,
     now,

@@ -29,7 +29,7 @@ function importErrorMessage(error: unknown): string | null {
 }
 
 export function roomRoutes({ services }: RouteDeps) {
-  const { store, rooms, accounts, lowQualities, now } = services;
+  const { store, rooms, accounts, lowQualities, circles, now } = services;
   // Creating a séance and adding an episode both import a stream: one budget for both.
   const imports = new RateLimiter(CREATE_LIMIT);
   const tooMany = { error: "Trop de liens importés, réessaie dans une minute." };
@@ -42,6 +42,9 @@ export function roomRoutes({ services }: RouteDeps) {
     const request = await readBody(c, CreateRoomRequest, IMPORT_HELP);
     const creator = accounts.accountFor(sessionToken(c));
     const room = await importing(rooms.create(new URL(request.url), request.title, creator?.id));
+    // Started from a circle (« On regarde ? »): the séance is in it from the start.
+    const circleId = c.req.query("cercle");
+    if (circleId && creator) circles.assignRoom(creator.id, room.code, circleId);
     return c.json({ code: room.code } satisfies CreateRoomResponse, 201);
   });
 

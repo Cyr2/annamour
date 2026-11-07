@@ -25,7 +25,7 @@ function positiveInt(value: string): number | null {
 
 /** Search the catalog and start a séance on a title: for signed-in people only. */
 export function catalogRoutes({ services }: RouteDeps) {
-  const { catalog, accounts, now } = services;
+  const { catalog, accounts, circles, now } = services;
   const limiter = new RateLimiter(CATALOG_LIMIT);
   const routes = new Hono<AppEnv>();
 
@@ -59,7 +59,11 @@ export function catalogRoutes({ services }: RouteDeps) {
 
   routes.post(CATALOG_API.play, async (c) => {
     const request = await readBody(c, PlayCatalogRequest, "Choisis un film, ou un épisode d'une série.");
-    const room = await importing(catalog.play(request, c.get("account").id));
+    const accountId = c.get("account").id;
+    const room = await importing(catalog.play(request, accountId));
+    // Started from a circle (« On regarde ? »): the séance is in it from the start.
+    const circleId = c.req.query("cercle");
+    if (circleId) circles.assignRoom(accountId, room.code, circleId);
     return c.json({ code: room.code } satisfies CreateRoomResponse, 201);
   });
 

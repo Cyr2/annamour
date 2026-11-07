@@ -96,9 +96,8 @@ describe("the shared watchlist", () => {
   it("turns a title shared with its author alone into « Tout le monde » (saved before it existed)", () => {
     const db = new DatabaseSync(":memory:");
     db.exec("PRAGMA foreign_keys = ON");
-    migrate(db);
-    // The database as it was before « Tout le monde » followed the history.
-    db.exec("ALTER TABLE watchlist_items DROP COLUMN everyone; PRAGMA user_version = 5;");
+    // The database as it was before « Tout le monde » followed the history (5 migrations).
+    migrate(db, 5);
     db.exec(
       "INSERT INTO accounts (id, key_hash, name, color, created_at) VALUES ('d', 'h1', 'Darius', 'peach', 0), ('l', 'h2', 'Léa', 'lilac', 0)",
     );
