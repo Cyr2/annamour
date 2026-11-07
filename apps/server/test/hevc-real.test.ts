@@ -29,7 +29,8 @@ import {
 const installed = (await ffmpegAvailable()) && (await x265Available());
 
 const QUIET = ["-v", "error", "-y"];
-const SECONDS = 4;
+/** As long as a real source segment (Naka's are 10 s): the bitrate cap and the timing are judged on one. */
+const SECONDS = 10;
 const FPS = 24;
 
 /** A 720p H.264 MPEG-TS source segment of SECONDS, starting `offset` s into the film. */
@@ -96,6 +97,7 @@ describe.skipIf(!installed)("real HEVC segments, the way Safari and hls.js need 
         expect(Math.abs(gap - SECONDS * 90_000), `${output.rung.name} tfdt`).toBeLessThan(90_000 / FPS);
         // Within the rung's cap (what the master declares, before its audio).
         const kbps = (one.segment.length * 8) / SECONDS / 1000;
+        console.info(`${output.rung.name}: ${Math.round(kbps)} kb/s (cap ${output.rung.maxrateKbps})`);
         expect(kbps, `${output.rung.name} bitrate`).toBeLessThan(output.rung.maxrateKbps * 1.1);
       }
     },
@@ -129,7 +131,8 @@ function payloadSizes(file: string, header: number): number[] {
     .toString()
     .trim()
     .split(/\s+/)
-    .map((size) => Number(size) - header);
+    // A packet with side data (MPEG-TS) prints it after its size on the same line: the size comes first.
+    .map((size) => Number.parseInt(size, 10) - header);
 }
 
 describe.skipIf(!installed)("the HEVC rungs' audio, in fMP4", () => {

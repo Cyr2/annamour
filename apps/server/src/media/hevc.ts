@@ -38,11 +38,14 @@ export const HEVC_RUNGS: readonly HevcRung[] = [
  * The rest of the complete ladder (HEVC_FULL=on), with the source's audio:
  * about 30 % under q480 (1000) and q540 (1600 kb/s), and half the ~3 Mb/s
  * 720p source, re-encoded so hls.js can climb to it without leaving HEVC.
+ * A one-second buffer: each segment is encoded on its own and starts with a
+ * full one: with a two-second buffer, h720 ran 19 % over its cap on a busy
+ * 4 s segment (the CI's test pattern), past what the master declares.
  */
 export const HEVC_HIGH_RUNGS: readonly HevcRung[] = [
-  { name: "h480", height: 480, crf: 25, maxrateKbps: 700, bufsizeKbps: 1400, level: 30 },
-  { name: "h540", height: 540, crf: 24, maxrateKbps: 1100, bufsizeKbps: 2200, level: 30 },
-  { name: "h720", height: 720, crf: 24, maxrateKbps: 1500, bufsizeKbps: 3000, level: 31 },
+  { name: "h480", height: 480, crf: 25, maxrateKbps: 700, bufsizeKbps: 700, level: 30 },
+  { name: "h540", height: 540, crf: 24, maxrateKbps: 1100, bufsizeKbps: 1100, level: 30 },
+  { name: "h720", height: 720, crf: 24, maxrateKbps: 1500, bufsizeKbps: 1500, level: 31 },
 ];
 
 /** The complete ladder tops out at the source's own picture: only made for a 720p source (Naka's). */
