@@ -1,10 +1,21 @@
-import { addHeightTime, type DeviceKind, type HeightTime, type PlaybackReport } from "@annamour/protocol";
+import {
+  addHeightTime,
+  addLeadTime,
+  bufferedAhead,
+  type DeviceKind,
+  type HeightTime,
+  median,
+  type PlaybackReport,
+} from "@annamour/protocol";
 
 /*
  * Measures how well the film plays on this device, only while the séance is
  * playing: time watched, freezes (seeks excluded), how long the picture took
  * to start, and the picture height actually shown (Safari's own player hides
- * which quality it picked, but not the height). The report grows during the
+ * which quality it picked, but not the height). Finer measures tell the
+ * players apart: the lead downloaded ahead while playing, quality switches,
+ * time spent waiting for someone else rather than freezing here, and freezes
+ * that follow a seek. The report grows during the
  * evening and is sent again every minute and when the page goes away.
  */
 
@@ -12,6 +23,8 @@ export interface PlaybackStatsOptions {
   video: HTMLVideoElement;
   /** True while the séance's shared state is « playing ». */
   roomPlaying: () => boolean;
+  /** True while the séance stands paused waiting for someone else to load. */
+  waitingForOthers: () => boolean;
   /** The name shown in the séance; null until the room has welcomed us. */
   name: () => string | null;
   engine: () => PlaybackReport["engine"] | null;
@@ -26,6 +39,8 @@ const REPORT_MS = 60_000;
 /** A wait shorter than this is not a freeze anyone sees. */
 const STALL_DEBOUNCE_MS = 300;
 const HAVE_FUTURE_DATA = 3;
+/** A freeze starting this soon after a seek is the seek's doing, not the network's alone. */
+const AFTER_SEEK_MS = 3000;
 
 function randomViewingId(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(12));
@@ -40,6 +55,14 @@ export class PlaybackStats {
   private stallSeconds = 0;
   private startupMs: number | null = null;
   private heights: HeightTime[] = [];
+  private leadSeconds: number[] = [];
+  /** One lead per sample: about 3,600 numbers for a two-hour film. */
+  private readonly leads: number[] = [];
+  private qualitySwitches = 0;
+  private lastHeight = 0;
+  private waitSeconds = 0;
+  private afterSeekStallCount = 0;
+  private lastSeekAt = Number.NEGATIVE_INFINITY;
 
   private lastSampleAt = performance.now();
   private roomPlayingSince: number | null = null;
@@ -56,6 +79,7 @@ export class PlaybackStats {
     video.addEventListener("waiting", this.onWaiting);
     video.addEventListener("playing", this.onPlaying);
     video.addEventListener("seeking", this.onSeeking);
+    video.addEventListener("seeked", this.onSeeked);
     window.addEventListener("pagehide", this.flush);
     document.addEventListener("visibilitychange", this.onVisibility);
     this.sampler = setInterval(this.sample, SAMPLE_MS);
@@ -68,6 +92,7 @@ export class PlaybackStats {
     video.removeEventListener("waiting", this.onWaiting);
     video.removeEventListener("playing", this.onPlaying);
     video.removeEventListener("seeking", this.onSeeking);
+    video.removeEventListener("seeked", this.onSeeked);
     window.removeEventListener("pagehide", this.flush);
     document.removeEventListener("visibilitychange", this.onVisibility);
     clearInterval(this.sampler);
@@ -90,6 +115,17 @@ export class PlaybackStats {
       stallSeconds: round(this.stallSeconds),
       startupMs: this.startupMs === null ? null : Math.round(this.startupMs),
       heights: this.heights.map(({ height, seconds }) => ({ height, seconds: round(seconds) })),
+      ...this.finerMeasures(),
+    };
+  }
+
+  private finerMeasures() {
+    const leadMedian = median(this.leads);
+    return {
+      ...(leadMedian === null ? {} : { leadSeconds: this.leadSeconds.map(round), leadMedian: round(leadMedian) }),
+      qualitySwitches: this.qualitySwitches,
+      waitSeconds: round(this.waitSeconds),
+      afterSeekStallCount: this.afterSeekStallCount,
     };
   }
 
@@ -110,13 +146,31 @@ export class PlaybackStats {
     const { video } = this.options;
     if (!this.options.roomPlaying()) {
       this.roomPlayingSince = null;
+      if (this.options.waitingForOthers()) this.waitSeconds += elapsed;
       return;
     }
     this.roomPlayingSince ??= now;
     if (video.paused || video.readyState < HAVE_FUTURE_DATA) return;
     this.watchedSeconds += elapsed;
-    if (video.videoHeight > 0) this.heights = addHeightTime(this.heights, video.videoHeight, elapsed);
+    this.samplePicture(video, elapsed);
+    this.sampleLead(video, elapsed);
   };
+
+  private samplePicture(video: HTMLVideoElement, elapsed: number): void {
+    const height = video.videoHeight;
+    if (height <= 0) return;
+    if (this.lastHeight > 0 && height !== this.lastHeight) this.qualitySwitches++;
+    this.lastHeight = height;
+    this.heights = addHeightTime(this.heights, height, elapsed);
+  }
+
+  private sampleLead(video: HTMLVideoElement, elapsed: number): void {
+    const { buffered } = video;
+    const ranges = Array.from({ length: buffered.length }, (_, i) => [buffered.start(i), buffered.end(i)] as const);
+    const lead = bufferedAhead(ranges, video.currentTime);
+    this.leads.push(lead);
+    this.leadSeconds = addLeadTime(this.leadSeconds, lead, elapsed);
+  }
 
   private readonly onWaiting = (): void => {
     const { video } = this.options;
@@ -127,6 +181,7 @@ export class PlaybackStats {
       this.stallTimer = undefined;
       if (this.options.video.readyState >= HAVE_FUTURE_DATA) return;
       this.stallCount++;
+      if (startedAt - this.lastSeekAt <= AFTER_SEEK_MS) this.afterSeekStallCount++;
       this.stalledAt = startedAt;
     }, STALL_DEBOUNCE_MS);
   };
@@ -148,6 +203,11 @@ export class PlaybackStats {
     // A seek's wait is the price of the seek, not a freeze.
     clearTimeout(this.stallTimer);
     this.stallTimer = undefined;
+    this.lastSeekAt = performance.now();
+  };
+
+  private readonly onSeeked = (): void => {
+    this.lastSeekAt = performance.now();
   };
 
   private readonly onVisibility = (): void => {

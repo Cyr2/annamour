@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PlaybackStatsEntry } from "../src/playback-stats.ts";
-import { heightBucket, SeanceReport, seanceReport } from "../src/seance-report.ts";
+import { heightBucket, SeanceReport, seanceReport, weightedMedian } from "../src/seance-report.ts";
 
 const entry = (overrides: Partial<PlaybackStatsEntry>): PlaybackStatsEntry => ({
   viewingId: "viewing-0001",
@@ -111,5 +111,57 @@ describe("time per quality", () => {
     ]).devices;
     expect(annou?.heights.map((h) => h.height)).toEqual([234, 360, 480, 540]);
     expect(annou?.heights.reduce((sum, h) => sum + h.share, 0)).toBeCloseTo(1);
+  });
+});
+
+describe("the finer measures of an evening", () => {
+  it("add up the page loads that measured them", () => {
+    const [anna] = seanceReport([
+      entry({ qualitySwitches: 3, waitSeconds: 40, afterSeekStallCount: 1, stallCount: 2 }),
+      entry({ qualitySwitches: 1, waitSeconds: 25.5, afterSeekStallCount: 0, stallCount: 1, updatedAt: 2 }),
+    ]).devices;
+    expect(anna).toMatchObject({ qualitySwitches: 4, waitSeconds: 65.5, afterSeekStallCount: 1, stallCount: 3 });
+  });
+
+  it("are not guessed for pages from before they existed", () => {
+    const [old] = seanceReport([entry({})]).devices;
+    expect(old).toMatchObject({
+      leadShares: [],
+      leadMedian: null,
+      qualitySwitches: null,
+      waitSeconds: null,
+      afterSeekStallCount: null,
+    });
+    const [mixed] = seanceReport([entry({}), entry({ qualitySwitches: 2 })]).devices;
+    expect(mixed?.qualitySwitches).toBe(2);
+  });
+
+  it("merge the forward lead of page loads, the longest one weighing most", () => {
+    const [anna] = seanceReport([
+      entry({ leadSeconds: [0, 0, 0, 0, 0, 3000], leadMedian: 290 }),
+      entry({ leadSeconds: [600, 0, 0, 0, 0, 0], leadMedian: 2, updatedAt: 2 }),
+      entry({}),
+    ]).devices;
+    expect(anna?.leadMedian).toBe(290);
+    expect(anna?.leadShares).toEqual([600 / 3600, 0, 0, 0, 0, 3000 / 3600]);
+    expect(SeanceReport.safeParse({ devices: [anna] }).success).toBe(true);
+  });
+
+  it("take the middle of middles by the time each was measured over", () => {
+    expect(weightedMedian([])).toBeNull();
+    expect(
+      weightedMedian([
+        { value: 10, weight: 1 },
+        { value: 120, weight: 5 },
+        { value: 30, weight: 1 },
+      ]),
+    ).toBe(120);
+    // Nothing measured long enough to weigh: a plain middle.
+    expect(
+      weightedMedian([
+        { value: 10, weight: 0 },
+        { value: 30, weight: 0 },
+      ]),
+    ).toBe(20);
   });
 });
