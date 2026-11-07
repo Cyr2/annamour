@@ -40,8 +40,8 @@ export function EpisodePicker({ show, onPick, onBack }: EpisodePickerProps) {
   const seasons = Array.from({ length: show.seasons ?? 1 }, (_, i) => i + 1);
 
   return (
-    <div className="grid gap-3">
-      <div className="flex items-center gap-3">
+    <div className="grid min-w-0 gap-3">
+      <div className="flex min-w-0 items-center gap-3">
         <Poster title={show} size="small" />
         <div className="min-w-0">
           <h3 className="truncate font-sans text-md font-semibold text-fg">{show.title}</h3>
@@ -49,7 +49,7 @@ export function EpisodePicker({ show, onPick, onBack }: EpisodePickerProps) {
         </div>
       </div>
       {seasons.length > 1 ? (
-        <fieldset className="-mx-1 flex gap-2 overflow-x-auto border-0 px-1 pb-1">
+        <fieldset className="-mx-1 flex min-w-0 gap-2 overflow-x-auto border-0 px-1 pb-1">
           <legend className="sr-only">Saison</legend>
           {seasons.map((n) => (
             <Button
@@ -84,7 +84,7 @@ function EpisodeList({ episodes, onPick }: { episodes: CatalogEpisode[]; onPick:
   if (episodes.length === 0)
     return <p className="px-1 text-sm text-fg-muted">Pas encore d'épisode pour cette saison.</p>;
   return (
-    <ul className="-mx-1 grid max-h-[36dvh] gap-1 overflow-y-auto px-1" aria-label="Épisodes">
+    <ul className="-mx-1 grid max-h-[36dvh] grid-cols-[minmax(0,1fr)] gap-1 overflow-y-auto px-1" aria-label="Épisodes">
       {episodes.map(({ number, title }) => (
         <li key={number}>
           <button
@@ -93,7 +93,7 @@ function EpisodeList({ episodes, onPick }: { episodes: CatalogEpisode[]; onPick:
             className="surface-tile flex min-h-11 w-full items-baseline gap-3 px-3.5 py-2.5 text-left focus-visible:outline-2 focus-visible:outline-accent"
           >
             <span className="w-7 shrink-0 font-mono text-sm text-fg-muted">É{number}</span>
-            <span className="truncate text-sm text-fg">{title ?? `Épisode ${number}`}</span>
+            <span className="min-w-0 truncate text-sm text-fg">{title ?? `Épisode ${number}`}</span>
           </button>
         </li>
       ))}

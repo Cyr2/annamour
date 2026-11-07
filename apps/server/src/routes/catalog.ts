@@ -1,13 +1,16 @@
 import {
+  AddCatalogEpisodeRequest,
+  type AddEpisodeResponse,
   CATALOG_API,
   CatalogQuery,
   type CatalogSearchResponse,
   type CatalogSeasonResponse,
   type CreateRoomResponse,
+  isRoomCode,
   PlayCatalogRequest,
 } from "@annamour/protocol";
 import { Hono } from "hono";
-import { BadRequestError, TooManyAttemptsError } from "../errors.ts";
+import { BadRequestError, NotFoundError, TooManyAttemptsError } from "../errors.ts";
 import { type AppEnv, type RouteDeps, readBody, requireAccount } from "../http/context.ts";
 import { RateLimiter } from "../services/rate-limiter.ts";
 import { importing } from "./rooms.ts";
@@ -44,6 +47,14 @@ export function catalogRoutes({ services }: RouteDeps) {
     const season = positiveInt(c.req.param("season"));
     if (id === null || season === null) throw new BadRequestError("Cette saison n'existe pas.");
     return c.json({ episodes: await catalog.season(id, season) } satisfies CatalogSeasonResponse);
+  });
+
+  routes.post(CATALOG_API.addEpisode, async (c) => {
+    const code = c.req.param("code");
+    if (!isRoomCode(code)) throw new NotFoundError("Cette séance n'existe plus.");
+    const request = await readBody(c, AddCatalogEpisodeRequest, "Choisis un film, ou un épisode d'une série.");
+    const episode = await importing(catalog.addEpisode(code, request));
+    return c.json({ episode } satisfies AddEpisodeResponse, 201);
   });
 
   routes.post(CATALOG_API.play, async (c) => {

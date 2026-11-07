@@ -1,4 +1,4 @@
-import { generateRoomCode, ROOM_RETENTION_MS } from "@annamour/protocol";
+import { type CatalogRef, generateRoomCode, ROOM_RETENTION_MS } from "@annamour/protocol";
 import type { ImportedMedia } from "./hls.ts";
 import { Room, type RoomPersistence } from "./rooms.ts";
 import type { RoomRepository } from "./storage/room-repository.ts";
@@ -11,6 +11,12 @@ export const CHECKPOINT_INTERVAL_MS = 30 * 1000;
 export interface RoomStoreOptions {
   random?: () => number;
   now?: () => number;
+}
+
+/** What is known of a séance's first video beyond the stream: its label and the catalog title it came from. */
+export interface FirstEpisode {
+  label?: string | undefined;
+  catalog?: CatalogRef | undefined;
 }
 
 export interface SweepResult {
@@ -34,20 +40,23 @@ export class RoomStore {
     this.now = now;
   }
 
-  create(title: string, imported: ImportedMedia, now: number): Room {
+  /** `first` names the séance's first video when it is an episode of something (« S1 · É1 » of a series). */
+  create(title: string, imported: ImportedMedia, now: number, first: FirstEpisode = {}): Room {
     const code = this.freeCode();
-    const first = { id: 0, label: undefined };
+    const episode = { id: 0, label: first.label, catalog: first.catalog };
     this.repository.insert({
       code,
       title,
-      episodes: [{ ...first, media: imported }],
+      episodes: [{ ...episode, media: imported }],
       current: 0,
       nextEpisodeId: 1,
       position: 0,
       createdAt: now,
       lastUsedAt: now,
     });
-    return this.remember(new Room(code, title, [{ ...first, imported }], now, { persistence: this.persistence(code) }));
+    return this.remember(
+      new Room(code, title, [{ ...episode, imported }], now, { persistence: this.persistence(code) }),
+    );
   }
 
   /** The live room, or the saved one brought back paused at its last position. */
@@ -56,7 +65,7 @@ export class RoomStore {
     if (live) return live;
     const stored = this.repository.find(code);
     if (!stored) return undefined;
-    const episodes = stored.episodes.map(({ id, label, media }) => ({ id, label, imported: media }));
+    const episodes = stored.episodes.map(({ id, label, media, catalog }) => ({ id, label, catalog, imported: media }));
     const room = new Room(code, stored.title, episodes, this.now(), {
       position: stored.position,
       current: stored.current,
@@ -67,8 +76,8 @@ export class RoomStore {
   }
 
   /** Queues an imported episode after the room's others, on disk and for everyone in it. Returns its index. */
-  addEpisode(room: Room, label: string | undefined, imported: ImportedMedia): number {
-    const episode = { id: room.nextEpisodeId, label };
+  addEpisode(room: Room, label: string | undefined, imported: ImportedMedia, catalog?: CatalogRef): number {
+    const episode = { id: room.nextEpisodeId, label, catalog };
     this.repository.addEpisode(room.code, { ...episode, media: imported });
     return room.addEpisode({ ...episode, imported });
   }

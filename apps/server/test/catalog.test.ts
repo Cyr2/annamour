@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { type BridgeAnswer, bridgeFetcher, NakaCatalog, toCatalogEpisodes } from "../src/catalog/naka-catalog.ts";
 import { ConfigError, loadConfig } from "../src/config.ts";
 import type { TextFetcher } from "../src/safe-fetch.ts";
-import { jsonRequest, sessionCookieOf, testApp } from "./helpers.ts";
+import { jsonRequest, media, sessionCookieOf, testApp, testStore } from "./helpers.ts";
 
 const INTERSTELLAR = {
   id: 543,
@@ -218,5 +218,62 @@ describe("starting a séance from the catalog", () => {
     const { cookie } = await signedIn();
     const play = { id: 91, type: "tv", title: "Euphoria" };
     expect((await app.request(CATALOG_API.play, jsonRequest("POST", play, { cookie }))).status).toBe(400);
+  });
+});
+
+describe("adding a catalog title to a séance's queue", () => {
+  const EPISODE_1 = "streaming/sources/91?type=tv&season=1&episode=1";
+  const EPISODE_2 = "streaming/sources/91?type=tv&season=1&episode=2";
+  const DUNE = "streaming/sources/7?type=movie";
+
+  async function seriesSession(answers: Record<string, unknown>) {
+    const ctx = setup({ [EPISODE_1]: SOURCES, ...answers });
+    const { cookie } = await ctx.signedIn();
+    const play = { id: 91, type: "tv", title: "Euphoria", season: 1, episode: 1 };
+    const created = await ctx.app.request(CATALOG_API.play, jsonRequest("POST", play, { cookie }));
+    const { code } = (await created.json()) as { code: string };
+    const add = (body: unknown, room = code) =>
+      ctx.app.request(`/api/catalog/rooms/${room}/episodes`, jsonRequest("POST", body, { cookie }));
+    const snapshot = async () => (await ctx.app.request(`/api/rooms/${code}`)).json();
+    return { ...ctx, code, add, snapshot };
+  }
+
+  it("queues the next episode of the series, remembering where it comes from", async () => {
+    const { add, snapshot } = await seriesSession({ [EPISODE_2]: SOURCES });
+    const next = { id: 91, type: "tv", title: "Euphoria", season: 1, episode: 2 };
+    const response = await add(next);
+    expect(response.status).toBe(201);
+    expect(await response.json()).toEqual({ episode: 1 });
+    expect(await snapshot()).toMatchObject({
+      episodes: [
+        { label: "S1 · É1", catalog: { id: 91, season: 1, episode: 1 } },
+        { label: "S1 · É2", catalog: next },
+      ],
+    });
+  });
+
+  it("queues a film by its title", async () => {
+    const { add, snapshot } = await seriesSession({ [DUNE]: SOURCES });
+    expect((await add({ id: 7, type: "movie", title: "Dune" })).status).toBe(201);
+    expect(await snapshot()).toMatchObject({ episodes: [{}, { label: "Dune" }] });
+  });
+
+  it("asks nothing of Naka for a séance that does not exist", async () => {
+    const { add, bridge } = await seriesSession({ [DUNE]: SOURCES });
+    const before = bridge.calls.length;
+    expect((await add({ id: 7, type: "movie", title: "Dune" }, "ZZZZ")).status).toBe(404);
+    expect((await add({ id: 7, type: "movie", title: "Dune" }, "nope")).status).toBe(404);
+    expect(bridge.calls).toHaveLength(before);
+  });
+});
+
+describe("a séance's catalog titles on disk", () => {
+  it("come back when the séance is reopened from the database", () => {
+    const { store, repository } = testStore();
+    const ref = { id: 91, type: "tv" as const, title: "Euphoria", season: 1, episode: 1 };
+    const room = store.create("Euphoria", media, 0, { label: "S1 · É1", catalog: ref });
+    store.addEpisode(room, "Lien collé", media);
+    const reopened = repository.find(room.code);
+    expect(reopened?.episodes.map((e) => e.catalog)).toEqual([ref, undefined]);
   });
 });
