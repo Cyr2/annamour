@@ -50,6 +50,16 @@ async function enterPage(): Promise<void> {
     .catch(() => {});
 }
 
+/**
+ * Leaving the player while full screen (its back arrow, Retour) would leave
+ * the whole app full screen and stuck in landscape: give the screen back.
+ */
+export function leaveFullscreen(): void {
+  if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+  // Not left to `fullscreenchange`: the player is already gone when it fires, and nothing may be listening yet.
+  orientation()?.unlock?.();
+}
+
 export function toggleFullscreen(video: HTMLVideoElement | null): void {
   const webkitVideo = video as WebkitVideo | null;
   const plan = fullscreenPlan({

@@ -1,5 +1,5 @@
 import type { Reaction } from "@annamour/protocol";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useRoom } from "../../sync/room.ts";
 import type { SyncClient } from "../../sync/SyncClient.ts";
@@ -10,7 +10,7 @@ import { Sheet } from "../../ui/Sheet.tsx";
 import { useTv } from "../tv/tv-context.ts";
 import { ControlsBar } from "./ControlsBar.tsx";
 import { FloatingReactions } from "./FloatingReactions.tsx";
-import { toggleFullscreen } from "./fullscreen.ts";
+import { leaveFullscreen, toggleFullscreen } from "./fullscreen.ts";
 import { BlockedNotice, CenterPlay, PlayerError, WaitBanner } from "./PlayerOverlays.tsx";
 import { PlayerTopBar } from "./PlayerTopBar.tsx";
 import { SeekBadge } from "./SeekBadge.tsx";
@@ -49,6 +49,8 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
   const controlsLayer = useRef<HTMLDivElement>(null);
   const { controls } = player;
 
+  // Full screen belongs to the film: leaving the player gives the app back, upright.
+  useEffect(() => leaveFullscreen, []);
   useTrackChoice(video, code, media, controls);
   useVolumeOnVideo(video);
   usePlaybackNotices();

@@ -1,9 +1,9 @@
 import { LogIn } from "lucide-react";
 import { useIdentity } from "../../sync/identity.ts";
+import { BrandBar } from "../../ui/BrandBar.tsx";
 import { GlassLink } from "../../ui/GlassLink.tsx";
 import { LinkButton } from "../../ui/LinkButton.tsx";
 import { PresenceBubble } from "../../ui/PresenceBubble.tsx";
-import { Wordmark } from "../../ui/Wordmark.tsx";
 import { useTv } from "../tv/tv-context.ts";
 
 /**
@@ -13,20 +13,21 @@ import { useTv } from "../tv/tv-context.ts";
 export function HomeTopBar() {
   const tv = useTv();
   return (
-    <header className="flex min-h-12 items-center justify-between gap-3">
-      <Wordmark />
-      {tv ? (
-        <nav aria-label="Navigation" className="flex items-center gap-5">
-          {/* Where the remote starts when there is nothing to resume (see features/tv/focus-engine.ts). */}
-          <div data-tv-primary>
-            <LinkButton href="/rejoindre" icon={<LogIn />}>
-              Rejoindre avec un code
-            </LinkButton>
-          </div>
-          <ProfileChip />
-        </nav>
-      ) : null}
-    </header>
+    <BrandBar
+      end={
+        tv ? (
+          <nav aria-label="Navigation" className="flex items-center gap-5">
+            {/* Where the remote starts when there is nothing to resume (see features/tv/focus-engine.ts). */}
+            <div data-tv-primary>
+              <LinkButton href="/rejoindre" icon={<LogIn />}>
+                Rejoindre avec un code
+              </LinkButton>
+            </div>
+            <ProfileChip />
+          </nav>
+        ) : null
+      }
+    />
   );
 }
 

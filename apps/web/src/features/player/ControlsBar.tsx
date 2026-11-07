@@ -1,6 +1,5 @@
 import type { Reaction } from "@annamour/protocol";
-import { LogOut, Maximize, Pause, Play, RotateCcw, RotateCw, Subtitles } from "lucide-react";
-import { Link } from "wouter";
+import { Maximize, Pause, Play, RotateCcw, RotateCw, Subtitles } from "lucide-react";
 import { formatClock } from "../../lib/format.ts";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { Surface } from "../../ui/Surface.tsx";
@@ -27,8 +26,9 @@ interface ControlsBarProps {
  * The glass capsule floating over the film: the timeline between its two
  * clocks, then play, ±10 s and volume on the left; reactions, tracks and full
  * screen on the right. On a phone the seven buttons share the width evenly.
- * On a TV (always full screen, volume on the remote) the last one is
- * « Quitter » instead, and play/pause is where the remote lands.
+ * On a TV (always full screen, volume on the remote) there is no full-screen
+ * button, leaving the film is the top bar's back arrow (or Retour), and
+ * play/pause is where the remote lands.
  */
 export function ControlsBar(props: ControlsBarProps) {
   const { playing, onToggle, onSeek } = props;
@@ -59,18 +59,7 @@ export function ControlsBar(props: ControlsBarProps) {
         <span className="hidden flex-1 sm:block" />
         <ReactionPicker open={props.reactionsOpen} onOpenChange={props.onReactionsOpenChange} onReact={props.onReact} />
         <IconButton label="Audio et sous-titres" icon={<Subtitles />} onClick={props.onOpenTracks} />
-        {tv ? (
-          <Link
-            href="/"
-            aria-label="Quitter le film"
-            title="Quitter le film"
-            className="grid size-11 shrink-0 place-items-center rounded-full text-fg transition-colors hover:bg-fill-hover [&>svg]:size-5"
-          >
-            <LogOut aria-hidden />
-          </Link>
-        ) : (
-          <IconButton label="Plein écran" icon={<Maximize />} onClick={props.onFullscreen} />
-        )}
+        {tv ? null : <IconButton label="Plein écran" icon={<Maximize />} onClick={props.onFullscreen} />}
       </div>
     </Surface>
   );
