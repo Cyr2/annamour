@@ -204,6 +204,18 @@ export class Room {
     return member.id;
   }
 
+  /**
+   * A member's link dropped; they may be back in a moment, so they stay listed.
+   * Whatever they were loading no longer holds the room: it would wait for nobody.
+   */
+  disconnected(memberId: string, connection: Connection, now: number): void {
+    const participant = this.participants.get(memberId);
+    if (!participant || participant.connection !== connection || !participant.buffering) return;
+    participant.buffering = false;
+    this.broadcastMembers();
+    this.maybeResume(now);
+  }
+
   leave(memberId: string, connection: Connection, now: number): void {
     const participant = this.participants.get(memberId);
     if (!participant || participant.connection !== connection) return; // already replaced
