@@ -98,16 +98,21 @@ test("un spectateur sur une 4G faible et changeante regarde avec un autre sur la
   await onboard(fiber, "Fibre");
   const roomUrl = await createSession(fiber, "Mesure réseau faible", FILM);
   const code = roomUrl.split("/").at(-1) ?? "";
+  // The weak link is weak from the start: the player fills its lead behind the salon, before the film starts.
+  await throttle(weak, PROFILE_KBPS[0] ?? 0);
   await onboard(weak, "4G", roomUrl);
   await expect(fiber.getByRole("heading", { name: "4G est là" })).toBeVisible();
   // As people are told to: start once the salon says the lighter qualities are ready.
   await expect(fiber.getByText("Vidéo prête pour toutes les connexions")).toBeVisible({ timeout: 180_000 });
 
-  await throttle(weak, PROFILE_KBPS[0] ?? 0);
+  const inSalon = await observed(weak, 0);
   const beforeStart = await weak.evaluate(() => performance.now());
   await fiber.getByRole("button", { name: "Lancer le film" }).click();
   await expect.poll(() => videoTime(fiber), { timeout: 60_000 }).toBeGreaterThan(2);
-  const steps = [`before the profile (from launch) → ${await observed(weak, beforeStart)}`];
+  const steps = [
+    `in the salon (at ${PROFILE_KBPS[0]} kb/s) → ${inSalon}`,
+    `from the launch to the profile → ${await observed(weak, beforeStart)}`,
+  ];
   for (const kbps of PROFILE_KBPS) {
     await throttle(weak, kbps);
     const since = await weak.evaluate(() => performance.now());
