@@ -4,7 +4,7 @@ import { serve } from "@hono/node-server";
 import { createApp } from "./app.ts";
 import { bridgeFetcher, NakaCatalog } from "./catalog/naka-catalog.ts";
 import { loadConfig } from "./config.ts";
-import { ffmpegAvailable, ffmpegEncoder } from "./media/ffmpeg.ts";
+import { ffmpegAvailable, ffmpegEncoder, firstTimestamp } from "./media/ffmpeg.ts";
 import { segmentSource } from "./media/segment-source.ts";
 import { Transcoder } from "./media/transcoder.ts";
 import { attachRealtime } from "./realtime.ts";
@@ -25,7 +25,12 @@ const services = createServices({
   pepper: config.pepper,
   relyingParty: config.relyingParty,
   ...(nakaBridge ? { catalog: new NakaCatalog(bridgeFetcher(nakaBridge.url, nakaBridge.secret)) } : {}),
-  ...(transcoder ? { transcoder } : {}),
+  ...(transcoder
+    ? {
+        transcoder,
+        timelineProbe: { source: segmentSource(safeFetchBytes, nakaBridge), firstTimestamp, log: console.info },
+      }
+    : {}),
 });
 
 /** Lighter qualities for weak links, made with ffmpeg when it is installed (it is in the Docker image). */

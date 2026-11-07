@@ -42,9 +42,10 @@ describe("a source with a single quality", () => {
     expect(rungsFor(source(), SOURCE)).toEqual([...RUNGS]);
   });
 
-  it("gets no rung when it is already small, or made of fMP4 segments", () => {
+  it("gets only the rungs below it, and none when made of fMP4 segments", () => {
     const small = { ...source(), height: 360 };
-    expect(rungsFor(small, SOURCE).map((rung) => rung.name)).toEqual([]);
+    expect(rungsFor(small, SOURCE).map((rung) => rung.name)).toEqual(["q234"]);
+    expect(rungsFor({ ...source(), height: 234 }, SOURCE)).toEqual([]);
     expect(rungsFor(source(), `#EXTM3U\n#EXT-X-MAP:URI="init.mp4"\n#EXTINF:4,\nhttps://cdn.test/a.m4s`)).toEqual([]);
     expect(rungsFor(source(), "#EXTM3U")).toEqual([]);
   });
@@ -60,7 +61,12 @@ describe("the master with lighter qualities", () => {
 
   it("lists the lighter rungs first, the one a phone on 4G should start with on top", () => {
     const variants = master.split("\n").filter((line) => !line.startsWith("#") && line.trim());
-    expect(variants).toEqual(["q480.m3u8", "q360.m3u8", "p1.m3u8"]);
+    expect(variants).toEqual(["q480.m3u8", "q540.m3u8", "q360.m3u8", "q234.m3u8", "p1.m3u8"]);
+  });
+
+  it("offers a last-resort rung light enough for a collapsing link, and a 540p one at its own H.264 level", () => {
+    expect(master).toContain("BANDWIDTH=310000,AVERAGE-BANDWIDTH=280000,RESOLUTION=416x234");
+    expect(master).toContain('RESOLUTION=960x540,CODECS="avc1.64001f,mp4a.40.2"');
   });
 
   it("declares what Apple requires for each rung, with the source's audio", () => {

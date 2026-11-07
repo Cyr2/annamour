@@ -3,10 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SegmentEncoder } from "../src/media/ffmpeg.ts";
-import { RUNGS } from "../src/media/ladder.ts";
+import { RUNGS, rungNamed } from "../src/media/ladder.ts";
 import { type Film, Transcoder, type TranscoderOptions } from "../src/media/transcoder.ts";
 
-const [Q480, Q360] = RUNGS;
+const Q480 = rungNamed("q480");
+const Q360 = rungNamed("q360");
 if (!Q480 || !Q360) throw new Error("rungs");
 
 const film = (segments = 100): Film => ({
