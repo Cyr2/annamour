@@ -136,7 +136,7 @@ export class NakaCatalog implements Catalog {
 }
 
 /** The bridge over HTTP, on the Docker network, with its shared secret. */
-export function bridgeFetcher(baseUrl: string, secret: string, timeoutMs = 45_000): BridgeFetcher {
+export function bridgeFetcher(baseUrl: string, secret: string, timeoutMs = 95_000): BridgeFetcher {
   return async (apiPath) => {
     const response = await fetch(new URL(`/naka/${apiPath}`, baseUrl), {
       headers: { "x-bridge-secret": secret },
