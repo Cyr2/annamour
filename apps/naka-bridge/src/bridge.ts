@@ -65,7 +65,11 @@ async function handleMedia(target: string, deps: BridgeDeps): Promise<NakaAnswer
   const url = mediaUrl(target, deps.mediaHosts);
   if (url === null) return error(404, "not one of Naka's video files");
   try {
-    const answer = await deps.media.run(deps.now(), () => deps.naka.fetchMedia(url));
+    const answer = await deps.media.run(
+      deps.now(),
+      () => deps.naka.fetchMedia(url),
+      (fetched) => fetched.body.length,
+    );
     return answer ?? error(429, "media budget spent, retry shortly");
   } catch (cause) {
     console.error("Naka media fetch failed", cause);

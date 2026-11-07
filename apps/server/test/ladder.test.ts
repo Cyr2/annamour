@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  lightAudioFor,
   RUNGS,
   rungNamed,
   rungPlaylist,
@@ -65,7 +66,7 @@ describe("the master with lighter qualities", () => {
   });
 
   it("offers a last-resort rung light enough for a collapsing link, and a 540p one at its own H.264 level", () => {
-    expect(master).toContain("BANDWIDTH=310000,AVERAGE-BANDWIDTH=280000,RESOLUTION=416x234");
+    expect(master).toContain("BANDWIDTH=280000,AVERAGE-BANDWIDTH=256000,RESOLUTION=416x234");
     expect(master).toContain('RESOLUTION=960x540,CODECS="avc1.64001f,mp4a.40.2"');
   });
 
@@ -89,11 +90,56 @@ describe("the master with lighter qualities", () => {
   });
 });
 
+describe("the lighter audio", () => {
+  const audioPlaylist = `#EXTM3U\n#EXTINF:10.005333,\nhttps://cdn.test/audio_fr/segment-000.aac\n#EXT-X-ENDLIST`;
+  const light = () => lightAudioFor(MASTER, source(), (uri) => (uri === "p0.m3u8" ? audioPlaylist : undefined));
+
+  it("twins every language of the source's packed AAC audio, under the same name", () => {
+    expect(light()).toEqual({
+      group: "audio-lo",
+      renditions: [
+        {
+          name: "lo-a0",
+          sourceUri: "p0.m3u8",
+          line: '#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio-lo",NAME="Français",DEFAULT=YES,LANGUAGE="fr",URI="lo-a0.m3u8"',
+          isDefault: true,
+        },
+      ],
+    });
+  });
+
+  it("goes with the lightest rungs only, which then fit Apple's 192 kb/s for cellular", () => {
+    const master = withLowQualities(MASTER, source(), RUNGS, light());
+    expect(master).toContain('GROUP-ID="audio-lo"');
+    expect(master).toContain(
+      'BANDWIDTH=192000,AVERAGE-BANDWIDTH=168000,RESOLUTION=416x234,CODECS="avc1.64001e,mp4a.40.2",AUDIO="audio-lo"',
+    );
+    expect(master).toMatch(/RESOLUTION=640x360[^\n]*AUDIO="audio-lo"/);
+    expect(master).toMatch(/RESOLUTION=854x480[^\n]*AUDIO="audio"\n/);
+  });
+
+  it("is not made when the source's audio is not packed AAC, or not for every language", () => {
+    const tsAudio = "#EXTM3U\n#EXTINF:10,\nhttps://cdn.test/a.ts";
+    expect(lightAudioFor(MASTER, source(), () => tsAudio)).toBeUndefined();
+    expect(lightAudioFor(MASTER, source(), () => undefined)).toBeUndefined();
+    const twoLanguages = MASTER.replace(
+      "\n\n#EXT-X-STREAM-INF",
+      '\n#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",NAME="English",LANGUAGE="en",URI="pX.m3u8"\n\n#EXT-X-STREAM-INF',
+    );
+    expect(
+      lightAudioFor(twoLanguages, source(), (uri) => (uri === "p0.m3u8" ? audioPlaylist : tsAudio)),
+    ).toBeUndefined();
+    const muxed = sourceVariant("#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1,RESOLUTION=1280x720\nv.m3u8");
+    if (muxed) expect(lightAudioFor(MASTER, muxed, () => audioPlaylist)).toBeUndefined();
+  });
+});
+
 describe("a rung's playlist", () => {
   it("keeps the source's durations and points each segment to our encode of it", () => {
-    const playlist = rungPlaylist(SOURCE, RUNGS[0] ?? RUNGS[1] ?? ({} as never));
+    const playlist = rungPlaylist(SOURCE, "q480");
     expect(playlist).toContain("#EXTINF:6.5,\nq480/00002.ts");
     expect(playlist).toContain("#EXT-X-ENDLIST");
+    expect(rungPlaylist(SOURCE, "lo-a0", "aac")).toContain("lo-a0/00002.aac");
     expect(playlist).not.toContain("cdn.test");
   });
 

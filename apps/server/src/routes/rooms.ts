@@ -89,7 +89,7 @@ export function roomRoutes({ services }: RouteDeps) {
     if (path === undefined) return c.notFound();
     if (path === null) return c.body(null, 503, { "retry-after": "2", "cache-control": "no-store" });
     return c.body(await readFile(path), 200, {
-      "content-type": "video/mp2t",
+      "content-type": path.endsWith(".aac") ? "audio/aac" : "video/mp2t",
       "cache-control": "private, max-age=86400",
     });
   });

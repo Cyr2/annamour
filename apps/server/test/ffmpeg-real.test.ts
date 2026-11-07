@@ -1,9 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ffmpegAvailable, ffmpegEncoder } from "../src/media/ffmpeg.ts";
+import { joinBytes, splitAdts } from "../src/media/adts.ts";
+import { ffmpegAudioEncoder, ffmpegAvailable, ffmpegEncoder } from "../src/media/ffmpeg.ts";
 import { RUNGS } from "../src/media/ladder.ts";
 
 /*
@@ -58,5 +59,68 @@ describe.skipIf(!installed)("encoding a real segment", () => {
     const outputs = RUNGS.map((rung) => ({ rung, path: join(dir, `${rung.name}.ts`) }));
     await ffmpegEncoder(source, outputs);
     for (const output of outputs) expect(firstVideoTime(output.path)).toBeCloseTo(firstVideoTime(source), 1);
+    // Four rungs on a 2-core CI runner take a few seconds; the server has many more cores.
+  }, 60_000);
+});
+
+/** Decodes an ADTS stream to mono 16-bit samples, as a player would play it. */
+function decode(file: string): Int16Array {
+  const pcm = execFileSync("ffmpeg", ["-v", "error", "-f", "aac", "-i", file, "-ac", "1", "-f", "s16le", "-"], {
+    maxBuffer: 64 * 1024 * 1024,
   });
+  return new Int16Array(pcm.buffer, pcm.byteOffset, Math.floor(pcm.byteLength / 2));
+}
+
+/** The lag (in samples) at which `heard` best matches `expected` around `at`. */
+function bestLag(expected: Int16Array, heard: Int16Array, at: number, window = 4800, range = 2048): number {
+  let best = { lag: 0, score: Number.NEGATIVE_INFINITY };
+  for (let lag = -range; lag <= range; lag++) {
+    let score = 0;
+    for (let i = 0; i < window; i++) score += (expected[at + i] ?? 0) * (heard[at + i + lag] ?? 0);
+    if (score > best.score) best = { lag, score };
+  }
+  return best.lag;
+}
+
+describe.skipIf(!installed)("making a real packed-audio segment lighter", () => {
+  it("plays at exactly the source's time between two source segments, with the same frames", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "annamour-audio-"));
+    const sourceFile = join(dir, "source.aac");
+    // White noise: it matches itself at a single lag only (a tone repeats, and so would its match).
+    const chirp = "anoisesrc=color=white:seed=7:amplitude=0.5:sample_rate=48000:duration=32";
+    execFileSync("ffmpeg", [
+      "-v",
+      "error",
+      "-f",
+      "lavfi",
+      "-i",
+      chirp,
+      "-c:a",
+      "aac",
+      "-b:a",
+      "128k",
+      "-f",
+      "adts",
+      sourceFile,
+    ]);
+    // Cut like Naka's: 469 frames of 1024 samples (10.005 s at 48 kHz) per segment.
+    const frames = splitAdts(readFileSync(sourceFile)).frames;
+    const [previous, current, next] = [0, 1, 2].map((i) => joinBytes(frames.slice(i * 469, (i + 1) * 469)));
+    if (!previous || !current || !next) throw new Error("segments");
+
+    const lighter = await ffmpegAudioEncoder({ previous, current, next }, dir);
+    expect(splitAdts(lighter).frames).toHaveLength(469);
+
+    const played = join(dir, "played.aac");
+    writeFileSync(played, joinBytes([previous, lighter, next]));
+    const expected = decode(join(dir, "source.aac"));
+    const heard = decode(played);
+    const start = 469 * 1024;
+    // Its start, middle and end: all in place, so no shift and no drift across the segment.
+    const lags = [start + 1024, start + 469 * 512, start + 469 * 1024 - 6000].map((at) => bestLag(expected, heard, at));
+    expect(
+      lags.map(Math.abs).every((lag) => lag <= 16),
+      `lags ${lags.join(", ")}`,
+    ).toBe(true);
+  }, 60_000);
 });
