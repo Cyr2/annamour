@@ -9,6 +9,7 @@ Version TV d'Annamour pour Android TV / Google TV (cible de test : vidéoproject
 **Même appli, même interface.** La TV réutilise les écrans existants de la PWA (design « salle obscure », mêmes composants, mêmes textes) : accueil, carte « Reprendre », rejoindre, salon, lecteur. Le mode TV ne fait que les adapter : mise à l'échelle pour 3 m de distance, focus bien visible, navigation aux flèches, marges de sécurité, effets de verre allégés. La maquette fil de fer sert seulement à valider les parcours de la télécommande, pas le visuel.
 
 Seuls éléments nouveaux :
+
 - l'écran « Relie cette TV à ton compte » (QR + code court) ;
 - un clavier de lettres à l'écran sous les 4 cases de « Rejoindre » ;
 - le comportement télécommande du lecteur (OK, ◀ ▶, barre ▲ ▼, Retour) appliqué à la capsule de commandes existante ;
@@ -16,13 +17,13 @@ Seuls éléments nouveaux :
 
 ## Décisions validées
 
-| Sujet | Décision |
-|---|---|
-| Lier la TV | Par QR code : la TV affiche un QR et un code court, le téléphone (déjà connecté) confirme. Aucune saisie sur la TV. |
-| Créer une séance | Sur le téléphone (coller le lien). Elle apparaît dans « Mes séances » sur la TV, qui partage le même compte. |
-| Rejoindre une séance | Sur la TV, code de 4 lettres saisi avec un clavier à l'écran piloté aux flèches. |
-| Réactions | Depuis le téléphone (au toucher) ; aussi accessibles dans la barre du lecteur TV. |
-| Lecteur | OK = pause / lecture ; ◀ ▶ = −10 s / +10 s sans ouvrir de menu ; ▲ ou ▼ = affiche la barre de commandes, dans laquelle on se déplace aux flèches comme sur Netflix ; Retour = ferme la barre, puis quitte le film. La barre s'efface après 5 s sans action pendant la lecture. |
+| Sujet                | Décision                                                                                                                                                                                                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Lier la TV           | Par QR code : la TV affiche un QR et un code court, le téléphone (déjà connecté) confirme. Aucune saisie sur la TV.                                                                                                                                                            |
+| Créer une séance     | Sur le téléphone (coller le lien). Elle apparaît dans « Mes séances » sur la TV, qui partage le même compte.                                                                                                                                                                   |
+| Rejoindre une séance | Sur la TV, code de 4 lettres saisi avec un clavier à l'écran piloté aux flèches.                                                                                                                                                                                               |
+| Réactions            | Depuis le téléphone (au toucher) ; aussi accessibles dans la barre du lecteur TV.                                                                                                                                                                                              |
+| Lecteur              | OK = pause / lecture ; ◀ ▶ = −10 s / +10 s sans ouvrir de menu ; ▲ ou ▼ = affiche la barre de commandes, dans laquelle on se déplace aux flèches comme sur Netflix ; Retour = ferme la barre, puis quitte le film. La barre s'efface après 5 s sans action pendant la lecture. |
 
 ## Parcours
 
@@ -35,18 +36,21 @@ Seuls éléments nouveaux :
 ## Technique
 
 ### Serveur (contrat dans `packages/protocol`)
+
 - `POST /api/tv/pairing` (sans compte) → `{ code, pollToken, expiresAt }` : demande de liaison créée par la TV ; code court lisible (6 caractères, alphabet sans ambiguïtés), valable 10 min.
 - `GET /api/tv/pairing/:pollToken` (TV, interrogé toutes les 2 s, ou WebSocket) → `pending` | `approved` (pose le cookie de session de la TV) | `expired`.
 - `POST /api/tv/pairing/approve { code }` (téléphone connecté) → lie la TV au compte ; usage unique ; limité en essais par IP.
 - Jetons stockés hachés comme les autres ; tests et couverture selon les règles du dépôt.
 
 ### Interface TV (même appli web, mode TV)
+
 - Mode TV activé par l'appli Android TV (paramètre `?tv=1` mémorisé) ou par détection (`navigator.userAgent` Android TV / Google TV). **Pas d'écrans dupliqués** : les écrans existants reçoivent une variante TV (classe ou contexte `tv` sur la racine), seule la liaison a sa route `/tv/lier`. L'accueil TV montre en plus la liste « Mes séances » du profil, sous la carte « Reprendre ».
 - **Navigation spatiale** au pavé directionnel : bibliothèque éprouvée (ex. `@noriginmedia/norigin-spatial-navigation`) ; focus très visible (anneau + légère mise à l'échelle) ; Retour (`Escape`/`Backspace`/`GoBack`) géré partout.
 - « 10 pieds » : texte plus grand, marges de sécurité de 5 % sur les bords, cibles larges ; effets de verre allégés (pas de réfraction SVG : les puces de TV sont lentes), animations courtes.
 - Le lecteur réutilise `PlayerSync` et la synchro existante ; seule la couche de contrôle change.
 
 ### Appli Android TV
+
 - Petite appli Android TV (WebView plein écran ou Trusted Web Activity) qui ouvre l'URL de prod en mode TV, avec bannière Leanback pour apparaître dans le lanceur Google TV, et transmet les touches de la télécommande.
 - Installée sur le Formovie par ADB réseau (`adb -s 192.168.1.20:5555`), en respectant les règles du projecteur : lire d'abord `work\README.md` du dépôt cleanyourtv, ne désinstaller ni désactiver aucun paquet système, vérifier chaque étape par capture d'écran, refermer l'ADB à la fin.
 
