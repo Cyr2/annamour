@@ -10,16 +10,16 @@ interface BrandBarProps {
 }
 
 /**
- * A screen's top bar led by the wordmark. Alone on a phone, the wordmark sits
- * in the middle, the way an app shows its name; with a button beside it, it
- * keeps its place on the left.
+ * Every screen's top bar, led by the wordmark. Alone, the wordmark sits in the
+ * middle, the way an app shows its name; with a button beside it, it keeps its
+ * place on the left. One bar for all screens, so they all start the same way.
  */
 export function BrandBar({ start, end }: BrandBarProps) {
   return (
     <header
       className={cx(
         "flex min-h-12 flex-wrap items-center justify-between gap-x-3 gap-y-2",
-        !start && !end && "max-sm:justify-center",
+        !start && !end && "justify-center",
       )}
     >
       <div className="flex items-center gap-3">

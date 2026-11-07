@@ -6,8 +6,9 @@ import { useLocation, useSearch } from "wouter";
 import { errorMessage } from "../../api/http.ts";
 import { passkeysSupported } from "../../api/passkeys.ts";
 import { shakeKeyframes, shakeTransition } from "../../lib/motion.ts";
+import { BrandBar } from "../../ui/BrandBar.tsx";
 import { Button, Input } from "../../ui/controls.tsx";
-import { ScreenTopBar } from "../../ui/ScreenTopBar.tsx";
+import { BackLink } from "../../ui/ScreenTopBar.tsx";
 import { safeNext } from "../account/AccountGate.tsx";
 import { loginWithKey, loginWithPasskey } from "../account/account.ts";
 
@@ -65,7 +66,7 @@ export function KeyLoginScreen() {
 
   return (
     <div className="safe-area mx-auto flex min-h-dvh max-w-[1240px] flex-col">
-      <ScreenTopBar back="/bienvenue" />
+      <BrandBar start={<BackLink href="/bienvenue" />} />
       <main className="grid flex-1 place-items-center py-8 text-center">
         <form onSubmit={submit} className="grid w-[min(460px,100%)] justify-items-center gap-5" noValidate>
           <h1 className="type-title">J'ai déjà une clé</h1>
