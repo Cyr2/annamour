@@ -3,6 +3,7 @@ import { z } from "zod/mini";
 import { formatClock, formatDuration, joinNames, plural } from "./format.ts";
 import { canReloadNow } from "./reload-policy.ts";
 import { readStored, removeStored, writeStored } from "./storage.ts";
+import { visibleArea } from "./visible-area.ts";
 
 describe("formatting", () => {
   it("shows a film clock with hours", () => {
@@ -64,5 +65,18 @@ describe("updating the installed app", () => {
     expect(canReloadNow("/")).toBe(true);
     expect(canReloadNow("/a-regarder")).toBe(true);
     expect(canReloadNow("/s/ABCD")).toBe(false);
+  });
+});
+
+describe("a sheet over the on-screen keyboard", () => {
+  it("sits in the area the keyboard leaves visible", () => {
+    expect(visibleArea(844, { height: 508, offsetTop: 0 })).toEqual({ top: 0, height: 508 });
+    expect(visibleArea(844, { height: 508, offsetTop: 40 })).toEqual({ top: 40, height: 508 });
+  });
+
+  it("does nothing without a keyboard, or where the page already shrank (Android)", () => {
+    expect(visibleArea(844, { height: 844, offsetTop: 0 })).toBeNull();
+    expect(visibleArea(844, { height: 843, offsetTop: 0 })).toBeNull();
+    expect(visibleArea(844, null)).toBeNull();
   });
 });

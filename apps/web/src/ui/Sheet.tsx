@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { exit, spring } from "../lib/motion.ts";
 import { cx } from "./cx.ts";
+import { useVisibleArea } from "./useVisibleArea.ts";
 
 /*
  * A bottom sheet: slides up over a scrim, closes on Escape or a tap outside,
@@ -61,8 +62,14 @@ function SheetPanel({ onClose, title, children }: Omit<SheetProps, "open">) {
     };
   }, []);
 
+  // With a keyboard up (iPhone, iPad), the sheet sits above it, like a native one, instead of behind it.
+  const area = useVisibleArea(true);
+
   return (
-    <div className="fixed inset-0 z-[var(--am-z-overlay)]">
+    <div
+      className="fixed inset-x-0 top-0 bottom-0 z-[var(--am-z-overlay)]"
+      style={area ? { top: area.top, height: area.height, bottom: "auto" } : undefined}
+    >
       <m.div
         aria-hidden
         className="absolute inset-0 bg-scrim"
@@ -78,7 +85,7 @@ function SheetPanel({ onClose, title, children }: Omit<SheetProps, "open">) {
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cx(
-          "absolute bottom-0 left-1/2 flex max-h-[92dvh] w-[min(560px,100%)] -translate-x-1/2 flex-col gap-4 overflow-y-auto overscroll-contain",
+          "absolute bottom-0 left-1/2 flex max-h-[92%] w-[min(560px,100%)] -translate-x-1/2 flex-col gap-4 overflow-y-auto overscroll-contain",
           "am-sheet rounded-t-sheet px-6 pt-2.5 pb-[max(28px,var(--am-safe-bottom))] outline-none sm:px-8",
         )}
         initial={{ y: "105%" }}
