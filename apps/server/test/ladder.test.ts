@@ -45,7 +45,7 @@ describe("a source with a single quality", () => {
 
   it("gets only the rungs below it, and none when made of fMP4 segments", () => {
     const small = { ...source(), height: 360 };
-    expect(rungsFor(small, SOURCE).map((rung) => rung.name)).toEqual(["q234"]);
+    expect(rungsFor(small, SOURCE).map((rung) => rung.name)).toEqual(["q288", "q234"]);
     expect(rungsFor({ ...source(), height: 234 }, SOURCE)).toEqual([]);
     expect(rungsFor(source(), `#EXTM3U\n#EXT-X-MAP:URI="init.mp4"\n#EXTINF:4,\nhttps://cdn.test/a.m4s`)).toEqual([]);
     expect(rungsFor(source(), "#EXTM3U")).toEqual([]);
@@ -62,7 +62,7 @@ describe("the master with lighter qualities", () => {
 
   it("lists the lighter rungs first, the one a phone on 4G should start with on top", () => {
     const variants = master.split("\n").filter((line) => !line.startsWith("#") && line.trim());
-    expect(variants).toEqual(["q480.m3u8", "q540.m3u8", "q360.m3u8", "q234.m3u8", "p1.m3u8"]);
+    expect(variants).toEqual(["q480.m3u8", "q540.m3u8", "q360.m3u8", "q288.m3u8", "q234.m3u8", "p1.m3u8"]);
   });
 
   it("offers a last-resort rung light enough for a collapsing link, and a 540p one at its own H.264 level", () => {
@@ -116,6 +116,15 @@ describe("the lighter audio", () => {
     );
     expect(master).toMatch(/RESOLUTION=640x360[^\n]*AUDIO="audio-lo"/);
     expect(master).toMatch(/RESOLUTION=854x480[^\n]*AUDIO="audio"\n/);
+  });
+
+  it("makes a ladder a weak link can climb: each rung at most twice the one below", () => {
+    const master = withLowQualities(MASTER, source(), RUNGS, light());
+    const rates = [...master.matchAll(/BANDWIDTH=(\d+),AVERAGE/g)]
+      .map((match) => Number(match[1]))
+      .sort((a, b) => a - b);
+    expect(rates).toEqual([192_000, 372_000, 622_000, 1_160_000, 1_760_000]);
+    for (let i = 1; i < rates.length; i++) expect((rates[i] ?? 0) / (rates[i - 1] ?? 1)).toBeLessThanOrEqual(2);
   });
 
   it("is not made when the source's audio is not packed AAC, or not for every language", () => {

@@ -62,9 +62,9 @@ describe("the ffmpeg command for one segment", () => {
   it("decodes once and makes every rung, keeping the source's timestamps", () => {
     expect(args).toContain("-copyts");
     expect(args[args.indexOf("-filter_complex") + 1]).toBe(
-      "[0:v]split=4[v0in][v1in][v2in][v3in];[v0in]scale=-2:480[v0];[v1in]scale=-2:540[v1];[v2in]scale=-2:360[v2];[v3in]scale=-2:234[v3]",
+      "[0:v]split=5[v0in][v1in][v2in][v3in][v4in];[v0in]scale=-2:480[v0];[v1in]scale=-2:540[v1];[v2in]scale=-2:360[v2];[v3in]scale=-2:288[v3];[v4in]scale=-2:234[v4]",
     );
-    expect(args.filter((arg) => arg === "mpegts")).toHaveLength(4);
+    expect(args.filter((arg) => arg === "mpegts")).toHaveLength(5);
     expect(args.at(-1)).toBe("q234.ts");
     expect(args.filter((arg) => arg === "3.1")).toHaveLength(1);
   });
