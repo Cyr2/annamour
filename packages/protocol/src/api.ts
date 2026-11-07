@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BubbleColor, Name, RoomCode } from "./messages.ts";
+import { isTvPairingCode, normalizeTvPairingCode } from "./tv-pairing-code.ts";
 
 /**
  * HTTP contract between the PWA and the server for accounts and the
@@ -77,6 +78,28 @@ export const WebAuthnJson = z.record(z.string(), z.unknown());
 export const PasskeyLoginVerifyRequest = z.object({ response: WebAuthnJson });
 export const PasskeyRegisterVerifyRequest = z.object({ response: WebAuthnJson });
 
+/**
+ * Linking a TV without typing on it (device-code style): the TV asks for a
+ * pairing, shows its short code and polls with its secret poll token; a
+ * signed-in phone approves the code; the next poll signs the TV in.
+ */
+export const TvPairingCode = z.string().transform(normalizeTvPairingCode).refine(isTvPairingCode, "invalid code");
+export const TvPairingStatus = z.enum(["pending", "approved", "expired"]);
+export type TvPairingStatus = z.infer<typeof TvPairingStatus>;
+/** Secret known only to the TV: it alone can claim the session (URL-safe, see randomToken on the server). */
+export const TvPollToken = z.string().regex(/^[\w-]{16,128}$/, "invalid poll token");
+export const CreateTvPairingResponse = z.object({
+  /** Display form, e.g. "K7P-2QX". */
+  code: z.string(),
+  pollToken: TvPollToken,
+  expiresAt: z.number(),
+});
+export type CreateTvPairingResponse = z.infer<typeof CreateTvPairingResponse>;
+export const TvPairingStatusResponse = z.object({ status: TvPairingStatus });
+export type TvPairingStatusResponse = z.infer<typeof TvPairingStatusResponse>;
+export const ApproveTvPairingRequest = z.object({ code: TvPairingCode });
+export type ApproveTvPairingRequest = z.infer<typeof ApproveTvPairingRequest>;
+
 export const API = {
   createAccount: "/api/account",
   loginWithKey: "/api/account/login",
@@ -89,9 +112,27 @@ export const API = {
   passkeyRegisterVerify: "/api/passkey/register/verify",
   passkeyLoginOptions: "/api/passkey/login/options",
   passkeyLoginVerify: "/api/passkey/login/verify",
+  tvPairing: "/api/tv/pairing",
+  tvPairingPoll: "/api/tv/pairing/:pollToken",
+  tvPairingApprove: "/api/tv/pairing/approve",
+  tvPairingCode: "/api/tv/pairing/code/:code",
 } as const;
+
+/** Fills the `:param` segments of an API path, e.g. apiPath(API.tvPairingPoll, { pollToken }). */
+export function apiPath(path: string, params: Record<string, string>): string {
+  return path.replace(/:(\w+)/g, (segment, name: string) => {
+    const value = params[name];
+    return value === undefined ? segment : encodeURIComponent(value);
+  });
+}
 
 export const SESSION_COOKIE = "am_session";
 export const LINK_TOKEN_TTL_MS = 5 * 60 * 1000;
 export const ROOM_RETENTION_MS = 60 * 24 * 60 * 60 * 1000;
 export const KEY_LOGIN_LIMIT = { max: 10, windowMs: 60 * 60 * 1000 } as const;
+export const TV_PAIRING_TTL_MS = 10 * 60 * 1000;
+export const TV_PAIRING_POLL_INTERVAL_MS = 2000;
+/** A TV left on its pairing screen asks for a new code every 10 minutes. */
+export const TV_PAIRING_CREATE_LIMIT = { max: 30, windowMs: 60 * 60 * 1000 } as const;
+/** Checking and approving codes, per address: enough for typos, far too few to guess. */
+export const TV_PAIRING_APPROVE_LIMIT = { max: 20, windowMs: 60 * 60 * 1000 } as const;

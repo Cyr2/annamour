@@ -3,7 +3,7 @@
  * so it is in French and says what to do next.
  */
 export class UserFacingError extends Error {
-  readonly status: 400 | 401 | 404 | 422 | 429;
+  readonly status: 400 | 401 | 404 | 409 | 410 | 422 | 429;
 
   constructor(message: string, status: UserFacingError["status"]) {
     super(message);
@@ -31,8 +31,8 @@ export class InvalidKeyError extends UserFacingError {
 }
 
 export class TooManyAttemptsError extends UserFacingError {
-  constructor() {
-    super("Trop d'essais. Réessaie dans une heure, ou scanne le QR code d'un appareil déjà connecté.", 429);
+  constructor(message = "Trop d'essais. Réessaie dans une heure, ou scanne le QR code d'un appareil déjà connecté.") {
+    super(message, 429);
   }
 }
 
@@ -51,5 +51,23 @@ export class PasskeyError extends UserFacingError {
 export class NotFoundError extends UserFacingError {
   constructor(message: string) {
     super(message, 404);
+  }
+}
+
+export class UnknownTvCodeError extends UserFacingError {
+  constructor() {
+    super("Ce code ne correspond à aucune TV. Vérifie les 6 caractères affichés sur l'écran.", 404);
+  }
+}
+
+export class ExpiredTvCodeError extends UserFacingError {
+  constructor() {
+    super("Ce code a expiré. Affiche un nouveau code sur la TV, puis réessaie.", 410);
+  }
+}
+
+export class UsedTvCodeError extends UserFacingError {
+  constructor() {
+    super("Ce code a déjà servi. Si la TV n'est pas connectée, affiches-en un nouveau.", 409);
   }
 }

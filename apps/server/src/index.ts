@@ -26,6 +26,7 @@ const checkpoint = setInterval(() => services.store.checkpoint(Date.now()), CHEC
 const sweeper = setInterval(() => {
   services.store.sweep(Date.now());
   services.accounts.sweep();
+  services.tvPairings.sweep();
 }, SWEEP_INTERVAL_MS);
 
 function shutdown(): void {

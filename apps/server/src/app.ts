@@ -8,6 +8,7 @@ import { accountRoutes } from "./routes/account.ts";
 import { passkeyRoutes } from "./routes/passkey.ts";
 import { roomRoutes } from "./routes/rooms.ts";
 import { sessionRoutes } from "./routes/sessions.ts";
+import { tvPairingRoutes } from "./routes/tv-pairing.ts";
 import type { Services } from "./services/services.ts";
 
 export interface AppOptions extends Partial<HttpOptions> {
@@ -49,6 +50,7 @@ export function createApp(services: Services, { webDist, production = false }: A
   app.route("/", accountRoutes(deps));
   app.route("/", passkeyRoutes(deps));
   app.route("/", sessionRoutes(deps));
+  app.route("/", tvPairingRoutes(deps));
   app.all("/api/*", (c) => c.json({ error: "Not found" }, 404));
 
   if (webDist) serveWebApp(app, webDist);
