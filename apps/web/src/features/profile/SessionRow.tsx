@@ -28,14 +28,39 @@ async function copyLink(code: string) {
   }
 }
 
-/** One session of « Mes séances »: what, when, with whom, how far, the way back in, and a menu for the rest. */
-export function SessionRow({ session, me, now, onRemove }: SessionRowProps) {
-  const finished = isFinished(session);
+/**
+ * What a session is: its title, code, day, who was there, how far, where it
+ * stopped. Shared by the profile's rows and the TV's « Mes séances » cards.
+ */
+export function SessionDetails({ session, me, now }: Omit<SessionRowProps, "onRemove">) {
   const progress = progressOf(session);
   const people = useMemo(
     () => [me, ...session.participants.map((p) => ({ id: p.accountId, name: p.name, color: p.color }))],
     [me, session.participants],
   );
+
+  return (
+    <div className="grid min-w-0 gap-2">
+      <strong className="truncate font-rounded-tight text-md font-extrabold text-fg">{session.title}</strong>
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-fg-muted">
+        <span translate="no" className="rounded-chip bg-fill-strong px-2 py-0.5 font-bold tracking-[0.12em] text-fg">
+          {session.code}
+        </span>
+        <span>{relativeDay(session.lastUsedAt, now)}</span>
+        <BubbleStack people={people} />
+        <span>{companionsLabel(session)}</span>
+      </div>
+      {progress === null ? null : (
+        <Progress.Bar value={progress} label={`${Math.round(progress * 100)} % regardé`} className="mt-1" />
+      )}
+      <p className="text-xs text-fg-muted">{stopLabel(session)}</p>
+    </div>
+  );
+}
+
+/** One session of « Mes séances »: what, when, with whom, how far, the way back in, and a menu for the rest. */
+export function SessionRow({ session, me, now, onRemove }: SessionRowProps) {
+  const finished = isFinished(session);
 
   return (
     <motion.li
@@ -47,24 +72,7 @@ export function SessionRow({ session, me, now, onRemove }: SessionRowProps) {
       exit={{ opacity: 0, scale: 0.96, transition: exit.quick }}
     >
       <Surface className="grid gap-3 rounded-panel p-4 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-5 sm:p-5">
-        <div className="grid min-w-0 gap-2">
-          <strong className="truncate font-rounded-tight text-md font-extrabold text-fg">{session.title}</strong>
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-fg-muted">
-            <span
-              translate="no"
-              className="rounded-chip bg-fill-strong px-2 py-0.5 font-bold tracking-[0.12em] text-fg"
-            >
-              {session.code}
-            </span>
-            <span>{relativeDay(session.lastUsedAt, now)}</span>
-            <BubbleStack people={people} />
-            <span>{companionsLabel(session)}</span>
-          </div>
-          {progress === null ? null : (
-            <Progress.Bar value={progress} label={`${Math.round(progress * 100)} % regardé`} className="mt-1" />
-          )}
-          <p className="text-xs text-fg-muted">{stopLabel(session)}</p>
-        </div>
+        <SessionDetails session={session} me={me} now={now} />
         <div className="flex items-center gap-2 justify-self-end">
           <LinkButton
             href={`/s/${session.code}`}

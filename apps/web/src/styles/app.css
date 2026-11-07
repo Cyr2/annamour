@@ -548,6 +548,84 @@
   font-size: var(--am-text-md);
 }
 
+/* ---- TV (html[data-tv]): the same screens, for a remote and 3 m away (sizes in tokens.css) ---- */
+
+/* The whole width, 5 % clear of the edges a TV may crop. */
+html[data-tv] .safe-area {
+  max-width: none;
+  padding: var(--am-tv-safe-y) var(--am-tv-safe-x);
+}
+
+/* The focus, obvious from the sofa: a thick milk ring and a slight lift, on whatever has it. */
+html[data-tv] :focus:not([tabindex="-1"]) {
+  outline: var(--am-tv-ring) solid var(--am-tv-focus);
+  outline-offset: var(--am-tv-ring-offset);
+}
+
+/* A link on glass lifts with its glass; anything else lifts itself. */
+html[data-tv] :focus:not([tabindex="-1"], .lg-glass > *, .am-frost > *),
+html[data-tv] :is(.lg-glass, .am-frost):has(> :focus:not([tabindex="-1"])) {
+  scale: var(--am-tv-lift);
+  box-shadow: var(--am-tv-glow);
+}
+
+html[data-tv] :is(a, button, [role="slider"]) {
+  transition:
+    scale var(--am-duration-fast) var(--am-ease-out),
+    background-color var(--am-duration-base) ease,
+    color var(--am-duration-base) ease;
+}
+
+/* Lighter motion: the sky holds still (TV chips are slow), no shooting star. */
+html[data-tv] .am-sky-stars {
+  animation: none;
+  opacity: 0.85;
+}
+
+html[data-tv] .am-sky-shooting {
+  display: none;
+}
+
+/* Buttons in rem, so they grow with the screen like the text. */
+html[data-tv] .am-button.lg-button {
+  padding-inline: 1.25rem;
+}
+
+html[data-tv] .am-button.lg-button > svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+html[data-tv] .am-button.lg-button[data-size="large"] {
+  height: var(--am-tv-target-large);
+  padding-inline: 1.75rem;
+  border-radius: calc(var(--am-tv-target-large) / 2);
+}
+
+html[data-tv] .am-button.lg-button[data-size="large"][data-icon="only"] {
+  width: var(--am-tv-target-large);
+}
+
+html[data-tv] .am-button.lg-button[data-size="hero"] {
+  width: 5.5rem;
+  height: 5.5rem;
+}
+
+html[data-tv] .am-button.lg-button[data-size="hero"] > svg {
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-left: 0.25rem;
+}
+
+html[data-tv] .am-sheet {
+  width: min(46rem, 100%);
+}
+
+/* The track pickers' labels (glisse sets 13px); [class] keeps this above the tab bar's rule. */
+html[data-tv] .lg-segmented[class] :is(.lg-tab, .lg-tab-copy) {
+  font-size: var(--am-text-sm);
+}
+
 /* ---- Reduced motion ---- */
 
 @media (prefers-reduced-motion: reduce) {

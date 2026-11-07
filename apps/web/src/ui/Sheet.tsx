@@ -49,7 +49,10 @@ function SheetPanel({ onClose, title, children }: Omit<SheetProps, "open">) {
     const first = panel?.querySelector<HTMLElement>(FOCUSABLE);
     (first ?? panel)?.focus({ preventScroll: true });
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onCloseRef.current();
+      if (event.key !== "Escape") return;
+      // Said handled, so the TV remote's Retour closes the sheet only (see features/tv/TvRemote.tsx).
+      event.preventDefault();
+      onCloseRef.current();
     };
     document.addEventListener("keydown", onKey);
     return () => {

@@ -7,8 +7,8 @@ index 28f5d34cfd831154aa8a64b3ddf135be3072475d..88f40b5211c020140f209f926ae6d6d9
  }
  /** Only Chromium applies SVG filters to the live backdrop. */
 -const refractsBackdrop = () => /Chrom(?:e|ium)\//.test(navigator.userAgent);
-+/** Annamour: bending is drawn on the CPU every frame; touch screens keep the frost and the lit rim instead. */
-+const refractsBackdrop = () => /Chrom(?:e|ium)\//.test(navigator.userAgent) && matchMedia("(pointer: fine)").matches;
++/** Annamour: bending is drawn on the CPU every frame; touch screens and TVs (html[data-tv]) keep the frost and the lit rim instead. */
++const refractsBackdrop = () => /Chrom(?:e|ium)\//.test(navigator.userAgent) && matchMedia("(pointer: fine)").matches && !document.documentElement.hasAttribute("data-tv");
  const MARK = "data-glisse-backdrop";
  function visibleBox(element) {
  	let { left, top, right, bottom } = element.getBoundingClientRect();
@@ -21,8 +21,8 @@ index 02d488ace3671da61835b1d629c1714cc92fb52c..385665c286c0c56102f0137c656d5b42
  }
  /** Only Chromium applies SVG filters to the live backdrop. */
 -const refractsBackdrop = () => /Chrom(?:e|ium)\//.test(navigator.userAgent);
-+/** Annamour: bending is drawn on the CPU every frame; touch screens keep the frost and the lit rim instead. */
-+const refractsBackdrop = () => /Chrom(?:e|ium)\//.test(navigator.userAgent) && matchMedia("(pointer: fine)").matches;
++/** Annamour: bending is drawn on the CPU every frame; touch screens and TVs (html[data-tv]) keep the frost and the lit rim instead. */
++const refractsBackdrop = () => /Chrom(?:e|ium)\//.test(navigator.userAgent) && matchMedia("(pointer: fine)").matches && !document.documentElement.hasAttribute("data-tv");
  const MARK = "data-glisse-backdrop";
  function visibleBox(element) {
  	let { left, top, right, bottom } = element.getBoundingClientRect();

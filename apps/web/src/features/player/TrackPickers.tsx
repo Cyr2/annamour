@@ -15,7 +15,7 @@ const NO_SUBTITLES = "none";
 const SCROLLER = "-mx-4 -my-3.5 overflow-x-auto px-4 py-3.5";
 
 /** Wide enough for « Français (forcés) »; the control scrolls if a film has many tracks. */
-const SEGMENT_STYLE = { "--lg-tab-width": "7.75rem", "--lg-tab-height": "40px" } as CSSProperties;
+const SEGMENT_STYLE = { "--lg-tab-width": "7.75rem", "--lg-tab-height": "2.5rem" } as CSSProperties;
 
 /** Audio language and subtitles for this person only. */
 export function TrackPickers({ code, media }: { code: string; media: Pick<Media, "audio" | "subtitles"> }) {

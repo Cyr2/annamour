@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   glisse@0.5.0:
-    hash: 774032c79ec5ef0603083924d21f1927cf457ae1abd3b4432f18a5d92fed50ed
+    hash: b6c7b59c6ab51edb56db3de1c14987057523e68f7d6b7a978d5153755dca8849
     path: patches/glisse@0.5.0.patch
 
 importers:
@@ -73,7 +73,7 @@ importers:
         version: 14.0.0
       glisse:
         specifier: ^0.5.0
-        version: 0.5.0(patch_hash=774032c79ec5ef0603083924d21f1927cf457ae1abd3b4432f18a5d92fed50ed)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 0.5.0(patch_hash=b6c7b59c6ab51edb56db3de1c14987057523e68f7d6b7a978d5153755dca8849)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       hls.js:
         specifier: ^1.7.4
         version: 1.7.4
@@ -4807,7 +4807,7 @@ snapshots:
       es-errors: 1.3.0
       get-intrinsic: 1.3.0
 
-  glisse@0.5.0(patch_hash=774032c79ec5ef0603083924d21f1927cf457ae1abd3b4432f18a5d92fed50ed)(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
+  glisse@0.5.0(patch_hash=b6c7b59c6ab51edb56db3de1c14987057523e68f7d6b7a978d5153755dca8849)(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
     dependencies:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)

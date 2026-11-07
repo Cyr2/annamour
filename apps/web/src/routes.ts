@@ -13,6 +13,8 @@ const loaders = {
   join: () => import("./features/join/JoinScreen.tsx"),
   profile: () => import("./features/profile/ProfileScreen.tsx"),
   session: () => import("./features/session/SessionScreen.tsx"),
+  tvPairing: () => import("./features/tv/TvPairingScreen.tsx"),
+  tvLink: () => import("./features/tv-link/TvLinkScreen.tsx"),
 };
 
 export type RouteName = keyof typeof loaders;
@@ -29,3 +31,5 @@ export const LinkDeviceScreen = lazy(() => loaders.link().then((m) => ({ default
 export const JoinScreen = lazy(() => loaders.join().then((m) => ({ default: m.JoinScreen })));
 export const ProfileScreen = lazy(() => loaders.profile().then((m) => ({ default: m.ProfileScreen })));
 export const SessionScreen = lazy(() => loaders.session().then((m) => ({ default: m.SessionScreen })));
+export const TvPairingScreen = lazy(() => loaders.tvPairing().then((m) => ({ default: m.TvPairingScreen })));
+export const TvLinkScreen = lazy(() => loaders.tvLink().then((m) => ({ default: m.TvLinkScreen })));
