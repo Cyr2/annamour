@@ -32,9 +32,21 @@ describe("playback notices", () => {
 
   it("celebrates the end of a wait", () => {
     expect(
-      describePlaybackEvent({ ...base, action: "resume", by: undefined, previous: paused(5), next: playing(5) })
+      describePlaybackEvent({ ...base, action: "resume", by: undefined, previous: paused(5), next: playing(5, 4000) })
         ?.message,
     ).toBe("C'est reparti");
+  });
+
+  it("says nothing when the wait was too short to notice, like a jump inside what was downloaded", () => {
+    expect(
+      describePlaybackEvent({
+        ...base,
+        action: "resume",
+        by: undefined,
+        previous: paused(600, 10_000),
+        next: playing(600, 10_200),
+      }),
+    ).toBeNull();
   });
 
   it("says how far a short seek went, and where a long one landed", () => {
@@ -53,6 +65,17 @@ describe("playback notices", () => {
     expect(
       describePlaybackEvent({ ...base, action: "seek", by: "m2", previous: paused(100), next: paused(4360) })?.message,
     ).toBe("Anna a avancé à 1:12:40");
+  });
+
+  it("tells a jump that makes everyone wait as a jump, never as a pause", () => {
+    const notice = describePlaybackEvent({
+      ...base,
+      action: "seek",
+      by: "m2",
+      previous: playing(100, 0),
+      next: paused(3700, 2000),
+    });
+    expect(notice).toMatchObject({ kind: "forward", message: "Anna a avancé à 1:01:40" });
   });
 
   it("ignores tiny corrections and unknown people still get a name", () => {

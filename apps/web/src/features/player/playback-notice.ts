@@ -47,6 +47,13 @@ function seekNotice(
   return { kind, message };
 }
 
+/** A wait shorter than this went unnoticed (a jump inside what everyone had downloaded): no « C'est reparti » (ms). */
+const BRIEF_WAIT_MS = 1500;
+
+function briefWait(previous: PlaybackState | null, next: PlaybackState): boolean {
+  return previous?.status === "paused" && next.at - previous.at < BRIEF_WAIT_MS;
+}
+
 export function describePlaybackEvent({
   action,
   by,
@@ -56,7 +63,8 @@ export function describePlaybackEvent({
   you,
 }: PlaybackEventInput): PlaybackNotice | null {
   if (by !== undefined && by === you) return null;
-  if (action === "resume") return { kind: "resume", message: "C'est reparti", member: undefined };
+  if (action === "resume")
+    return briefWait(previous, next) ? null : { kind: "resume", message: "C'est reparti", member: undefined };
   // A wait is shown by the banner naming who is loading.
   if (action === "wait" || by === undefined) return null;
   const member = members.find((m) => m.id === by);

@@ -12,6 +12,7 @@ import { FloatingReactions } from "./FloatingReactions.tsx";
 import { leaveFullscreen, toggleFullscreen } from "./fullscreen.ts";
 import { BlockedNotice, CenterPlay, PlayerError, ReadyBanner, VideoLoading, WaitBanner } from "./PlayerOverlays.tsx";
 import { PlayerTopBar } from "./PlayerTopBar.tsx";
+import { filmIsOn } from "./readying-rules.ts";
 import { SeekBadge } from "./SeekBadge.tsx";
 import { TracksSheet } from "./TracksSheet.tsx";
 import { useEpisodeEndReport } from "./useEpisodeEndReport.ts";
@@ -38,7 +39,7 @@ interface PlayerViewProps {
 export function PlayerView({ code, active, video, onVideo, player, client }: PlayerViewProps) {
   const tv = useTv();
   const media = useRoom((s) => s.room?.media);
-  const playing = useRoom((s) => s.playback?.status === "playing");
+  const playing = useRoom((s) => filmIsOn(s.playback, s.readying));
   const you = useRoom((s) => s.you);
   const toggleMute = useVolume((s) => s.toggleMute);
   const [reactionsOpen, setReactionsOpen] = useState(false);

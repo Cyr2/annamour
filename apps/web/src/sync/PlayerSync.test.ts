@@ -225,6 +225,31 @@ describe("PlayerSync", () => {
     expect(client.of("lead").length).toBeGreaterThanOrEqual(3);
   });
 
+  it("tells its lead at the new position at once when a jump during the film makes the room wait", () => {
+    // Downloaded far ahead around 10, and a little around 600 where someone jumps.
+    video.bufferedRanges = [
+      [0, 300],
+      [600, 612],
+    ];
+    start();
+    sync.setPlayback(paused(10));
+    sync.setPlayback(playing(10));
+    vi.advanceTimersByTime(100);
+    client.sent.length = 0;
+    sync.setReadying({ target: 30, until: 25_000 });
+    sync.setPlayback(paused(600, 100));
+    expect(video.currentTime).toBe(600);
+    expect(client.of("lead")).toEqual([{ type: "lead", seconds: 12 }]);
+  });
+
+  it("tells it again when the room pauses elsewhere, even if the amount ahead looks the same", () => {
+    video.bufferedRanges = [[0, 7826]];
+    start();
+    sync.setPlayback(paused(10));
+    sync.setPlayback(paused(20, 50));
+    expect(client.of("lead")).toHaveLength(2);
+  });
+
   it("says nothing of its lead while the film plays", () => {
     start();
     sync.setPlayback(playing(10));

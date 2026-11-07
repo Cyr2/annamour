@@ -1,4 +1,5 @@
 import {
+  awaitedLeads,
   type BubbleColor,
   type CatalogRef,
   type ClientMessage,
@@ -13,6 +14,7 @@ import {
   episodeResumed,
   episodeTitle,
   everyoneLeft,
+  forgottenLead,
   goToEpisode,
   initialPlayback,
   type Media,
@@ -24,10 +26,9 @@ import {
   play,
   positionAt,
   REACTION_COOLDOWN_MS,
-  READY_MAX_WAIT_MS,
   type Readying,
   type RoomSnapshot,
-  readyTarget,
+  readyingFrom,
   readyToStart,
   type ServerMessage,
   seek,
@@ -82,6 +83,8 @@ interface Participant extends Member {
   lastReactionAt: number;
   /** What this device last said of its lead; undefined for an app that never reports it. */
   deviceLead?: DeviceLead | undefined;
+  /** Its link dropped without a goodbye; it stays listed for a while, but nothing waits for it. */
+  linkDown: boolean;
 }
 
 /** Where an episode's files are served: by its id, so a link never points to another episode. */
@@ -170,13 +173,13 @@ export class Room {
   }
 
   members(): Member[] {
-    return [...this.participants.values()].map(({ id, name, color, buffering, deviceLead }) => ({
+    return [...this.participants.values()].map(({ id, name, color, buffering, deviceLead, linkDown }) => ({
       id,
       name,
       color,
       buffering,
-      // Leads only matter (and are only shown) while the room waits to start together.
-      ...(this.readying && deviceLead ? { lead: Math.round(deviceLead.seconds) } : {}),
+      // Leads only matter (and are only shown) while the room waits to start together, for whom it waits.
+      ...(this.readying && deviceLead && !linkDown ? { lead: Math.round(deviceLead.seconds) } : {}),
     }));
   }
 
@@ -208,10 +211,13 @@ export class Room {
       member.name = name;
       member.color = color;
       member.buffering = false;
+      member.linkDown = false;
+      // Back: it says its lead again on arrival, and is waited for again meanwhile.
+      member.deviceLead = forgottenLead(member.deviceLead, now);
     } else {
       if (this.participants.size >= MAX_MEMBERS) return null;
       const id = `m${this.nextMemberId++}`;
-      member = { id, clientId, name, color, buffering: false, connection, lastReactionAt: -Infinity };
+      member = { id, clientId, name, color, buffering: false, connection, lastReactionAt: -Infinity, linkDown: false };
       this.participants.set(id, member);
     }
     this.emptySince = null;
@@ -225,14 +231,19 @@ export class Room {
 
   /**
    * A member's link dropped; they may be back in a moment, so they stay listed.
-   * Whatever they were loading no longer holds the room: it would wait for nobody.
+   * Nothing they were doing holds the room any more, neither loading nor
+   * downloading their lead: it would wait for nobody.
    */
   disconnected(memberId: string, connection: Connection, now: number): void {
     const participant = this.participants.get(memberId);
-    if (!participant || participant.connection !== connection || !participant.buffering) return;
-    participant.buffering = false;
-    this.broadcastMembers();
+    if (!participant || participant.connection !== connection) return;
+    participant.linkDown = true;
+    if (participant.buffering || this.readying) {
+      participant.buffering = false;
+      this.broadcastMembers();
+    }
     this.maybeResume(now);
+    this.maybeStart(now);
   }
 
   leave(memberId: string, connection: Connection, now: number): void {
@@ -309,13 +320,29 @@ export class Room {
         this.setPlayback(pause(this.playback, now, message.position), "pause", memberId);
         return;
       case "seek":
-        // What was downloaded ahead was for the old position: everyone reports again.
-        this.forgetLeads(now);
-        if (this.readying) this.setReadying({ ...this.readying, until: now + READY_MAX_WAIT_MS });
-        this.setPlayback(seek(this.playback, now, message.position), "seek", memberId);
-        this.setProgress(episodeResumed(this.progress), memberId);
+        this.onSeek(memberId, message.position, now);
         return;
     }
+  }
+
+  /**
+   * A jump while the film plays (or is about to): what was downloaded ahead was
+   * for the old position, so the film waits at the new one for everyone's lead,
+   * like a start. When nobody needs waiting for, it simply plays on from there.
+   */
+  private onSeek(memberId: string, position: number, now: number): void {
+    this.forgetLeads(now);
+    const wantsToPlay = this.playback.status === "playing" || this.readying !== null;
+    const duration = this.currentEpisode.imported.duration;
+    const readying = wantsToPlay ? readyingFrom(this.leads(), position, duration, now) : null;
+    // The wait is announced before the pause, and ended after the start: the film never looks simply paused.
+    if (readying) this.setReadying(readying);
+    const moved = seek(this.playback, now, position);
+    const playsOn = wantsToPlay && !readying;
+    // Told as a jump, never as a pause: the others read « Darius a avancé à 1:02:10 », then the wait.
+    this.setPlayback(playsOn ? play(moved, now) : pause(moved, now), "seek", memberId);
+    if (!readying) this.setReadying(null);
+    this.setProgress(episodeResumed(this.progress), memberId);
   }
 
   positionAt(now: number): number {
@@ -361,11 +388,8 @@ export class Room {
       return;
     }
     const from = position ?? this.positionAt(now);
-    const readying = {
-      target: readyTarget(from, this.currentEpisode.imported.duration),
-      until: now + READY_MAX_WAIT_MS,
-    };
-    if (readyToStart(this.leads(), readying, now)) {
+    const readying = readyingFrom(this.leads(), from, this.currentEpisode.imported.duration, now);
+    if (!readying) {
       this.setPlayback(play(this.playback, now, position), "play", memberId);
       return;
     }
@@ -382,12 +406,12 @@ export class Room {
   }
 
   private leads(): Array<DeviceLead | undefined> {
-    return [...this.participants.values()].map((p) => p.deviceLead);
+    return awaitedLeads([...this.participants.values()].map((p) => ({ lead: p.deviceLead, linkDown: p.linkDown })));
   }
 
   /** The leads reported so far no longer apply (another position, another episode): back to zero. */
   private forgetLeads(now: number): void {
-    for (const p of this.participants.values()) if (p.deviceLead) p.deviceLead = { seconds: 0, grewAt: now };
+    for (const p of this.participants.values()) p.deviceLead = forgottenLead(p.deviceLead, now);
   }
 
   private setReadying(readying: Readying | null): void {
@@ -399,10 +423,16 @@ export class Room {
 
   /** The wait to start together is over (everyone ready, or long enough): the film starts. */
   private maybeStart(now: number): void {
-    if (!this.readying || this.participants.size === 0 || this.anyoneBuffering()) return;
+    if (!this.readying || !this.anyoneConnected() || this.anyoneBuffering()) return;
     if (!readyToStart(this.leads(), this.readying, now)) return;
-    this.setReadying(null);
+    // Playing first, then the end of the wait: never a moment where the film looks simply paused.
     this.setPlayback(play(this.playback, now), "resume");
+    this.setReadying(null);
+  }
+
+  /** Someone is still there to watch: the film does not start for links that all dropped. */
+  private anyoneConnected(): boolean {
+    return [...this.participants.values()].some((p) => !p.linkDown);
   }
 
   private onBuffering(participant: Participant, buffering: boolean, now: number, position?: number): void {
@@ -445,10 +475,9 @@ export class Room {
     this.resumeAfterBuffer = false;
     const duration = this.currentEpisode.imported.duration;
     // A new episode starts together too: everyone first downloads a little of it (devices that report their lead).
-    const together = status === "playing" && this.leads().some((lead) => lead !== undefined);
-    if (together) this.forgetLeads(now);
-    this.readying = together ? { target: readyTarget(0, duration), until: now + READY_MAX_WAIT_MS } : null;
-    this.playback = { status: together ? "paused" : status, position: 0, at: now };
+    if (status === "playing") this.forgetLeads(now);
+    this.readying = status === "playing" ? readyingFrom(this.leads(), 0, duration, now) : null;
+    this.playback = { status: this.readying ? "paused" : status, position: 0, at: now };
     this.persistence.saveCurrentEpisode(next.current, duration, now);
     this.broadcastRoom(by);
   }
