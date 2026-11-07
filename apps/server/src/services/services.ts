@@ -10,6 +10,7 @@ import { CatalogService } from "./catalog-service.ts";
 import { HistoryService } from "./history-service.ts";
 import { LowQualityService } from "./low-quality-service.ts";
 import { PasskeyService, type RelyingParty, type WebAuthn } from "./passkey-service.ts";
+import { PlaybackStatsService } from "./playback-stats-service.ts";
 import { RoomService } from "./room-service.ts";
 import type { RandomInt } from "./secrets.ts";
 import { TvPairingService } from "./tv-pairing-service.ts";
@@ -46,6 +47,7 @@ export interface Services {
   catalog: CatalogService;
   watchlist: WatchlistService;
   lowQualities: LowQualityService;
+  playbackStats: PlaybackStatsService;
   now: () => number;
 }
 
@@ -81,6 +83,7 @@ export function createServices(options: ServiceOptions): Services {
     tvPairings: new TvPairingService({ repositories, accounts, now, randomInt: options.tvCodeRandomInt }),
     passkeys: new PasskeyService({ repositories, relyingParty, now, webAuthn: options.webAuthn }),
     watchlist: new WatchlistService({ repositories, now }),
+    playbackStats: new PlaybackStatsService({ repositories, now }),
     lowQualities,
     now,
   };

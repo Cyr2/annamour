@@ -3,6 +3,7 @@ import { AccountRepository } from "./account-repository.ts";
 import { AuthSessionRepository, LinkTokenRepository } from "./auth-repository.ts";
 import { ParticipationRepository } from "./participation-repository.ts";
 import { PasskeyRepository } from "./passkey-repository.ts";
+import { PlaybackReportRepository } from "./playback-report-repository.ts";
 import { RoomRepository } from "./room-repository.ts";
 import { TvPairingRepository } from "./tv-pairing-repository.ts";
 import { WatchlistRepository } from "./watchlist-repository.ts";
@@ -17,6 +18,7 @@ export interface Repositories {
   participations: ParticipationRepository;
   tvPairings: TvPairingRepository;
   watchlist: WatchlistRepository;
+  playbackReports: PlaybackReportRepository;
 }
 
 export function createRepositories(db: DatabaseSync): Repositories {
@@ -29,5 +31,6 @@ export function createRepositories(db: DatabaseSync): Repositories {
     participations: new ParticipationRepository(db),
     tvPairings: new TvPairingRepository(db),
     watchlist: new WatchlistRepository(db),
+    playbackReports: new PlaybackReportRepository(db),
   };
 }
