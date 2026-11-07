@@ -8,6 +8,7 @@ import {
 import { Plus, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { plural } from "../../lib/format.ts";
+import { BrandBar } from "../../ui/BrandBar.tsx";
 import { Button, SegmentedControl } from "../../ui/controls.tsx";
 import { ThreadSpinner } from "../../ui/ThreadSpinner.tsx";
 import { toast } from "../../ui/toast.ts";
@@ -51,41 +52,44 @@ export function WatchlistScreen() {
   const now = Date.now();
 
   return (
-    <div className="safe-area mx-auto flex min-h-dvh max-w-[760px] flex-col gap-5 py-6">
-      <header className="flex items-center justify-between gap-3">
-        <h1 className="type-title">À regarder</h1>
-        <Button variant="filled" icon={<Plus />} onClick={() => setAdding(true)}>
-          Ajouter
-        </Button>
-      </header>
-      {people.length > 0 ? (
-        <PersonFilter people={people} selected={person} onSelect={setPerson} legend="Filtrer par personne" />
-      ) : null}
-      <SegmentedControl
-        aria-label="Trier"
-        className="am-sort-segments self-start"
-        items={SORTS.map((s) => ({ value: s.value, label: s.label }))}
-        value={sort}
-        onValueChange={(value) => setSort(value === "recent" ? "recent" : "wants")}
-      />
-      {status === "loading" || status === "idle" ? (
-        <div className="grid place-items-center py-10">
-          <ThreadSpinner />
-        </div>
-      ) : null}
-      {status === "error" ? (
-        <div className="grid justify-items-start gap-3">
-          <p role="alert" className="text-sm text-danger">
-            {error}
-          </p>
-          <Button icon={<RefreshCw />} onClick={() => void loadWatchlist()}>
-            Réessayer
+    <div className="safe-area mx-auto flex min-h-dvh w-full max-w-[1240px] flex-col">
+      <BrandBar />
+      <main className="mx-auto grid w-full max-w-[760px] content-start gap-5 py-6">
+        <header className="flex items-center justify-between gap-3">
+          <h1 className="type-heading">À regarder</h1>
+          <Button variant="filled" icon={<Plus />} onClick={() => setAdding(true)}>
+            Ajouter
           </Button>
-        </div>
-      ) : null}
-      {status === "ready" && items.length === 0 ? <EmptyList onAdd={() => setAdding(true)} /> : null}
-      <Section title="À regarder" items={toWatch} me={me} now={now} onOpen={(i) => setOpenId(i.id)} onWant={want} />
-      <Section title="Vus" items={watched} me={me} now={now} onOpen={(i) => setOpenId(i.id)} onWant={want} />
+        </header>
+        {people.length > 0 ? (
+          <PersonFilter people={people} selected={person} onSelect={setPerson} legend="Filtrer par personne" />
+        ) : null}
+        <SegmentedControl
+          aria-label="Trier"
+          className="am-sort-segments self-start"
+          items={SORTS.map((s) => ({ value: s.value, label: s.label }))}
+          value={sort}
+          onValueChange={(value) => setSort(value === "recent" ? "recent" : "wants")}
+        />
+        {status === "loading" || status === "idle" ? (
+          <div className="grid place-items-center py-10">
+            <ThreadSpinner />
+          </div>
+        ) : null}
+        {status === "error" ? (
+          <div className="grid justify-items-start gap-3">
+            <p role="alert" className="text-sm text-danger">
+              {error}
+            </p>
+            <Button icon={<RefreshCw />} onClick={() => void loadWatchlist()}>
+              Réessayer
+            </Button>
+          </div>
+        ) : null}
+        {status === "ready" && items.length === 0 ? <EmptyList onAdd={() => setAdding(true)} /> : null}
+        <Section title="À regarder" items={toWatch} me={me} now={now} onOpen={(i) => setOpenId(i.id)} onWant={want} />
+        <Section title="Vus" items={watched} me={me} now={now} onOpen={(i) => setOpenId(i.id)} onWant={want} />
+      </main>
       <AddToWatchlistSheet open={adding} onClose={() => setAdding(false)} />
       <WatchlistItemSheet item={open} me={me} onClose={() => setOpenId(null)} />
     </div>

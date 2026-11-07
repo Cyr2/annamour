@@ -1,7 +1,7 @@
 import type { Account, SessionSummary } from "@annamour/protocol";
 import { useCallback, useMemo, useState } from "react";
+import { BrandBar } from "../../ui/BrandBar.tsx";
 import { cx } from "../../ui/cx.ts";
-import { ScreenTopBar } from "../../ui/ScreenTopBar.tsx";
 import { toast } from "../../ui/toast.ts";
 import { useAccount } from "../account/account.ts";
 import { favoriteOf, rankPeople, withPerson } from "../sessions/session-rules.ts";
@@ -44,10 +44,12 @@ export function ProfileScreen() {
   const account = useAccount((s) => s.account);
   const layout = LAYOUT[useTv() ? "tv" : "phone"];
   return (
-    <div className={cx("safe-area mx-auto flex max-w-[1240px] flex-col", layout.page)}>
-      <ScreenTopBar title={<h1 className="truncate">Profil</h1>} />
+    <div className={cx("safe-area mx-auto flex w-full max-w-[1240px] flex-col", layout.page)}>
+      <BrandBar />
       {account ? (
         <main className={cx("grid flex-1 items-start", layout.main)}>
+          {/* The tab bar says where we are; the title stays for screen readers. */}
+          <h1 className="sr-only">Profil</h1>
           <div className={layout.me}>
             <MeCard account={account} />
           </div>

@@ -2,12 +2,12 @@ import { normalizeTvPairingCode } from "@annamour/protocol";
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { Redirect, useSearch } from "wouter";
+import { BrandBar } from "../../ui/BrandBar.tsx";
 import { CodeLetters } from "../../ui/CodeLetters.tsx";
 import { Button } from "../../ui/controls.tsx";
 import { QrCode } from "../../ui/QrCode.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import { ThreadSpinner } from "../../ui/ThreadSpinner.tsx";
-import { Wordmark } from "../../ui/Wordmark.tsx";
 import { safeNext } from "../account/AccountGate.tsx";
 import { refreshAccount, useAccount } from "../account/account.ts";
 import { resetSessions } from "../sessions/sessions.ts";
@@ -42,9 +42,7 @@ export function TvPairingScreen() {
 
   return (
     <div className="safe-area mx-auto flex min-h-dvh max-w-[1240px] flex-col">
-      <header className="flex min-h-12 items-center">
-        <Wordmark />
-      </header>
+      <BrandBar />
       <main className="grid flex-1 content-center items-center gap-10 py-8 md:grid-cols-[auto_minmax(0,1fr)] md:gap-[6vw]">
         <Surface className="surface-panel grid size-[min(20rem,80vw)] place-items-center justify-self-center p-5">
           {state.phase === "waiting" ? (
