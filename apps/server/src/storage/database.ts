@@ -104,6 +104,13 @@ const MIGRATIONS: readonly string[] = [
   );
   CREATE INDEX watchlist_members_account_id ON watchlist_members (account_id);
   `,
+  // « Tout le monde » follows the author's history (people met later see it too). A title shared with
+  // its author alone can only have meant that: it becomes « Tout le monde ».
+  `
+  ALTER TABLE watchlist_items ADD COLUMN everyone INTEGER NOT NULL DEFAULT 0;
+  UPDATE watchlist_items SET everyone = 1
+  WHERE (SELECT COUNT(*) FROM watchlist_members m WHERE m.item_id = watchlist_items.id) = 1;
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;
