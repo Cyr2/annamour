@@ -4,7 +4,7 @@ import { serve } from "@hono/node-server";
 import { createApp } from "./app.ts";
 import { bridgeFetcher, NakaCatalog } from "./catalog/naka-catalog.ts";
 import { loadConfig } from "./config.ts";
-import { ffmpegAudioEncoder, ffmpegAvailable, ffmpegEncoder, firstTimestamp } from "./media/ffmpeg.ts";
+import { describeMedia, ffmpegAudioEncoder, ffmpegAvailable, ffmpegEncoder, firstTimestamp } from "./media/ffmpeg.ts";
 import { segmentSource } from "./media/segment-source.ts";
 import { Transcoder } from "./media/transcoder.ts";
 import { attachRealtime } from "./realtime.ts";
@@ -28,7 +28,12 @@ const services = createServices({
   ...(transcoder
     ? {
         transcoder,
-        timelineProbe: { source: segmentSource(safeFetchBytes, nakaBridge), firstTimestamp, log: console.info },
+        timelineProbe: {
+          source: segmentSource(safeFetchBytes, nakaBridge),
+          firstTimestamp,
+          describe: describeMedia,
+          log: console.info,
+        },
       }
     : {}),
 });
@@ -45,7 +50,7 @@ async function lowQualityTranscoder(): Promise<Transcoder | undefined> {
     dir,
     source: segmentSource(safeFetchBytes, nakaBridge),
     encode: ffmpegEncoder,
-    encodeAudio: ffmpegAudioEncoder,
+    ...(config.lightAudio ? { encodeAudio: ffmpegAudioEncoder } : {}),
     workers: config.transcodeWorkers,
   });
 }

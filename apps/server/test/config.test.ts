@@ -18,6 +18,12 @@ describe("server configuration", () => {
     expect(() => loadConfig({ TRANSCODE_WORKERS: "64" })).toThrow(ConfigError);
   });
 
+  it("keeps the lighter audio off unless asked for", () => {
+    expect(loadConfig({}).lightAudio).toBe(false);
+    expect(loadConfig({ LIGHT_AUDIO: "on" }).lightAudio).toBe(true);
+    expect(loadConfig({ LIGHT_AUDIO: "yes" }).lightAudio).toBe(false);
+  });
+
   it("has development defaults", () => {
     const config = loadConfig({});
     expect(config).toMatchObject({

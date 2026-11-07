@@ -21,6 +21,11 @@ export interface ServerConfig {
   nakaBridge: { url: string; secret: string } | undefined;
   /** ffmpeg processes making lighter qualities at once (0 turns them off). */
   transcodeWorkers: number;
+  /**
+   * Lighter audio for the lowest rungs (LIGHT_AUDIO=on). Off by default: it
+   * needs packed ADTS audio, and Naka's turned out not to be (see the timeline probe).
+   */
+  lightAudio: boolean;
 }
 
 const DEFAULT_TRANSCODE_WORKERS = 2;
@@ -64,5 +69,6 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     relyingParty: { id: env.RP_ID?.trim() || "localhost", name: "Annamour", origins: origins(env.ORIGIN) },
     nakaBridge: nakaBridge(env),
     transcodeWorkers: transcodeWorkers(env.TRANSCODE_WORKERS),
+    lightAudio: env.LIGHT_AUDIO?.trim().toLowerCase() === "on",
   };
 }
