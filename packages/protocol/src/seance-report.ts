@@ -1,6 +1,6 @@
 import { z } from "zod/mini";
 import { Name } from "./messages.ts";
-import { DeviceKind, type PlaybackStatsEntry, rebufferRatio } from "./playback-stats.ts";
+import { DeviceKind, LEAD_BUCKETS, median, type PlaybackStatsEntry, rebufferRatio } from "./playback-stats.ts";
 
 /**
  * A séance's evening at a glance: per person and device (and player), how
@@ -41,6 +41,15 @@ export const DeviceEvening = z.object({
   stallSeconds: z.number(),
   /** Share of the watched time at each height bucket, from the lightest; buckets never seen are left out. */
   heights: z.array(z.object({ height: z.number(), share: z.number() })),
+  /** Share of the measured time at each forward lead (LEAD_BUCKETS); empty when no page measured it. */
+  leadShares: z.array(z.number()),
+  /** The middle forward lead while playing, seconds. The finer measures are null when no page measured them. */
+  leadMedian: z.nullable(z.number()),
+  qualitySwitches: z.nullable(z.number()),
+  /** Seconds spent waiting for someone else, as opposed to freezing here. */
+  waitSeconds: z.nullable(z.number()),
+  /** Freezes that began right after a seek; the rest of stallCount came on their own. */
+  afterSeekStallCount: z.nullable(z.number()),
   targets: z.object({
     rebuffer: TargetCheck,
     stalls: TargetCheck,
@@ -57,14 +66,6 @@ export type SeanceReport = z.infer<typeof SeanceReport>;
 /** The bucket a picture height counts in. */
 export function heightBucket(height: number): HeightBucket {
   return HEIGHT_BUCKETS.find((bucket) => height <= bucket) ?? 640;
-}
-
-function median(values: readonly number[]): number | null {
-  const sorted = [...values].sort((a, b) => a - b);
-  if (sorted.length === 0) return null;
-  const mid = Math.floor(sorted.length / 2);
-  const upper = sorted[mid] ?? 0;
-  return sorted.length % 2 ? upper : ((sorted[mid - 1] ?? upper) + upper) / 2;
 }
 
 const below = (value: number | null, limit: number): TargetCheck => ({
@@ -87,6 +88,52 @@ function shares(entries: readonly PlaybackStatsEntry[], watched: number): Device
   });
 }
 
+type FinerMeasures = Pick<
+  DeviceEvening,
+  "leadShares" | "leadMedian" | "qualitySwitches" | "waitSeconds" | "afterSeekStallCount"
+>;
+type CountedMeasure = "qualitySwitches" | "waitSeconds" | "afterSeekStallCount";
+
+/** The sum over the page loads that measured it; null when none did (pages from before it existed). */
+function sumMeasured(entries: readonly PlaybackStatsEntry[], measure: CountedMeasure): number | null {
+  const measured = entries.flatMap((entry) => entry[measure] ?? []);
+  return measured.length > 0 ? measured.reduce((sum, value) => sum + value, 0) : null;
+}
+
+/**
+ * The middle of several middles, each counting for the time it was measured
+ * over: a long evening outweighs a page reloaded after a minute.
+ */
+export function weightedMedian(samples: ReadonlyArray<{ value: number; weight: number }>): number | null {
+  const total = samples.reduce((sum, { weight }) => sum + weight, 0);
+  if (total <= 0) return median(samples.map(({ value }) => value));
+  let seen = 0;
+  for (const { value, weight } of [...samples].sort((a, b) => a.value - b.value)) {
+    seen += weight;
+    if (seen >= total / 2) return value;
+  }
+  return null;
+}
+
+function finerMeasures(entries: readonly PlaybackStatsEntry[]): FinerMeasures {
+  const leads = entries.flatMap(({ leadSeconds, leadMedian }) =>
+    leadSeconds && leadMedian !== undefined ? [{ leadSeconds, leadMedian }] : [],
+  );
+  const histogram = LEAD_BUCKETS.map((_, index) => leads.reduce((sum, l) => sum + (l.leadSeconds[index] ?? 0), 0));
+  const measured = histogram.reduce((sum, seconds) => sum + seconds, 0);
+  const middles = leads.map(({ leadSeconds, leadMedian }) => ({
+    value: leadMedian,
+    weight: leadSeconds.reduce((sum, seconds) => sum + seconds, 0),
+  }));
+  return {
+    leadShares: measured > 0 ? histogram.map((seconds) => seconds / measured) : [],
+    leadMedian: weightedMedian(middles),
+    qualitySwitches: sumMeasured(entries, "qualitySwitches"),
+    waitSeconds: sumMeasured(entries, "waitSeconds"),
+    afterSeekStallCount: sumMeasured(entries, "afterSeekStallCount"),
+  };
+}
+
 function evening(entries: readonly PlaybackStatsEntry[]): DeviceEvening | null {
   const [latest] = entries;
   if (!latest) return null;
@@ -105,6 +152,7 @@ function evening(entries: readonly PlaybackStatsEntry[]): DeviceEvening | null {
     stallCount,
     stallSeconds,
     heights,
+    ...finerMeasures(entries),
     targets: {
       rebuffer: below(
         watchedSeconds > 0 ? rebufferRatio({ watchedSeconds, stallSeconds }) : null,

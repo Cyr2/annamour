@@ -123,6 +123,12 @@ export function useRoomConnection(code: string | null): SyncClient | null {
   return client;
 }
 
+/** The séance stands paused because someone else is loading (a « wait » this device did not cause). */
+export function waitingForOthers({ playback, lastEvent, you }: RoomState): boolean {
+  if (playback?.status !== "paused" || lastEvent?.action !== "wait") return false;
+  return lastEvent.by !== undefined && lastEvent.by !== you;
+}
+
 /** Display helper: the member who caused an event, if any. */
 export function memberById(members: Member[], id: string | undefined): Member | undefined {
   return id ? members.find((m) => m.id === id) : undefined;

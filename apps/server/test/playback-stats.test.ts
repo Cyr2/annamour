@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { TextFetcher } from "../src/safe-fetch.ts";
 import { FetchError } from "../src/safe-fetch.ts";
 import { REPORT_RETENTION_MS } from "../src/services/playback-stats-service.ts";
+import { openDatabase } from "../src/storage/database.ts";
 import { testApp } from "./helpers.ts";
 
 const MASTER = "https://cdn.example/film/master.m3u8";
@@ -26,7 +27,8 @@ const report = (overrides: Record<string, unknown> = {}) => ({
 
 function setup() {
   let clock = 1_000_000;
-  const { app, services } = testApp({ fetchText, now: () => clock });
+  const db = openDatabase(":memory:");
+  const { app, services } = testApp({ fetchText, now: () => clock, db });
   const create = async () => {
     const created = await app.request("/api/rooms", {
       method: "POST",
@@ -45,7 +47,7 @@ function setup() {
   const list = async (code: string) =>
     ((await (await app.request(`/api/rooms/${code}/stats`)).json()) as { reports: Array<Record<string, unknown>> })
       .reports;
-  return { app, services, create, send, list, advance: (ms: number) => (clock += ms) };
+  return { app, db, services, create, send, list, advance: (ms: number) => (clock += ms) };
 }
 
 describe("a séance's evening report", () => {
@@ -130,5 +132,50 @@ describe("playback reports", () => {
     expect(services.playbackStats.list("ABCD")).toEqual([]);
     const { app } = testApp();
     expect((await app.request("/api/rooms/bad!/stats")).status).toBe(404);
+  });
+});
+
+describe("the finer measures", () => {
+  const finer = {
+    leadSeconds: [5, 10, 0, 0, 30, 45],
+    leadMedian: 130,
+    qualitySwitches: 4,
+    waitSeconds: 65,
+    afterSeekStallCount: 1,
+  };
+
+  it("are kept and given back as sent", async () => {
+    const { create, send, list } = setup();
+    const code = await create();
+    expect((await send(code, report(finer))).status).toBe(204);
+    expect((await list(code))[0]).toMatchObject(finer);
+  });
+
+  it("are simply missing from reports kept before they existed, which still read and add up", async () => {
+    const { app, db, create, send } = setup();
+    const code = await create();
+    // A row as an older server stored it, straight in the base.
+    db.prepare("INSERT INTO playback_reports (viewing_id, room_code, report, updated_at) VALUES (?, ?, ?, ?)").run(
+      "viewing-old1",
+      code,
+      JSON.stringify(report({ viewingId: "viewing-old1" })),
+      1,
+    );
+    await send(code, report({ viewingId: "viewing-0002", ...finer }));
+    const body = SeanceReport.parse(await (await app.request(`/api/rooms/${code}/report`)).json());
+    expect(body.devices[0]).toMatchObject({
+      watchedSeconds: 180,
+      qualitySwitches: 4,
+      waitSeconds: 65,
+      afterSeekStallCount: 1,
+      leadMedian: 130,
+    });
+  });
+
+  it("are refused when malformed", async () => {
+    const { create, send } = setup();
+    const code = await create();
+    expect((await send(code, report({ leadSeconds: [1, 2] }))).status).toBe(400);
+    expect((await send(code, report({ qualitySwitches: -1 }))).status).toBe(400);
   });
 });
