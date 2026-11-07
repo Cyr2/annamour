@@ -44,7 +44,6 @@ export function TonightHero({ circle }: { circle: Circle | null }) {
         </div>
       </RedThread.Root>
       <h1 className="type-display">Une soirée ensemble</h1>
-      <p className="type-lede">Le même film, à la même seconde, chacun chez soi.</p>
     </header>
   );
 }

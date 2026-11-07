@@ -7,7 +7,6 @@ import { BubbleStack } from "../../ui/BubbleStack.tsx";
 import { Button } from "../../ui/controls.tsx";
 import { LinkButton } from "../../ui/LinkButton.tsx";
 import { Poster } from "../../ui/Poster.tsx";
-import { Progress } from "../../ui/Progress.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import type { TonightPick } from "../circles/circle-rules.ts";
 import { describeTitle } from "../home/create/CatalogResults.tsx";
@@ -42,24 +41,32 @@ export function TonightCard({ pick, me, onOpenItem, onAdd }: TonightCardProps) {
 
 function ResumeBody({ pick }: { pick: Extract<TonightPick, { kind: "resume" }> }) {
   const { session } = pick;
+  const percent = Math.round((progressOf(session) ?? 0) * 100);
   return (
-    <>
-      <div className="flex items-center gap-4">
-        <Progress.Ring value={progressOf(session) ?? 0} label="Où vous en êtes">
-          <Play aria-hidden className="relative ml-0.5 size-5 fill-current text-fg" />
-        </Progress.Ring>
-        <div className="grid min-w-0 gap-0.5">
-          <span className="text-xs font-semibold text-accent">On reprend ?</span>
-          <strong className="truncate font-rounded-tight text-lg font-extrabold text-fg">
-            {sessionTitle(session)}
-          </strong>
-          <span className="text-sm text-fg-muted">{resumeLine(session, Date.now())}</span>
-        </div>
+    <div className="flex items-center gap-4">
+      <span
+        aria-hidden
+        className="relative block aspect-[2/3] w-24 shrink-0 overflow-hidden rounded-control"
+        style={{ background: "var(--am-poster-glow), var(--am-poster)" }}
+      >
+        <span className="absolute inset-x-0 bottom-0 h-1 bg-fill-strong">
+          <span className="block h-full bg-accent" style={{ width: `${percent}%` }} />
+        </span>
+      </span>
+      <div className="grid min-w-0 flex-1 gap-1">
+        <span className="text-xs font-semibold text-accent">On reprend ?</span>
+        <strong className="truncate font-rounded-tight text-lg font-extrabold text-fg">{sessionTitle(session)}</strong>
+        <span className="text-sm text-fg-muted">{resumeLine(session, Date.now())}</span>
+        <LinkButton
+          href={sessionPath(session.code)}
+          variant="filled"
+          icon={<Play />}
+          className="mt-1 justify-self-start"
+        >
+          Reprendre
+        </LinkButton>
       </div>
-      <LinkButton href={sessionPath(session.code)} variant="filled" size="large" icon={<Play />}>
-        Reprendre
-      </LinkButton>
-    </>
+    </div>
   );
 }
 

@@ -51,6 +51,3 @@ export function tonightPick(
   const [item] = sortWatchlist(splitWatchlist(ofCircle(items, circle, me)).toWatch, "wants");
   return item ? { kind: "title", item } : { kind: "nothing" };
 }
-
-/** Which part of « Notre liste » is shown. */
-export type ListState = "to-watch" | "ongoing" | "watched";

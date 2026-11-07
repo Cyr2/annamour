@@ -1,13 +1,14 @@
 import { circleTitle, othersIn } from "@annamour/protocol";
 import { Users } from "lucide-react";
 import type { ReactNode } from "react";
+import { joinNames } from "../../lib/format.ts";
 import { BubbleStack } from "../../ui/BubbleStack.tsx";
 import { cx } from "../../ui/cx.ts";
 import { useAccount } from "../account/account.ts";
 import { selectCircle, shownCircle, useCircles } from "./circles.ts";
 
 /**
- * « Avec qui ce soir ? »: one chip per circle, then « Tout ». Picking one
+ * « Avec qui ce soir ? »: one chip per circle (first names only), then « Tout ». Picking one
  * changes what the whole screen offers. With a single circle (a couple) there
  * is nothing to pick, so nothing shows.
  */
@@ -18,12 +19,14 @@ export function CircleSwitcher({ legend = "Avec qui ce soir ?" }: { legend?: str
   if (circles.length < 2) return null;
 
   return (
-    <fieldset className="-m-1 flex min-w-0 flex-wrap gap-1.5 border-0 p-1">
-      <legend className="mb-1.5 px-1 text-sm font-semibold text-fg-muted">{legend}</legend>
+    // One line under the title, scrolling sideways when there are many circles.
+    <fieldset className="-mx-1 flex min-w-0 justify-center-safe gap-1.5 overflow-x-auto border-0 px-1 py-1 [scrollbar-width:none]">
+      <legend className="sr-only">{legend}</legend>
       {circles.map((circle) => (
         <Chip
           key={circle.id}
-          label={circleTitle(circle, me)}
+          label={circle.name ?? joinNames(othersIn(circle, me).map((p) => p.name))}
+          fullLabel={circleTitle(circle, me)}
           pressed={shown === circle.id}
           onPress={() => selectCircle(circle.id)}
         >
@@ -41,11 +44,14 @@ export function CircleSwitcher({ legend = "Avec qui ce soir ?" }: { legend?: str
 
 function Chip({
   label,
+  fullLabel,
   pressed,
   onPress,
   children,
 }: {
   label: string;
+  /** Said by a screen reader when the chip shows only first names. */
+  fullLabel?: string;
   pressed: boolean;
   onPress: () => void;
   children: ReactNode;
@@ -54,9 +60,10 @@ function Chip({
     <button
       type="button"
       aria-pressed={pressed}
+      aria-label={fullLabel}
       onClick={onPress}
       className={cx(
-        "flex min-h-11 max-w-full cursor-pointer items-center gap-2 rounded-pill border px-3 py-1.5 text-sm font-semibold transition-colors duration-200",
+        "flex min-h-11 max-w-full shrink-0 cursor-pointer items-center gap-2 rounded-pill border px-3 py-1.5 text-sm font-semibold transition-colors duration-200",
         pressed ? "border-transparent bg-fill-strong text-fg" : "border-line text-fg-muted hover:bg-fill-soft",
       )}
     >

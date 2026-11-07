@@ -1,19 +1,13 @@
-import {
-  type SessionSummary,
-  sortWatchlist,
-  splitWatchlist,
-  type WatchlistItem,
-  type WatchlistSort,
-} from "@annamour/protocol";
-import { Plus } from "lucide-react";
+import { type SessionSummary, sortWatchlist, splitWatchlist, type WatchlistItem } from "@annamour/protocol";
+import { ChevronLeft, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useSearch } from "wouter";
 import { BrandBar } from "../../ui/BrandBar.tsx";
 import { Button, SegmentedControl } from "../../ui/controls.tsx";
+import { LinkButton } from "../../ui/LinkButton.tsx";
 import { toast } from "../../ui/toast.ts";
 import { useAccount } from "../account/account.ts";
-import { CircleSwitcher } from "../circles/CircleSwitcher.tsx";
-import { type ListState, ofCircle } from "../circles/circle-rules.ts";
-import { loadCircles, useShownCircle } from "../circles/circles.ts";
+import { loadCircles, useCircles } from "../circles/circles.ts";
 import { SessionRow } from "../profile/SessionRow.tsx";
 import { splitByStatus } from "../sessions/session-rules.ts";
 import { hideSession, useSessions } from "../sessions/sessions.ts";
@@ -21,96 +15,75 @@ import { useLoadSessions } from "../sessions/useLoadSessions.ts";
 import { AddToWatchlistSheet } from "../watchlist/AddToWatchlistSheet.tsx";
 import { useLoadWatchlist } from "../watchlist/useLoadWatchlist.ts";
 import { WatchlistItemSheet } from "../watchlist/WatchlistItemSheet.tsx";
-import { WatchlistRow } from "../watchlist/WatchlistRow.tsx";
 import { toggleWant, useWatchlist } from "../watchlist/watchlist.ts";
+import { PosterGrid, type ShelfHandlers, ShelfRow, shelfName } from "./ShelfRow.tsx";
+import { type Shelf, shelvesFor } from "./shelves.ts";
 
-const STATES = [
+type Tab = "to-watch" | "watched";
+const TABS = [
   { value: "to-watch", label: "À voir" },
-  { value: "ongoing", label: "En cours" },
-  { value: "watched", label: "Vus" },
+  { value: "watched", label: "Déjà vus" },
 ] as const;
 
-const SORTS = [
-  { value: "wants", label: "Le plus d'envies" },
-  { value: "recent", label: "Ajouté récemment" },
-] as const;
-
-/** « Notre liste »: every title of the circle on screen, to watch, under way or watched, in one place. */
+/**
+ * « Notre liste »: the same posters as on « Ce soir », one floor per circle
+ * (or a grid when there is only one); « Tout voir » opens a circle's grid.
+ */
 export function OurListScreen() {
   useLoadSessions();
   useLoadWatchlist();
   useEffect(() => void loadCircles(), []);
-  const account = useAccount((s) => s.account);
-  const me = account?.id ?? "";
-  const circle = useShownCircle();
-  const sessions = useSessions((s) => s.sessions);
+  const me = useAccount((s) => s.account?.id ?? "");
+  const circles = useCircles((s) => s.circles);
   const items = useWatchlist((s) => s.items);
-  const [state, setState] = useState<ListState>("to-watch");
-  const [sort, setSort] = useState<WatchlistSort>("wants");
+  const [tab, setTab] = useState<Tab>("to-watch");
   const [adding, setAdding] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const focus = new URLSearchParams(useSearch()).get("cercle");
 
-  const titles = useMemo(
-    () => splitWatchlist(sortWatchlist(ofCircle(items, circle, me), sort)),
-    [items, circle, me, sort],
-  );
-  const seances = useMemo(() => splitByStatus(ofCircle(sessions, circle, me)), [sessions, circle, me]);
-  const want = (item: WatchlistItem, value: boolean) =>
-    void toggleWant(item.id, me, value).catch((failure: Error) => toast({ message: failure.message }));
-  const meBubble = account ? { id: account.id, name: account.name, color: account.color } : null;
-  const now = Date.now();
+  const titles = useMemo(() => splitWatchlist(sortWatchlist(items, "wants")), [items]);
+  const shelves = useMemo(() => shelvesFor(circles, titles.toWatch, me), [circles, titles.toWatch, me]);
+  const handlers: ShelfHandlers = {
+    me,
+    onPick: (item) => setOpenId(item.id),
+    onWant: (item, want) =>
+      void toggleWant(item.id, me, want).catch((failure: Error) => toast({ message: failure.message })),
+  };
+  const focused = focus ? shelves.find((shelf) => (shelf.circle?.id ?? "tous") === focus) : undefined;
 
   return (
     <div className="safe-area mx-auto flex min-h-dvh w-full max-w-[1240px] flex-col">
       <BrandBar />
-      <main className="mx-auto grid w-full max-w-[760px] content-start gap-5 py-6">
+      <main className="mx-auto grid w-full max-w-[760px] content-start gap-6 py-6">
         <header className="flex items-center justify-between gap-3">
-          <h1 className="type-heading">Notre liste</h1>
+          <h1 className="type-heading">{focused ? shelfName(focused.circle, me) : "Notre liste"}</h1>
           <Button variant="filled" icon={<Plus />} onClick={() => setAdding(true)}>
             Ajouter
           </Button>
         </header>
-        <CircleSwitcher legend="Avec qui ?" />
-        <SegmentedControl
-          aria-label="Quels titres"
-          className="am-state-segments justify-self-start"
-          items={STATES.map((s) => ({ value: s.value, label: s.label }))}
-          value={state}
-          onValueChange={(value) => setState(STATES.find((s) => s.value === value)?.value ?? "to-watch")}
-        />
-        {state === "to-watch" ? (
+        {focused ? (
+          <>
+            <LinkButton href="/liste" icon={<ChevronLeft />} className="justify-self-start">
+              Toute la liste
+            </LinkButton>
+            <PosterGrid items={focused.items} label="Titres" {...handlers} />
+          </>
+        ) : (
           <>
             <SegmentedControl
-              aria-label="Trier"
-              className="am-sort-segments justify-self-start"
-              items={SORTS.map((s) => ({ value: s.value, label: s.label }))}
-              value={sort}
-              onValueChange={(value) => setSort(value === "recent" ? "recent" : "wants")}
+              aria-label="Quels titres"
+              className="am-state-segments justify-self-start"
+              items={TABS.map((t) => ({ value: t.value, label: t.label }))}
+              value={tab}
+              onValueChange={(value) => setTab(value === "watched" ? "watched" : "to-watch")}
             />
-            <Titles
-              items={titles.toWatch}
-              me={me}
-              now={now}
-              onOpen={(i) => setOpenId(i.id)}
-              onWant={want}
-              empty="Rien à voir pour l'instant : ajoutez un film ou une série."
-            />
+            {tab === "to-watch" ? (
+              <ToWatch shelves={shelves} handlers={handlers} />
+            ) : (
+              <Watched items={titles.watched} handlers={handlers} />
+            )}
           </>
-        ) : null}
-        {state === "ongoing" && meBubble ? (
-          <Seances sessions={seances.ongoing} me={meBubble} now={now} empty="Aucune séance en cours." />
-        ) : null}
-        {state === "watched" && meBubble ? (
-          <>
-            <Titles items={titles.watched} me={me} now={now} onOpen={(i) => setOpenId(i.id)} onWant={want} empty="" />
-            <Seances
-              sessions={seances.finished}
-              me={meBubble}
-              now={now}
-              empty={titles.watched.length ? "" : "Rien de vu pour l'instant."}
-            />
-          </>
-        ) : null}
+        )}
       </main>
       <AddToWatchlistSheet open={adding} onClose={() => setAdding(false)} />
       <WatchlistItemSheet item={items.find((i) => i.id === openId) ?? null} me={me} onClose={() => setOpenId(null)} />
@@ -118,37 +91,44 @@ export function OurListScreen() {
   );
 }
 
-interface TitlesProps {
-  items: WatchlistItem[];
-  me: string;
-  now: number;
-  onOpen: (item: WatchlistItem) => void;
-  onWant: (item: WatchlistItem, want: boolean) => void;
-  empty: string;
-}
-
-function Titles({ items, me, now, onOpen, onWant, empty }: TitlesProps) {
-  if (items.length === 0) return empty ? <p className="px-1 text-sm text-fg-muted">{empty}</p> : null;
+function ToWatch({ shelves, handlers }: { shelves: Shelf[]; handlers: ShelfHandlers }) {
+  const [first] = shelves;
+  if (!first) {
+    return <p className="px-1 text-sm text-fg-muted">Rien à voir pour l'instant : ajoutez un film ou une série.</p>;
+  }
+  // One circle (a couple, often): a grid, not a single row with the rest of the page empty.
+  if (shelves.length === 1) return <PosterGrid items={first.items} label="Titres" {...handlers} />;
   return (
-    <ul className="grid gap-2" aria-label="Titres">
-      {items.map((item) => (
-        <WatchlistRow key={item.id} item={item} me={me} now={now} onOpen={onOpen} onWant={onWant} />
+    <div className="grid gap-5">
+      {shelves.map((shelf) => (
+        <ShelfRow key={shelf.circle?.id ?? "tous"} circle={shelf.circle} items={shelf.items} {...handlers} />
       ))}
-    </ul>
+    </div>
   );
 }
 
-interface SeancesProps {
-  sessions: SessionSummary[];
-  me: { id: string; name: string; color: SessionSummary["participants"][number]["color"] };
-  now: number;
-  empty: string;
+type Me = { id: string; name: string; color: SessionSummary["participants"][number]["color"] };
+
+function Watched({ items, handlers }: { items: WatchlistItem[]; handlers: ShelfHandlers }) {
+  const sessions = useSessions((s) => s.sessions);
+  const account = useAccount((s) => s.account);
+  const finished = useMemo(() => splitByStatus(sessions).finished, [sessions]);
+  if (items.length === 0 && finished.length === 0) {
+    return <p className="px-1 text-sm text-fg-muted">Rien de vu pour l'instant.</p>;
+  }
+  const me: Me | null = account ? { id: account.id, name: account.name, color: account.color } : null;
+  return (
+    <div className="grid gap-6">
+      {items.length ? <PosterGrid items={items} label="Titres vus" {...handlers} /> : null}
+      {finished.length && me ? <FinishedSeances sessions={finished} me={me} /> : null}
+    </div>
+  );
 }
 
-function Seances({ sessions, me, now, empty }: SeancesProps) {
-  if (sessions.length === 0) return empty ? <p className="px-1 text-sm text-fg-muted">{empty}</p> : null;
+function FinishedSeances({ sessions, me }: { sessions: SessionSummary[]; me: Me }) {
+  const now = Date.now();
   return (
-    <ul className="grid gap-2.5" aria-label="Séances">
+    <ul className="grid gap-2.5" aria-label="Séances terminées">
       {sessions.map((session) => (
         <SessionRow
           key={session.code}

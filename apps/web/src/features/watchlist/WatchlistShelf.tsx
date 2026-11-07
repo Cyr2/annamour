@@ -3,18 +3,17 @@ import { ChevronRight, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { plural } from "../../lib/format.ts";
-import { BubbleStack } from "../../ui/BubbleStack.tsx";
 import { cx } from "../../ui/cx.ts";
-import { Poster } from "../../ui/Poster.tsx";
+import { toast } from "../../ui/toast.ts";
 import { useAccount } from "../account/account.ts";
 import { ofCircle } from "../circles/circle-rules.ts";
-import { describeTitle } from "../home/create/CatalogResults.tsx";
 import { useTv } from "../tv/tv-context.ts";
 import { listPath, useCircleUi } from "../ui-version/ui-version.ts";
+import { PosterCard } from "./PosterCard.tsx";
 import { useLaunchTitle } from "./useLaunchTitle.ts";
 import { useLoadWatchlist } from "./useLoadWatchlist.ts";
 import { WatchlistItemSheet } from "./WatchlistItemSheet.tsx";
-import { useWatchlist } from "./watchlist.ts";
+import { toggleWant, useWatchlist } from "./watchlist.ts";
 
 const SHELF_SIZE = 10;
 
@@ -44,6 +43,8 @@ export function WatchlistShelf({
   const { launch } = useLaunchTitle();
   if (toWatch.length === 0) return null;
 
+  const want = (item: WatchlistItem, value: boolean) =>
+    void toggleWant(item.id, me, value).catch((failure: Error) => toast({ message: failure.message }));
   const pick = (item: WatchlistItem) => (tv && item.title.type === "movie" ? void launch(item) : setOpenId(item.id));
 
   return (
@@ -70,7 +71,13 @@ export function WatchlistShelf({
       <ul className={cx("flex gap-3 overflow-x-auto py-3 [scrollbar-width:none]", tv && "-mx-6 gap-5 px-6 py-5")}>
         {toWatch.slice(0, SHELF_SIZE).map((item) => (
           <li key={item.id} className="w-[7.5rem] shrink-0">
-            <ShelfCard item={item} tv={tv} onPick={pick} />
+            <PosterCard
+              item={item}
+              me={me}
+              onPick={pick}
+              onWant={tv ? undefined : want}
+              hint={tv && item.title.type === "movie" ? "OK pour lancer" : undefined}
+            />
           </li>
         ))}
         {tv ? null : (
@@ -89,28 +96,5 @@ export function WatchlistShelf({
       </ul>
       <WatchlistItemSheet item={toWatch.find((i) => i.id === openId) ?? null} me={me} onClose={() => setOpenId(null)} />
     </section>
-  );
-}
-
-function ShelfCard({ item, tv, onPick }: { item: WatchlistItem; tv: boolean; onPick: (item: WatchlistItem) => void }) {
-  const wanters = item.sharedWith
-    .filter((person) => item.wantedBy.includes(person.accountId))
-    .map((person) => ({ id: person.accountId, name: person.name, color: person.color }));
-  return (
-    <button
-      type="button"
-      onClick={() => onPick(item)}
-      aria-label={`${item.title.title}, ${describeTitle(item.title)}${tv && item.title.type === "movie" ? " : OK pour lancer" : ""}`}
-      className="grid w-full cursor-pointer gap-2 rounded-control text-left"
-    >
-      <span className="relative block">
-        <Poster title={item.title} size="card" />
-        {wanters.length ? <BubbleStack people={wanters} className="absolute bottom-2 left-2" /> : null}
-      </span>
-      <span className="grid gap-0.5 px-0.5">
-        <span className="truncate text-sm font-semibold text-fg">{item.title.title}</span>
-        <span className="truncate text-xs text-fg-muted">{describeTitle(item.title)}</span>
-      </span>
-    </button>
   );
 }
