@@ -1,6 +1,7 @@
 import type { Reaction } from "@annamour/protocol";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
+import { keepScreenAwake } from "../../lib/screen-awake.ts";
 import { useRoom } from "../../sync/room.ts";
 import type { SyncClient } from "../../sync/SyncClient.ts";
 import type { PlayerSyncHandle } from "../../sync/usePlayerSync.ts";
@@ -55,6 +56,8 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
 
   // Full screen belongs to the film: leaving the player gives the app back, upright.
   useEffect(() => leaveFullscreen, []);
+  // The screen stays on with the film open, paused included: no auto-lock dropping what is downloaded.
+  useEffect(() => (active ? keepScreenAwake() : undefined), [active]);
   useTrackChoice(video, code, media, controls);
   useVolumeOnVideo(video);
   usePlaybackNotices();
