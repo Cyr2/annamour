@@ -11,7 +11,7 @@ const percent = (share: number) =>
 
 const seconds = (value: number) => `${Math.round(value)} s`;
 
-/** « Annou · iPad (lecteur Safari) » */
+/** « Anna · iPad (lecteur Safari) » */
 export function deviceTitle({ name, device, engine }: DeviceEvening): string {
   return `${name} · ${device} (lecteur ${engine === "native" ? "Safari" : "Annamour"})`;
 }

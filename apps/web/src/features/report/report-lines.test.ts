@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { deviceTitle, headline, heightLabel, targetLines } from "./report-lines.ts";
 
 const evening = (overrides: Partial<DeviceEvening> = {}): DeviceEvening => ({
-  name: "Annou",
+  name: "Anna",
   device: "iPad",
   engine: "native",
   watchedSeconds: 777.5,
@@ -26,8 +26,8 @@ const evening = (overrides: Partial<DeviceEvening> = {}): DeviceEvening => ({
 
 describe("the séance's quality, in words", () => {
   it("names the person, the device and the player", () => {
-    expect(deviceTitle(evening())).toBe("Annou · iPad (lecteur Safari)");
-    expect(deviceTitle(evening({ engine: "hls.js" }))).toBe("Annou · iPad (lecteur Annamour)");
+    expect(deviceTitle(evening())).toBe("Anna · iPad (lecteur Safari)");
+    expect(deviceTitle(evening({ engine: "hls.js" }))).toBe("Anna · iPad (lecteur Annamour)");
   });
 
   it("sums the evening up in a sentence", () => {

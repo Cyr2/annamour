@@ -4,7 +4,7 @@ import { heightBucket, SeanceReport, seanceReport } from "../src/seance-report.t
 
 const entry = (overrides: Partial<PlaybackStatsEntry>): PlaybackStatsEntry => ({
   viewingId: "viewing-0001",
-  name: "Annou",
+  name: "Anna",
   device: "iPad",
   engine: "native",
   watchedSeconds: 2400,
@@ -24,7 +24,7 @@ describe("a séance's evening, per device", () => {
       entry({ viewingId: "viewing-0002", watchedSeconds: 777.5, stallCount: 2, stallSeconds: 46.9, updatedAt: 2 }),
     ]);
     expect(report.devices).toHaveLength(1);
-    expect(report.devices[0]).toMatchObject({ name: "Annou", watchedSeconds: 3292.5, stallCount: 5 });
+    expect(report.devices[0]).toMatchObject({ name: "Anna", watchedSeconds: 3292.5, stallCount: 5 });
     expect(report.devices[0]?.stallSeconds).toBeCloseTo(105.8);
   });
 
@@ -35,8 +35,8 @@ describe("a séance's evening, per device", () => {
       entry({ engine: "hls.js", watchedSeconds: 200 }),
     ]);
     expect(report.devices.map((d) => `${d.name} ${d.device} ${d.engine}`)).toEqual([
-      "Annou iPad native",
-      "Annou iPad hls.js",
+      "Anna iPad native",
+      "Anna iPad hls.js",
       "Darius Windows hls.js",
     ]);
     expect(SeanceReport.safeParse(report).success).toBe(true);
