@@ -26,7 +26,16 @@ const leo = { accountId: "leo", name: "Léo", color: "butter" } as const;
 const ines = { accountId: "ines", name: "Inès", color: "mint" } as const;
 
 function session(code: string, overrides: Partial<SessionSummary> = {}): SessionSummary {
-  return { code, title: code, duration: 7826, position: 4360, lastUsedAt: 1000, participants: [], ...overrides };
+  return {
+    code,
+    title: code,
+    duration: 7826,
+    position: 4360,
+    lastUsedAt: 1000,
+    participants: [],
+    episode: { index: 0, count: 1 },
+    ...overrides,
+  };
 }
 
 const friday = session("YWEK", { lastUsedAt: 500, participants: [anna] });

@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { spring } from "../../lib/motion.ts";
 import { GlassLink } from "../../ui/GlassLink.tsx";
 import { Progress } from "../../ui/Progress.tsx";
-import { latestUnfinished, progressOf, resumeLine } from "../sessions/session-rules.ts";
+import { latestUnfinished, progressOf, resumeKicker, resumeLine, sessionTitle } from "../sessions/session-rules.ts";
 import { useSessions } from "../sessions/sessions.ts";
 import { useLoadSessions } from "../sessions/useLoadSessions.ts";
 
@@ -35,8 +35,10 @@ export function ResumeSlot({ className = "mt-6 w-[min(28.75rem,100%)]" }: { clas
           <Play aria-hidden className="relative ml-0.5 size-5 fill-current text-fg" />
         </Progress.Ring>
         <span className="grid min-w-0 flex-1 gap-0.5">
-          <span className="text-xs font-semibold text-accent">Reprendre</span>
-          <strong className="truncate font-rounded-tight text-md font-extrabold text-fg">{session.title}</strong>
+          <span className="text-xs font-semibold text-accent">{resumeKicker(session)}</span>
+          <strong className="truncate font-rounded-tight text-md font-extrabold text-fg">
+            {sessionTitle(session)}
+          </strong>
           <span className="text-sm text-pretty text-fg-muted">{resumeLine(session, Date.now())}</span>
         </span>
         <ChevronRight

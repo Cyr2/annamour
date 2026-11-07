@@ -1,6 +1,6 @@
 import { generateRoomCode, ROOM_RETENTION_MS } from "@annamour/protocol";
 import type { ImportedMedia } from "./hls.ts";
-import { Room } from "./rooms.ts";
+import { Room, type RoomPersistence } from "./rooms.ts";
 import type { RoomRepository } from "./storage/room-repository.ts";
 
 /** An empty room leaves memory after this long; it stays on disk and reopens on demand. */
@@ -36,8 +36,18 @@ export class RoomStore {
 
   create(title: string, imported: ImportedMedia, now: number): Room {
     const code = this.freeCode();
-    this.repository.insert({ code, title, media: imported, position: 0, createdAt: now, lastUsedAt: now });
-    return this.remember(new Room(code, title, imported, now, { save: this.saver(code) }));
+    const first = { id: 0, label: undefined };
+    this.repository.insert({
+      code,
+      title,
+      episodes: [{ ...first, media: imported }],
+      current: 0,
+      nextEpisodeId: 1,
+      position: 0,
+      createdAt: now,
+      lastUsedAt: now,
+    });
+    return this.remember(new Room(code, title, [{ ...first, imported }], now, { persistence: this.persistence(code) }));
   }
 
   /** The live room, or the saved one brought back paused at its last position. */
@@ -46,11 +56,21 @@ export class RoomStore {
     if (live) return live;
     const stored = this.repository.find(code);
     if (!stored) return undefined;
-    const room = new Room(code, stored.title, stored.media, this.now(), {
+    const episodes = stored.episodes.map(({ id, label, media }) => ({ id, label, imported: media }));
+    const room = new Room(code, stored.title, episodes, this.now(), {
       position: stored.position,
-      save: this.saver(code),
+      current: stored.current,
+      nextEpisodeId: stored.nextEpisodeId,
+      persistence: this.persistence(code),
     });
     return this.remember(room);
+  }
+
+  /** Queues an imported episode after the room's others, on disk and for everyone in it. Returns its index. */
+  addEpisode(room: Room, label: string | undefined, imported: ImportedMedia): number {
+    const episode = { id: room.nextEpisodeId, label };
+    this.repository.addEpisode(room.code, { ...episode, media: imported });
+    return room.addEpisode({ ...episode, imported });
   }
 
   /** Where a room in memory is right now; undefined when it is only on disk. */
@@ -90,8 +110,13 @@ export class RoomStore {
     return room;
   }
 
-  private saver(code: string) {
-    return (position: number, now: number) => this.repository.savePosition(code, position, now);
+  private persistence(code: string): RoomPersistence {
+    const repository = this.repository;
+    return {
+      savePosition: (position, now) => repository.savePosition(code, position, now),
+      saveCurrentEpisode: (current, duration, now) => repository.saveCurrentEpisode(code, current, duration, now),
+      removeEpisode: (id) => repository.removeEpisode(code, id),
+    };
   }
 
   private freeCode(): string {

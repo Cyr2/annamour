@@ -68,6 +68,20 @@ const MIGRATIONS: readonly string[] = [
   );
   CREATE INDEX tv_pairings_code_hash ON tv_pairings (code_hash);
   `,
+  // A séance chains episodes: each keeps its own imported stream; the one a séance was created with becomes episode 0.
+  `
+  CREATE TABLE room_episodes (
+    room_code TEXT NOT NULL REFERENCES rooms (code) ON DELETE CASCADE,
+    id INTEGER NOT NULL,
+    label TEXT,
+    media TEXT NOT NULL,
+    PRIMARY KEY (room_code, id)
+  );
+  INSERT INTO room_episodes (room_code, id, label, media) SELECT code, 0, NULL, media FROM rooms;
+  ALTER TABLE rooms DROP COLUMN media;
+  ALTER TABLE rooms ADD COLUMN current_episode INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE rooms ADD COLUMN next_episode_id INTEGER NOT NULL DEFAULT 1;
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

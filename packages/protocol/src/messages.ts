@@ -54,11 +54,24 @@ export const Media = z.object({
 });
 export type Media = z.infer<typeof Media>;
 
+/** One video of a séance (see episodes.ts). The first one usually has no label: it is the séance itself. */
+export const EpisodeLabel = z.string().check(z.trim(), z.minLength(1), z.maxLength(40));
+export const EpisodeInfo = z.object({ label: z.optional(z.string()), duration: z.optional(z.number()) });
+export type EpisodeInfo = z.infer<typeof EpisodeInfo>;
+export const EpisodeIndex = z.number().check(z.int(), z.gte(0));
+
 export const RoomSnapshot = z.object({
   code: RoomCode,
+  /** The episode on screen; its title names the episode too (« The Bear · S2 · É5 »). */
   media: Media,
   playback: PlaybackStateSchema,
   members: z.array(Member),
+  episodes: z.array(EpisodeInfo),
+  current: EpisodeIndex,
+  /** The current episode was watched to its end. */
+  finished: z.boolean(),
+  /** Server time at which the next episode starts for everyone; null when no countdown runs. */
+  countdownUntil: z.nullable(z.number()),
 });
 export type RoomSnapshot = z.infer<typeof RoomSnapshot>;
 
@@ -86,6 +99,13 @@ export const ClientMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("seek"), position: Position }),
   z.object({ type: z.literal("buffering"), buffering: z.boolean() }),
   z.object({ type: z.literal("react"), emoji: Reaction }),
+  /** This device reached the end of `episode`. */
+  z.object({ type: z.literal("ended"), episode: EpisodeIndex }),
+  /** Move everyone from `episode` to the one after (once, however many devices ask). */
+  z.object({ type: z.literal("nextEpisode"), episode: EpisodeIndex }),
+  /** « Pas ce soir »: stop the countdown for everyone. */
+  z.object({ type: z.literal("declineNext") }),
+  z.object({ type: z.literal("removeEpisode"), episode: EpisodeIndex }),
 ]);
 export type ClientMessage = z.infer<typeof ClientMessage>;
 
@@ -108,6 +128,8 @@ export const ServerMessage = z.discriminatedUnion("type", [
     by: z.optional(z.string()),
   }),
   z.object({ type: z.literal("members"), members: z.array(Member) }),
+  /** The episodes changed (one added or removed, the countdown, the next one started): the whole room again. */
+  z.object({ type: z.literal("room"), room: RoomSnapshot, by: z.optional(z.string()) }),
   /** Shown to everyone in the room, the sender included. */
   z.object({ type: z.literal("reaction"), by: z.string(), emoji: Reaction }),
   z.object({ type: z.literal("error"), code: ErrorCode, message: z.string() }),
@@ -124,6 +146,15 @@ export type CreateRoomRequest = z.infer<typeof CreateRoomRequest>;
 
 export const CreateRoomResponse = z.object({ code: RoomCode });
 export type CreateRoomResponse = z.infer<typeof CreateRoomResponse>;
+
+/** Queues the next episode of a séance: imported like a new séance, then shown to everyone in it. */
+export const AddEpisodeRequest = z.object({
+  url: z.url({ protocol: /^https$/ }),
+  label: z.optional(EpisodeLabel),
+});
+export type AddEpisodeRequest = z.infer<typeof AddEpisodeRequest>;
+export const AddEpisodeResponse = z.object({ episode: EpisodeIndex });
+export type AddEpisodeResponse = z.infer<typeof AddEpisodeResponse>;
 
 export function parseClientMessage(raw: string): ClientMessage | null {
   try {

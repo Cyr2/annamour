@@ -65,6 +65,10 @@ export function bindRoom(client: SyncClient): () => void {
       case "members":
         useRoom.setState({ members: message.members });
         break;
+      // Episodes changed: the whole room again, its playback included (a new episode starts at 0).
+      case "room":
+        useRoom.setState({ room: message.room, members: message.room.members, playback: message.room.playback });
+        break;
       case "error":
         useRoom.setState({ error: { code: message.code, message: message.message } });
         break;

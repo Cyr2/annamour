@@ -48,6 +48,25 @@ export function useVideoClock(video: HTMLVideoElement | null): VideoClock {
   return clock;
 }
 
+interface ControlsVisibility {
+  tv: boolean;
+  /** The film is on screen. */
+  active: boolean;
+  playing: boolean;
+  /** The end screen of an episode covers the film. */
+  over: boolean;
+  /** A menu or a sheet is open: the controls stay. */
+  busy: boolean;
+  /** On a TV, the remote brought the controls up. */
+  remoteShown: boolean;
+}
+
+/** Whether the controls are out of sight: under the end screen, after 3 s of stillness, or until the remote calls them. */
+export function useControlsHidden({ tv, active, playing, over, busy, remoteShown }: ControlsVisibility): boolean {
+  const idle = useIdle(tv || !active || !playing || busy);
+  return over || (tv ? !remoteShown : idle);
+}
+
 /** True after `delay` ms without pointer or keyboard activity, unless the UI must stay visible. */
 export function useIdle(keepVisible: boolean, delay = 3000): boolean {
   const [idle, setIdle] = useState(false);

@@ -33,6 +33,7 @@ describe("session summary", () => {
       position: 4360,
       lastUsedAt: 1,
       participants: [{ accountId: "a2", name: "Anna", color: "lilac" }],
+      episode: { index: 0, count: 1 },
     });
     expect(summary.participants).toHaveLength(1);
     expect(SessionSummary.safeParse({ ...summary, position: -1 }).success).toBe(false);

@@ -27,6 +27,10 @@ const snapshot = {
   },
   playback: { status: "paused", position: 0, at: 1 },
   members: [],
+  episodes: [{}],
+  current: 0,
+  finished: false,
+  countdownUntil: null,
 };
 
 afterEach(() => vi.unstubAllGlobals());

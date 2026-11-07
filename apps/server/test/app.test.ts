@@ -35,7 +35,7 @@ describe("HTTP API", () => {
     const master = await app.request(snapshot.media.src);
     expect(master.headers.get("content-type")).toContain("mpegurl");
     expect(await master.text()).toContain("p0.m3u8");
-    expect(await (await app.request(`/api/rooms/${code}/hls/p0.m3u8`)).text()).toContain(
+    expect(await (await app.request(`/api/rooms/${code}/e/0/hls/p0.m3u8`)).text()).toContain(
       "https://cdn.example/movie/v/s0.ts",
     );
   });

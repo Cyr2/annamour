@@ -4,18 +4,18 @@ import { useLocation } from "wouter";
 import { useRoom } from "../../sync/room.ts";
 import type { SyncClient } from "../../sync/SyncClient.ts";
 import type { PlayerSyncHandle } from "../../sync/usePlayerSync.ts";
-import { Button } from "../../ui/controls.tsx";
 import { cx } from "../../ui/cx.ts";
-import { Sheet } from "../../ui/Sheet.tsx";
 import { useTv } from "../tv/tv-context.ts";
 import { ControlsBar } from "./ControlsBar.tsx";
+import { EpisodeLayer, useEpisodeOver } from "./EpisodeLayer.tsx";
 import { FloatingReactions } from "./FloatingReactions.tsx";
 import { leaveFullscreen, toggleFullscreen } from "./fullscreen.ts";
 import { BlockedNotice, CenterPlay, PlayerError, WaitBanner } from "./PlayerOverlays.tsx";
 import { PlayerTopBar } from "./PlayerTopBar.tsx";
 import { SeekBadge } from "./SeekBadge.tsx";
-import { TrackPickers } from "./TrackPickers.tsx";
-import { useIdle, usePlaybackNotices, useTrackChoice, useVolumeOnVideo } from "./usePlayerEffects.ts";
+import { TracksSheet } from "./TracksSheet.tsx";
+import { useEpisodeEndReport } from "./useEpisodeEndReport.ts";
+import { useControlsHidden, usePlaybackNotices, useTrackChoice, useVolumeOnVideo } from "./usePlayerEffects.ts";
 import { usePlayerKeyboard, useSurfaceTap } from "./usePlayerKeyboard.ts";
 import { useTvPlayerRemote } from "./useTvPlayerRemote.ts";
 import { useVolume } from "./volume.ts";
@@ -45,6 +45,9 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
   const toggleMute = useVolume((s) => s.toggleMute);
   const [reactionsOpen, setReactionsOpen] = useState(false);
   const [tracksOpen, setTracksOpen] = useState(false);
+  const [upNextOpen, setUpNextOpen] = useState(false);
+  // The end screen of an episode takes over: its own buttons, the remote moving between them.
+  const over = useEpisodeOver();
   const [, navigate] = useLocation();
   const controlsLayer = useRef<HTMLDivElement>(null);
   const { controls } = player;
@@ -54,6 +57,7 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
   useTrackChoice(video, code, media, controls);
   useVolumeOnVideo(video);
   usePlaybackNotices();
+  useEpisodeEndReport(video, client);
 
   const toggle = () => (playing ? controls.pause() : controls.play());
   const seek = (position: number) => controls.seek(position);
@@ -63,7 +67,7 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
   const seekBy = (delta: number) => seek(Math.max(0, (video?.currentTime ?? 0) + delta));
 
   const remote = useTvPlayerRemote({
-    enabled: tv && active,
+    enabled: tv && active && !over,
     sheetOpen: tracksOpen,
     playing,
     // When the browser blocked the sound, OK is the gesture that lets the film play.
@@ -73,9 +77,16 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
     onHide: () => setReactionsOpen(false),
     onLeave: () => navigate("/"),
   });
-  const idle = useIdle(tv || !active || !playing || reactionsOpen || tracksOpen);
-  const hidden = tv ? !remote.shown : idle;
-  usePlayerKeyboard(active && !tracksOpen && !tv, { toggle, seekBy, toggleMute, fullscreen });
+  const sheetOpen = tracksOpen || upNextOpen;
+  const hidden = useControlsHidden({
+    tv,
+    active,
+    playing,
+    over,
+    busy: reactionsOpen || sheetOpen,
+    remoteShown: remote.shown,
+  });
+  usePlayerKeyboard(active && !sheetOpen && !over && !tv, { toggle, seekBy, toggleMute, fullscreen });
   const surfaceTap = useSurfaceTap(toggle);
 
   return (
@@ -129,26 +140,26 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
           onReactionsOpenChange={setReactionsOpen}
           onReact={react}
           onOpenTracks={() => setTracksOpen(true)}
+          onOpenUpNext={() => setUpNextOpen(true)}
           onFullscreen={fullscreen}
         />
       </div>
       <CenterPlay
-        visible={active && !playing && !player.blocked && loading.length === 0}
+        visible={active && !playing && !player.blocked && !over && loading.length === 0}
         onPlay={() => controls.play()}
       />
       {tv ? <SeekBadge flash={remote.seek} /> : null}
       <WaitBanner members={loading} />
       {active && player.blocked ? <BlockedNotice onUnlock={controls.unlock} /> : null}
       {player.error ? <PlayerError message={player.error} /> : null}
-      <Sheet open={tracksOpen} onClose={() => setTracksOpen(false)} title="Audio et sous-titres">
-        <Sheet.Lede>Ce réglage ne change que pour toi.</Sheet.Lede>
-        {media ? <TrackPickers code={code} media={media} /> : null}
-        <Sheet.Actions>
-          <Button variant="filled" onClick={() => setTracksOpen(false)}>
-            Terminé
-          </Button>
-        </Sheet.Actions>
-      </Sheet>
+      <EpisodeLayer
+        active={active}
+        client={client}
+        upNextOpen={upNextOpen}
+        onUpNextOpenChange={setUpNextOpen}
+        onWatchAgain={() => controls.seek(0) && controls.play()}
+      />
+      <TracksSheet open={tracksOpen} onClose={() => setTracksOpen(false)} code={code} media={media} />
     </section>
   );
 }

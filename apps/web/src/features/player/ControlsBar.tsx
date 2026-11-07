@@ -1,5 +1,5 @@
 import type { Reaction } from "@annamour/protocol";
-import { Maximize, Pause, Play, RotateCcw, RotateCw, Subtitles } from "lucide-react";
+import { ListVideo, Maximize, Pause, Play, RotateCcw, RotateCw, Subtitles } from "lucide-react";
 import { formatClock } from "../../lib/format.ts";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { Surface } from "../../ui/Surface.tsx";
@@ -19,13 +19,15 @@ interface ControlsBarProps {
   onReactionsOpenChange: (open: boolean) => void;
   onReact: (emoji: Reaction) => void;
   onOpenTracks: () => void;
+  onOpenUpNext: () => void;
   onFullscreen: () => void;
 }
 
 /**
  * The glass capsule floating over the film: the timeline between its two
  * clocks, then play, ±10 s and volume on the left; reactions, tracks and full
- * screen on the right. On a phone the seven buttons share the width evenly.
+ * screen on the right, with « À suivre » (the next episodes) before it. On a
+ * phone the buttons share the width evenly.
  * On a TV (always full screen, volume on the remote) there is no full-screen
  * button, leaving the film is the top bar's back arrow (or Retour), and
  * play/pause is where the remote lands.
@@ -59,6 +61,8 @@ export function ControlsBar(props: ControlsBarProps) {
         <span className="hidden flex-1 sm:block" />
         <ReactionPicker open={props.reactionsOpen} onOpenChange={props.onReactionsOpenChange} onReact={props.onReact} />
         <IconButton label="Audio et sous-titres" icon={<Subtitles />} onClick={props.onOpenTracks} />
+        {/* Adding an episode means pasting a link: a phone or a computer does it, the TV follows. */}
+        {tv ? null : <IconButton label="À suivre" icon={<ListVideo />} onClick={props.onOpenUpNext} />}
         {tv ? null : <IconButton label="Plein écran" icon={<Maximize />} onClick={props.onFullscreen} />}
       </div>
     </Surface>

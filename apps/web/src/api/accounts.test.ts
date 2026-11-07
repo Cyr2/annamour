@@ -81,7 +81,14 @@ describe("accounts API", () => {
     server(200, { token: "x".repeat(32), expiresAt: 5 });
     await expect(createLinkToken()).resolves.toEqual({ token: "x".repeat(32), expiresAt: 5 });
 
-    const session = { code: "YWEK", title: "Film", position: 10, lastUsedAt: 1, participants: [] };
+    const session = {
+      code: "YWEK",
+      title: "Film",
+      position: 10,
+      lastUsedAt: 1,
+      participants: [],
+      episode: { index: 0, count: 1 },
+    };
     server(200, { sessions: [session] });
     await expect(fetchSessions()).resolves.toEqual([session]);
   });

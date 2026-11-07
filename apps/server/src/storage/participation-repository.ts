@@ -9,6 +9,7 @@ export interface JoinedRoom {
   duration: number | undefined;
   position: number;
   lastUsedAt: number;
+  episode: { index: number; count: number; label: string | undefined };
 }
 
 const JoinedRoomRow = z.object({
@@ -17,6 +18,9 @@ const JoinedRoomRow = z.object({
   duration: z.number().nullable(),
   position: z.number(),
   last_used_at: z.number(),
+  current_episode: z.number(),
+  episode_count: z.number(),
+  episode_label: z.string().nullable(),
 });
 
 const CompanionRow = z.object({
@@ -56,7 +60,12 @@ export class ParticipationRepository {
   visibleRooms(accountId: string): JoinedRoom[] {
     const rows = this.db
       .prepare(
-        `SELECT r.code, r.title, r.duration, r.position, r.last_used_at
+        `SELECT r.code, r.title, r.duration, r.position, r.last_used_at, r.current_episode,
+           (SELECT COUNT(*) FROM room_episodes e WHERE e.room_code = r.code) AS episode_count,
+           (SELECT e.label FROM room_episodes e
+            WHERE e.room_code = r.code
+              AND (SELECT COUNT(*) FROM room_episodes b WHERE b.room_code = e.room_code AND b.id < e.id) = r.current_episode
+           ) AS episode_label
          FROM participations p JOIN rooms r ON r.code = p.room_code
          WHERE p.account_id = ? AND p.hidden = 0
          ORDER BY r.last_used_at DESC`,
@@ -68,6 +77,7 @@ export class ParticipationRepository {
       duration: row.duration ?? undefined,
       position: row.position,
       lastUsedAt: row.last_used_at,
+      episode: { index: row.current_episode, count: row.episode_count, label: row.episode_label ?? undefined },
     }));
   }
 
