@@ -1,9 +1,11 @@
+import type { PrepStatus } from "@annamour/protocol";
 import {
   type Rung,
   rungNamed,
   rungPlaylist,
   rungsFor,
   segmentAt,
+  segmentDurations,
   segmentSources,
   sourceVariant,
   withLowQualities,
@@ -11,6 +13,8 @@ import {
 import type { Film, Transcoder } from "../media/transcoder.ts";
 import type { RoomStore } from "../room-store.ts";
 
+/** A minute ready from the séance's position: enough to start, encoding then runs ~15× ahead of playback. */
+export const PREP_TARGET_SECONDS = 60;
 /** Encoded files are kept this long after a séance was last watched, then deleted. */
 export const KEEP_AFTER_LAST_USE_MS = 6 * 60 * 60 * 1000;
 const SEGMENT_FILE = /^(\d{5})\.ts$/;
@@ -61,6 +65,31 @@ export class LowQualityService {
     return this.transcoder?.segment(plan.film, rung, Number(index));
   }
 
+  /**
+   * How much of the séance's lighter qualities is ready from where it is, and
+   * starts preparing them: the salon asks before anyone presses play, so the
+   * film starts at once instead of waiting on its first segments.
+   */
+  async prep(code: string): Promise<PrepStatus | undefined> {
+    const room = this.store.get(code);
+    if (!room) return undefined;
+    const plan = this.plan(code, room.currentEpisode.id);
+    if (!plan || !this.transcoder) return { available: false, readySeconds: 0, targetSeconds: PREP_TARGET_SECONDS };
+    const start = this.prepareWhereWatched(plan);
+    const durations = segmentDurations(plan.sourcePlaylist);
+    // Near the end of the film, what is left is all there is to prepare.
+    const target = Math.min(
+      PREP_TARGET_SECONDS,
+      durations.slice(start).reduce((sum, d) => sum + d, 0),
+    );
+    let readySeconds = 0;
+    for (let index = start; readySeconds < target && index < durations.length; index++) {
+      if (!(await this.transcoder.isReady(plan.film, index))) break;
+      readySeconds += durations[index] ?? 0;
+    }
+    return { available: true, readySeconds: Math.min(readySeconds, target), targetSeconds: target };
+  }
+
   /** Deletes the encoded files of séances nobody has watched for a while. */
   async sweep(): Promise<void> {
     const now = this.now();
@@ -73,13 +102,19 @@ export class LowQualityService {
     for (const key of this.plans.keys()) if (key.startsWith(`${code}/`)) this.plans.delete(key);
   }
 
-  /** Starts encoding where the séance is, so the lighter qualities are ready before anyone asks. */
-  private prepareWhereWatched({ film, sourcePlaylist }: FilmPlan): void {
-    this.lastUse.set(film.code, this.now());
+  /** Starts encoding where the séance is, so the lighter qualities are ready before anyone asks. Returns that segment. */
+  private prepareWhereWatched(plan: FilmPlan): number {
+    this.lastUse.set(plan.film.code, this.now());
+    const start = this.startIndex(plan);
+    this.transcoder?.prepareFrom(plan.film, start);
+    return start;
+  }
+
+  /** The segment the séance is on (its start when this episode is not the one playing). */
+  private startIndex({ film, sourcePlaylist }: FilmPlan): number {
     const room = this.store.get(film.code);
     const current = room?.currentEpisode.id === film.episode;
-    const position = current ? (room?.positionAt(this.now()) ?? 0) : 0;
-    this.transcoder?.prepareFrom(film, segmentAt(sourcePlaylist, position));
+    return segmentAt(sourcePlaylist, current ? (room?.positionAt(this.now()) ?? 0) : 0);
   }
 
   private plan(code: string, episode: number): FilmPlan | undefined {

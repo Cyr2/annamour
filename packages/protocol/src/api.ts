@@ -71,6 +71,20 @@ export const ApiError = z.object({ error: z.string() });
 export type ApiError = z.infer<typeof ApiError>;
 
 /**
+ * How ready the séance's lighter qualities are, from where it is
+ * (GET /api/rooms/:code/prep). Asking also starts their preparation.
+ */
+export const PrepStatus = z.object({
+  /** The film gets lighter qualities (false: its source is already light, or the server cannot make them). */
+  available: z.boolean(),
+  /** Seconds encoded in a row from the séance's position, up to `targetSeconds`. */
+  readySeconds: z.number(),
+  /** Enough to start without waiting: encoding then stays well ahead. */
+  targetSeconds: z.number(),
+});
+export type PrepStatus = z.infer<typeof PrepStatus>;
+
+/**
  * Passkey ceremonies exchange WebAuthn JSON (as produced by SimpleWebAuthn);
  * the library validates those payloads, so they stay opaque here.
  */

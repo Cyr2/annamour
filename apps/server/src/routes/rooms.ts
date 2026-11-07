@@ -5,6 +5,7 @@ import {
   CreateRoomRequest,
   type CreateRoomResponse,
   isRoomCode,
+  type PrepStatus,
 } from "@annamour/protocol";
 import { Hono } from "hono";
 import { UserFacingError } from "../errors.ts";
@@ -70,6 +71,14 @@ export function roomRoutes({ services }: RouteDeps) {
       "content-type": "application/vnd.apple.mpegurl",
       "cache-control": "no-store",
     });
+  });
+
+  // The salon shows how ready the lighter qualities are; asking also starts making them.
+  routes.get("/api/rooms/:code/prep", async (c) => {
+    const code = c.req.param("code");
+    const status = isRoomCode(code) ? await lowQualities.prep(code) : undefined;
+    if (!status) return c.json({ error: "Cette séance n'existe plus." }, 404);
+    return c.json(status satisfies PrepStatus, 200, { "cache-control": "no-store" });
   });
 
   // A lighter quality's segment, encoded on demand: the player retries while it is being made.
