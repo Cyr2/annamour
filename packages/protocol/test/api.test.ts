@@ -1,5 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { AccountKey, CreateAccountResponse, KeyWord, SessionSummary, UpdateAccountRequest } from "../src/index.ts";
+import {
+  AccountKey,
+  asksHevcLadder,
+  CreateAccountResponse,
+  KeyWord,
+  SessionSummary,
+  UpdateAccountRequest,
+  withHevcLadder,
+} from "../src/index.ts";
+
+describe("asking for the complete HEVC ladder", () => {
+  it("adds the flag to an address, with or without a query", () => {
+    expect(withHevcLadder("/api/rooms/YWEK/e/0/hls/master.m3u8")).toBe("/api/rooms/YWEK/e/0/hls/master.m3u8?hevc=1");
+    expect(withHevcLadder("/api/rooms/YWEK/prep?x=2")).toBe("/api/rooms/YWEK/prep?x=2&hevc=1");
+  });
+
+  it("is only ever asked by the exact flag, never by default", () => {
+    expect(asksHevcLadder("1")).toBe(true);
+    for (const value of [undefined, null, "", "0", "true", "on", " 1"]) expect(asksHevcLadder(value)).toBe(false);
+  });
+});
 
 describe("account key", () => {
   it("normalises words and requires exactly four", () => {

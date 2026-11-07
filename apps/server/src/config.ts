@@ -37,6 +37,12 @@ export interface ServerConfig {
    * for the end-to-end tests' fake CDN; refused in production.
    */
   allowLocalMedia: boolean;
+  /**
+   * The complete HEVC ladder, 234p to 720p, for our iPad player (HEVC_FULL=on,
+   * only with HEVC=on). Off by default: it costs the most CPU and is untried
+   * on a real iPad.
+   */
+  hevcFull: boolean;
 }
 
 const DEFAULT_TRANSCODE_WORKERS = 2;
@@ -86,6 +92,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     lightAudio: switchedOn(env.LIGHT_AUDIO),
     hevc: switchedOn(env.HEVC),
     allowLocalMedia: allowLocalMedia(env, production),
+    hevcFull: switchedOn(env.HEVC) && switchedOn(env.HEVC_FULL),
   };
 }
 

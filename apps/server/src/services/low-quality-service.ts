@@ -1,5 +1,18 @@
 import type { PrepStatus } from "@annamour/protocol";
-import { fmp4Playlist, HEVC_RUNGS, type HevcOffer, hevcAudio, hevcCodecs, withHevc } from "../media/hevc.ts";
+import {
+  FULL_LADDER_HEIGHT,
+  fmp4Playlist,
+  HEVC_HIGH_RUNGS,
+  HEVC_RUNGS,
+  HEVC_SOUND_KBPS,
+  type HevcOffer,
+  type HevcRung,
+  type HevcSound,
+  hevcAudio,
+  hevcCodecs,
+  hevcLadderMaster,
+  withHevc,
+} from "../media/hevc.ts";
 import {
   audioRenditions,
   evenWidth,
@@ -11,6 +24,7 @@ import {
   segmentAt,
   segmentDurations,
   segmentSources,
+  sourceAudioCodec,
   sourceVariant,
   withLowQualities,
 } from "../media/ladder.ts";
@@ -41,16 +55,26 @@ interface Planned<T extends Track> {
  */
 type OfferState = "none" | "unchecked" | "checking" | "offered" | "refused";
 
-/** The HEVC rungs (Apple only) and their fMP4 audio. */
-interface HevcPlan {
+/** A set of HEVC rungs and their fMP4 audio, checked and offered on its own. */
+interface HevcPart {
+  source: SourceVariant;
   video: Planned<HevcTrack>;
   audio: Map<string, Planned<AudioTrack>>;
   defaultAudio: Planned<AudioTrack>;
-  source: SourceVariant;
-  audioGroup: string;
-  audioLines: string[];
+  /** The fMP4 audio group, as the master lists it. */
+  sound: HevcOffer["audio"];
+  /** Who it is for, in the log. */
+  audience: string;
   state: Exclude<OfferState, "none">;
+  /** Set once offered. */
   offer?: HevcOffer;
+}
+
+interface HevcPlan {
+  /** 360p to 234p with the lighter audio: for Apple's own player, beside its H.264 ladder. */
+  low: HevcPart;
+  /** 480p to 720p with the source's audio (HEVC_FULL=on, 720p source): with `low`, the complete ladder. */
+  high: HevcPart | undefined;
 }
 
 interface FilmPlan {
@@ -71,6 +95,11 @@ export interface Asker {
   apple?: boolean;
   /** A page on an iPhone, iPad or Mac: its native player may ask soon, so the HEVC rungs get checked. */
   appleDevice?: boolean;
+  /**
+   * Our hls.js player on an Apple device that decodes HEVC asked for the
+   * complete HEVC ladder (`?hevc=1`): it gets that ladder alone, once checked.
+   */
+  hevcLadder?: boolean;
 }
 
 export interface LowQualityServiceOptions {
@@ -88,7 +117,8 @@ const extensionOf = (track: Track) => (isFragmented(track) ? "m4s" : track.kind 
 /**
  * Offers each séance's film in lighter qualities too (see media/), for
  * whoever watches on a weak link: lighter video rungs, a lighter audio in
- * every language for the lightest ones, and for Apple devices HEVC rungs.
+ * every language for the lightest ones, HEVC rungs for Safari's own player,
+ * and the complete HEVC ladder for our player on an iPad asking for it.
  * Without a transcoder (no ffmpeg), séances keep their single source quality
  * and nothing here changes anything.
  */
@@ -115,7 +145,7 @@ export class LowQualityService {
     if (!plan) return undefined;
     if (file === "master.m3u8") {
       this.prepareWhereWatched(plan, asker);
-      return this.master(plan, asker.apple === true);
+      return this.master(plan, asker);
     }
     const name = file.replace(/\.m3u8$/, "");
     const planned = this.planned(plan, name);
@@ -170,19 +200,31 @@ export class LowQualityService {
     for (const key of this.plans.keys()) if (key.startsWith(`${code}/`)) this.plans.delete(key);
   }
 
-  /** The master this player gets: with the lighter audio once it proved to work, with HEVC for Apple once it did. */
-  private master(plan: FilmPlan, apple: boolean): string {
+  /**
+   * The master this player gets: with the lighter audio once it proved to
+   * work; for Apple's own player, with the lowest HEVC rungs once they did;
+   * for our player asking for it, the complete HEVC ladder alone once both
+   * its parts did (until then, the H.264 one).
+   */
+  private master(plan: FilmPlan, asker: Asker): string {
     const base = plan.lightAudio === "offered" ? plan.masters.withLightAudio : plan.masters.plain;
-    const offer = apple && plan.hevc?.state === "offered" ? plan.hevc.offer : undefined;
-    return offer && plan.hevc ? withHevc(base, plan.hevc.source.info, offer) : base;
+    const hevc = plan.hevc;
+    const ladder = asker.hevcLadder ? completeLadder(hevc) : undefined;
+    if (ladder) return hevcLadderMaster(base, ladder);
+    const low = asker.apple ? hevc?.low.offer : undefined;
+    return low && hevc ? withHevc(base, hevc.low.source.info, low) : base;
   }
 
   /** Our track of that name: a video rung, a lighter audio, or (once offered) a HEVC rung or its audio. */
   private planned(plan: FilmPlan, name: string): Planned<Track> | undefined {
     if (plan.video.track.rungs.some((rung) => rung.name === name)) return plan.video;
-    const hevc = plan.hevc?.state === "offered" ? plan.hevc : undefined;
-    if (hevc?.video.track.rungs.some((rung) => rung.name === name)) return hevc.video;
-    return hevc?.audio.get(name) ?? (plan.lightAudio === "offered" ? plan.audio.get(name) : undefined);
+    for (const part of [plan.hevc?.low, plan.hevc?.high]) {
+      if (!part?.offer) continue;
+      if (part.video.track.rungs.some((rung) => rung.name === name)) return part.video;
+      const audio = part.audio.get(name);
+      if (audio) return audio;
+    }
+    return plan.lightAudio === "offered" ? plan.audio.get(name) : undefined;
   }
 
   /** Seconds encoded in a row from where the séance is, up to a minute (or what is left). */
@@ -214,12 +256,20 @@ export class LowQualityService {
     if (this.store.get(code)?.currentEpisode.id === episode) this.prepareNext(code);
   }
 
-  private prepareHevc(hevc: HevcPlan | undefined, { apple = false, appleDevice = false }: Asker): void {
-    if (!hevc || !(apple || appleDevice)) return;
-    if (hevc.state === "unchecked") this.checkHevc(hevc);
-    if (hevc.state === "offered" && apple) {
-      this.prepare(hevc.video);
-      this.prepare(hevc.defaultAudio);
+  /**
+   * Any page on an Apple device gets the lowest HEVC rungs checked, our player
+   * asking for the complete ladder its higher rungs too. Whoever is served HEVC
+   * gets its lowest rungs prepared (where a player starts on a weak link); the
+   * higher ones are prepared once their playlist is asked for.
+   */
+  private prepareHevc(hevc: HevcPlan | undefined, { apple = false, appleDevice = false, hevcLadder = false }: Asker) {
+    if (!hevc || !(apple || appleDevice || hevcLadder)) return;
+    if (hevc.low.state === "unchecked") this.checkHevc(hevc.low);
+    if (hevcLadder && hevc.high?.state === "unchecked") this.checkHevc(hevc.high);
+    const served = (apple && hevc.low.offer) || (hevcLadder && completeLadder(hevc));
+    if (served) {
+      this.prepare(hevc.low.video);
+      this.prepare(hevc.low.defaultAudio);
     }
   }
 
@@ -260,14 +310,14 @@ export class LowQualityService {
   /**
    * Makes two real consecutive HEVC segments (their inits must match) and the
    * default language's fMP4 audio, behind every H.264 job, each checked as it
-   * is made (hvc1, key frame first, the source's clock). Only then is HEVC
-   * offered to Apple players.
+   * is made (hvc1, key frame first, the source's clock). Only then is that
+   * part offered.
    */
-  private checkHevc(hevc: HevcPlan): void {
+  private checkHevc(part: HevcPart): void {
     const transcoder = this.transcoder;
     if (!transcoder) return;
-    hevc.state = "checking";
-    const { video, defaultAudio } = hevc;
+    part.state = "checking";
+    const { video, defaultAudio } = part;
     const start = this.startIndex(video.track, video.playlist);
     const made = [start, start + 1]
       .filter((index) => index < video.track.segments.length)
@@ -275,35 +325,38 @@ export class LowQualityService {
     const audioStart = this.startIndex(defaultAudio.track, defaultAudio.playlist);
     made.push(transcoder.ensure(defaultAudio.track, audioStart, { later: true }));
     void Promise.all(made)
-      .then((all) => (all.every(Boolean) ? this.hevcOffer(hevc) : undefined))
+      .then((all) => (all.every(Boolean) ? this.hevcOffer(part) : undefined))
       .catch(() => undefined)
       .then((offer) => {
         const where = `${video.track.code}/${video.track.episode}`;
-        hevc.state = offer ? "offered" : "refused";
+        part.state = offer ? "offered" : "refused";
         if (offer) {
-          hevc.offer = offer;
-          this.log(`HEVC offered to Apple players for ${where}: ${offer.rungs.map((r) => r.codecs).join(", ")}`);
-        } else this.log(`HEVC not offered for ${where}: its segments could not be made or failed their checks`);
+          part.offer = offer;
+          this.log(`HEVC offered to ${part.audience} for ${where}: ${offer.rungs.map((r) => r.codecs).join(", ")}`);
+        } else
+          this.log(
+            `HEVC not offered to ${part.audience} for ${where}: its segments could not be made or failed their checks`,
+          );
       });
   }
 
   /** The CODECS of each HEVC rung, read from its init, with its frame rate. */
-  private async hevcOffer(hevc: HevcPlan): Promise<HevcOffer | undefined> {
+  private async hevcOffer(part: HevcPart): Promise<HevcOffer | undefined> {
     const transcoder = this.transcoder;
     if (!transcoder) return undefined;
     const rungs: Array<HevcOffer["rungs"][number]> = [];
-    for (const rung of hevc.video.track.rungs) {
-      const init = await transcoder.init(hevc.video.track, rung.name);
+    for (const rung of part.video.track.rungs) {
+      const init = await transcoder.init(part.video.track, rung.name);
       if (!init?.frameRate) return undefined;
       rungs.push({
         rung,
         codecs: hevcCodecs(init.bytes),
-        width: evenWidth(hevc.source, rung.height),
+        width: evenWidth(part.source, rung.height),
         frameRate: init.frameRate,
       });
     }
-    if (!(await transcoder.init(hevc.defaultAudio.track, hevc.defaultAudio.track.name))) return undefined;
-    return { rungs, audioGroup: hevc.audioGroup, audioLines: hevc.audioLines };
+    if (!(await transcoder.init(part.defaultAudio.track, part.defaultAudio.track.name))) return undefined;
+    return { rungs, audio: part.sound };
   }
 
   private prepare({ track, playlist }: Planned<Track>): void {
@@ -352,7 +405,9 @@ export class LowQualityService {
       video,
       audio,
       defaultAudio: defaultName ? audio.get(defaultName) : undefined,
-      hevc: this.transcoder?.makesHevc ? hevcPlan(video, source, packedAudio, playlistOf) : undefined,
+      hevc: this.transcoder?.makesHevc
+        ? hevcPlan(video, source, packedAudio, playlistOf, this.transcoder.makesFullHevc)
+        : undefined,
     };
   }
 
@@ -392,27 +447,60 @@ function audioTracks(
   );
 }
 
+/** The complete HEVC ladder (higher rungs, then lowest), once both its parts are offered. */
+function completeLadder(hevc: HevcPlan | undefined): HevcOffer[] | undefined {
+  const [high, low] = [hevc?.high?.offer, hevc?.low.offer];
+  return high && low ? [high, low] : undefined;
+}
+
+interface HevcContext {
+  video: Planned<VideoTrack>;
+  source: SourceVariant;
+  packedAudio: LightAudio;
+  playlist: (uri: string) => string | undefined;
+}
+
 /**
- * The HEVC rungs below the source, with the lighter audio in fMP4 for each
- * language. None without separate packed audio: HEVC rungs carry no sound of
- * their own, and a muxed-audio source is not worth the extra path here.
+ * The HEVC rungs below the source with the lighter audio in fMP4 for each
+ * language, and with `full` (on a 720p source) the higher rungs up to 720p
+ * with the source's own audio in fMP4. None without separate packed audio:
+ * HEVC rungs carry no sound of their own, and a muxed-audio source is not
+ * worth the extra path here.
  */
 function hevcPlan(
   video: Planned<VideoTrack>,
   source: SourceVariant,
   packedAudio: LightAudio | undefined,
   playlist: (uri: string) => string | undefined,
+  full: boolean,
 ): HevcPlan | undefined {
-  const rungs = HEVC_RUNGS.filter((rung) => rung.height < source.height);
-  if (!packedAudio || rungs.length === 0) return undefined;
+  if (!packedAudio) return undefined;
+  const context = { video, source, packedAudio, playlist };
+  const lowRungs = HEVC_RUNGS.filter((rung) => rung.height < source.height);
+  const low = hevcPart(context, "low", lowRungs, "light");
+  if (!low) return undefined;
+  const fits = full && source.height === FULL_LADDER_HEIGHT;
+  return { low, high: fits ? hevcPart(context, "high", HEVC_HIGH_RUNGS, "source") : undefined };
+}
+
+const AUDIENCE = { low: "Apple players", high: "our iPad player (complete ladder)" } as const;
+
+function hevcPart(
+  { video, source, packedAudio, playlist }: HevcContext,
+  part: HevcTrack["part"],
+  rungs: readonly HevcRung[],
+  sound: HevcSound,
+): HevcPart | undefined {
+  if (rungs.length === 0) return undefined;
   const { code, episode, segments } = video.track;
-  const twin = hevcAudio(packedAudio);
+  const twin = hevcAudio(packedAudio, sound);
   const audio = new Map(
     twin.renditions.flatMap(({ name, sourceUri, sourceOf }) => {
       const sourcePlaylist = playlist(sourceUri);
       if (!sourcePlaylist) return [];
       const track: AudioTrack = {
         ...{ kind: "audio", code, episode, name, container: "fmp4", sourceOf },
+        ...(sound === "source" ? { sound } : {}),
         segments: segmentSources(sourcePlaylist),
       };
       return [[name, { track, playlist: sourcePlaylist }] as const];
@@ -421,13 +509,14 @@ function hevcPlan(
   const defaultName = twin.renditions.find((r) => r.isDefault)?.name ?? twin.renditions[0]?.name;
   const defaultAudio = defaultName ? audio.get(defaultName) : undefined;
   if (!defaultAudio) return undefined;
+  const codec = sound === "source" ? (sourceAudioCodec(source) ?? "mp4a.40.2") : "mp4a.40.2";
   return {
-    video: { track: { kind: "hevc", code, episode, segments, rungs }, playlist: video.playlist },
+    source,
+    video: { track: { kind: "hevc", part, code, episode, segments, rungs }, playlist: video.playlist },
     audio,
     defaultAudio,
-    source,
-    audioGroup: twin.group,
-    audioLines: twin.renditions.map((rendition) => rendition.line),
+    sound: { group: twin.group, lines: twin.renditions.map((r) => r.line), codec, kbps: HEVC_SOUND_KBPS[sound] },
+    audience: AUDIENCE[part],
     state: "unchecked",
   };
 }

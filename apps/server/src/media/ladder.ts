@@ -90,10 +90,15 @@ export function evenWidth(source: SourceVariant, height: number): number {
   return Math.round((source.width * height) / source.height / 2) * 2;
 }
 
-function streamInf(source: SourceVariant, rung: Rung, lightAudio: LightAudio | undefined): string {
-  const audioCodec = attribute(source.info, "CODECS")
+/** The source's audio codec, as its variant declares it (e.g. "mp4a.40.2"). */
+export function sourceAudioCodec(source: SourceVariant): string | undefined {
+  return attribute(source.info, "CODECS")
     ?.split(",")
     .find((codec) => codec.startsWith("mp4a"));
+}
+
+function streamInf(source: SourceVariant, rung: Rung, lightAudio: LightAudio | undefined): string {
+  const audioCodec = sourceAudioCodec(source);
   const video = VIDEO_CODEC[rung.level];
   const codecs = audioCodec ? `${video},${audioCodec}` : video;
   const light = rung.lightAudio && lightAudio !== undefined;

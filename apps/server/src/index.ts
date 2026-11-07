@@ -5,7 +5,13 @@ import { createApp } from "./app.ts";
 import { bridgeFetcher, NakaCatalog } from "./catalog/naka-catalog.ts";
 import { loadConfig } from "./config.ts";
 import { describeMedia, ffmpegAudioEncoder, ffmpegAvailable, ffmpegEncoder, firstTimestamp } from "./media/ffmpeg.ts";
-import { checkHevcSegment, ffmpegHevcEncoder, fmp4AudioEncoder, x265Available } from "./media/hevc-ffmpeg.ts";
+import {
+  checkHevcSegment,
+  ffmpegHevcEncoder,
+  fmp4AudioEncoder,
+  fmp4SourceAudio,
+  x265Available,
+} from "./media/hevc-ffmpeg.ts";
 import { segmentSource } from "./media/segment-source.ts";
 import { Transcoder } from "./media/transcoder.ts";
 import { attachRealtime } from "./realtime.ts";
@@ -43,6 +49,12 @@ const services = createServices({
     : {}),
 });
 
+/** HEVC's encoders; with `full`, the source's sound in fMP4 too, for the complete ladder. */
+function hevcEncoders(full: boolean) {
+  const encoders = { encode: ffmpegHevcEncoder, check: checkHevcSegment, encodeAudio: fmp4AudioEncoder };
+  return full ? { ...encoders, sourceAudio: fmp4SourceAudio } : encoders;
+}
+
 /** Lighter qualities for weak links, made with ffmpeg when it is installed (it is in the Docker image). */
 async function lowQualityTranscoder(): Promise<Transcoder | undefined> {
   if (config.transcodeWorkers === 0 || !(await ffmpegAvailable())) {
@@ -58,7 +70,7 @@ async function lowQualityTranscoder(): Promise<Transcoder | undefined> {
     source: segmentSource(fetchBytes, nakaBridge),
     encode: ffmpegEncoder,
     ...(config.lightAudio ? { encodeAudio: ffmpegAudioEncoder } : {}),
-    ...(hevc ? { hevc: { encode: ffmpegHevcEncoder, check: checkHevcSegment, encodeAudio: fmp4AudioEncoder } } : {}),
+    ...(hevc ? { hevc: hevcEncoders(config.hevcFull) } : {}),
     workers: config.transcodeWorkers,
   });
 }
