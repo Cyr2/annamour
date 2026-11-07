@@ -1,6 +1,7 @@
 import { m, useAnimationFrame, useMotionValue, useReducedMotion, useSpring } from "motion/react";
 import { createContext, type ReactNode, use, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { spring } from "../lib/motion.ts";
+import { useCalmMotion } from "./calm-motion.ts";
 import { cx } from "./cx.ts";
 import { KNOT_ATTRIBUTE, knotPoint, type Point, threadPath } from "./thread-path.ts";
 
@@ -131,6 +132,9 @@ function Line({ className }: { className?: string }) {
     state: { synced, points },
   } = useThread();
   const reduceMotion = useReducedMotion() ?? false;
+  const calm = useCalmMotion();
+  // On a TV the wave would repaint the thread on every frame for as long as a seat is empty: it droops, still.
+  const stillWave = reduceMotion || calm;
 
   const amplitude = useSpring(synced ? 0 : SLACK_AMPLITUDE, spring.thread);
   const sag = useSpring(synced ? 0 : SLACK_SAG, spring.thread);
@@ -152,7 +156,7 @@ function Line({ className }: { className?: string }) {
   useAnimationFrame((time) => {
     if (points.length < 2) return;
     // With reduced motion the slack thread is drawn still: a frozen wave.
-    const next = threadPath(points, sag.get(), amplitude.get(), reduceMotion ? 0 : time);
+    const next = threadPath(points, sag.get(), amplitude.get(), stillWave ? 0 : time);
     if (next !== last.current) {
       last.current = next;
       d.set(next);
@@ -163,12 +167,9 @@ function Line({ className }: { className?: string }) {
 
   return (
     // Filters go on a wrapper, not the animated SVG, so the path repaints cheaply.
-    <div
-      aria-hidden
-      className={cx("pointer-events-none absolute inset-0 z-0", className)}
-      style={{ filter: "drop-shadow(0 0 6px var(--am-thread-glow))" }}
-    >
+    <div aria-hidden className={cx("am-thread-line pointer-events-none absolute inset-0 z-0", className)}>
       <svg className="h-full w-full overflow-visible" aria-hidden="true">
+        <m.path d={d} fill="none" strokeLinecap="round" strokeLinejoin="round" className="am-thread-halo" />
         <m.path
           d={d}
           fill="none"
