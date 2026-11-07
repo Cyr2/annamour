@@ -21,7 +21,7 @@ const StoredMedia = z.object({
   playlists: FileEntries,
   audio: z.array(AudioTrack),
   subtitleFiles: FileEntries,
-  subtitles: z.array(SubtitleTrack.omit({ url: true })),
+  subtitles: z.array(z.object(SubtitleTrack.shape).omit({ url: true })),
   duration: z.number().nullable(),
 });
 

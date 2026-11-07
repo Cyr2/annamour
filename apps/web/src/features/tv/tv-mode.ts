@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/mini";
 import { readStored, removeStored, writeStored } from "../../lib/storage.ts";
 
 /*

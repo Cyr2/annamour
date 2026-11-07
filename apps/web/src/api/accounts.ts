@@ -10,7 +10,7 @@ import {
   type SessionSummary,
   type UpdateAccountRequest,
 } from "@annamour/protocol";
-import { z } from "zod";
+import { z } from "zod/mini";
 import { ApiRequestError, request } from "./http.ts";
 
 /* Accounts: a 4-word key is the account; a session cookie keeps this device signed in. */

@@ -2,11 +2,13 @@ import type { SessionSummary } from "@annamour/protocol";
 import { LogIn } from "lucide-react";
 import { useMemo } from "react";
 import { plural } from "../../lib/format.ts";
+import { sessionPath } from "../../sync/restart.ts";
 import type { StackedPerson } from "../../ui/BubbleStack.tsx";
 import { GlassLink } from "../../ui/GlassLink.tsx";
 import { LinkButton } from "../../ui/LinkButton.tsx";
 import { useAccount } from "../account/account.ts";
 import { SessionDetails } from "../profile/SessionRow.tsx";
+import { isFinished } from "../sessions/session-rules.ts";
 import { useSessions } from "../sessions/sessions.ts";
 import { ResumeSlot } from "./ResumeSlot.tsx";
 
@@ -71,9 +73,9 @@ function TvSessions({ sessions }: { sessions: readonly SessionSummary[] }) {
 function TvSessionCard({ session, me }: { session: SessionSummary; me: StackedPerson }) {
   return (
     <GlassLink
-      href={`/s/${session.code}`}
+      href={sessionPath(session.code, isFinished(session))}
       material="frost"
-      label={`Ouvrir « ${session.title} »`}
+      label={`${isFinished(session) ? "Revoir" : "Reprendre"} « ${session.title} »`}
       className="surface-panel w-[26rem]"
       linkClassName="block p-5 text-left"
     >

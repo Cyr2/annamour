@@ -1,5 +1,5 @@
 import { ApiError } from "@annamour/protocol";
-import type { z } from "zod";
+import type { z } from "zod/mini";
 
 /*
  * The one place the app talks HTTP. Every response is validated by its zod
@@ -79,7 +79,7 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
 }
 
 /** Calls the API and returns the body parsed by `schema`, or throws an ApiRequestError. */
-export async function request<Schema extends z.ZodType>(
+export async function request<Schema extends z.ZodMiniType>(
   schema: Schema,
   path: string,
   options: RequestOptions = {},

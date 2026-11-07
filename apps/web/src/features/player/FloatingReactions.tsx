@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, m, useReducedMotion } from "motion/react";
 import { useReactions } from "../../sync/reactions.ts";
 import { bubbleColor } from "../../ui/colors.ts";
 
@@ -11,7 +11,7 @@ export function FloatingReactions() {
     <div aria-live="polite" className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
       <AnimatePresence>
         {reactions.map((r) => (
-          <motion.div
+          <m.div
             key={r.id}
             className="absolute bottom-[150px] grid justify-items-center gap-1.5"
             style={{ left: `${(r.mine ? 70 : 14) + r.spread * 12}%` }}
@@ -43,7 +43,7 @@ export function FloatingReactions() {
             >
               {r.mine ? "Toi" : r.name}
             </span>
-          </motion.div>
+          </m.div>
         ))}
       </AnimatePresence>
     </div>

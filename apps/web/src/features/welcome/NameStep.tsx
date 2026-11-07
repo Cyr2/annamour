@@ -1,5 +1,5 @@
 import { type AccountKey, type BubbleColor, Name } from "@annamour/protocol";
-import { motion } from "motion/react";
+import { m } from "motion/react";
 import { type FormEvent, useState } from "react";
 import { errorMessage } from "../../api/http.ts";
 import { spring } from "../../lib/motion.ts";
@@ -33,9 +33,9 @@ export function NameStep({ onCreated }: { onCreated: (key: AccountKey) => void }
 
   return (
     <form onSubmit={submit} className="grid w-full justify-items-center gap-5" noValidate>
-      <motion.div key={color} initial={{ scale: 0.6 }} animate={{ scale: 1 }} transition={spring.bubble}>
+      <m.div key={color} initial={{ scale: 0.6 }} animate={{ scale: 1 }} transition={spring.bubble}>
         <PresenceBubble name={name.trim() || "?"} color={color} size="xl" status="alone" />
-      </motion.div>
+      </m.div>
       <h1 className="type-title">Une soirée ensemble</h1>
       <p className="type-lede">Dis-nous comment t'appeler. C'est ce que les autres verront sur ta bulle.</p>
       <Field label="Ton prénom" htmlFor="welcome-name" className="w-full text-left">

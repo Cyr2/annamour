@@ -1,5 +1,6 @@
 import { LogIn, Plus } from "lucide-react";
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { useLocation, useSearch } from "wouter";
 import { useIdentity } from "../../sync/identity.ts";
 import { Button } from "../../ui/controls.tsx";
 import { cx } from "../../ui/cx.ts";
@@ -9,6 +10,7 @@ import { type BubbleSize, PresenceBubble } from "../../ui/PresenceBubble.tsx";
 import { RedThread } from "../../ui/RedThread.tsx";
 import { useTv } from "../tv/tv-context.ts";
 import { CreateSessionSheet } from "./create/CreateSessionSheet.tsx";
+import { asksToCreate } from "./create/create-link.ts";
 import { HomeTopBar } from "./HomeTopBar.tsx";
 import { ResumeSlot } from "./ResumeSlot.tsx";
 
@@ -19,7 +21,16 @@ const TvHomeShelf = lazy(() => import("./TvHomeShelf.tsx").then((m) => ({ defaul
 
 export function HomeScreen() {
   const tv = useTv();
-  const [creating, setCreating] = useState(false);
+  const askedToCreate = asksToCreate(useSearch());
+  const [creating, setCreating] = useState(askedToCreate);
+  const [, navigate] = useLocation();
+
+  // The sheet opens from the link, then the flag leaves the address: closing it, or reloading, stays on home.
+  useEffect(() => {
+    if (!askedToCreate) return;
+    setCreating(true);
+    navigate("/", { replace: true });
+  }, [askedToCreate, navigate]);
 
   return (
     <div className="safe-area mx-auto flex min-h-dvh max-w-[1240px] flex-col">

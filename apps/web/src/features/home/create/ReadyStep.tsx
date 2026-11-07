@@ -1,6 +1,6 @@
 import type { RoomSnapshot } from "@annamour/protocol";
 import { Check } from "lucide-react";
-import { motion } from "motion/react";
+import { m } from "motion/react";
 import { useLocation } from "wouter";
 import { formatDuration } from "../../../lib/format.ts";
 import { spring } from "../../../lib/motion.ts";
@@ -35,14 +35,14 @@ export function ReadyStep({ room }: { room: RoomSnapshot }) {
           <h3 className="truncate font-sans text-md font-semibold text-fg">{room.media.title}</h3>
           <p className="mt-0.5 text-xs text-fg-muted">{summary(room)}</p>
         </div>
-        <motion.span
+        <m.span
           className="ml-auto grid size-[26px] shrink-0 place-items-center rounded-full bg-success text-on-accent"
           initial={{ scale: 0.4, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={spring.bubble}
         >
           <Check className="size-[15px]" strokeWidth={3} aria-label="Vidéo trouvée" />
-        </motion.span>
+        </m.span>
       </div>
       <TrackPickers code={room.code} media={room.media} />
       <Sheet.Actions>

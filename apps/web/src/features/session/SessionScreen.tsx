@@ -1,7 +1,10 @@
 import { isRoomCode, normalizeRoomCode } from "@annamour/protocol";
 import { House } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation, useSearch } from "wouter";
+import { restartOnWelcome, sessionPath, wantsFromStart } from "../../sync/restart.ts";
 import { useRoom, useRoomConnection } from "../../sync/room.ts";
+import type { SyncClient } from "../../sync/SyncClient.ts";
 import { usePlayerSync } from "../../sync/usePlayerSync.ts";
 import { Countdown } from "../../ui/Countdown.tsx";
 import { LinkButton } from "../../ui/LinkButton.tsx";
@@ -22,6 +25,7 @@ export function SessionScreen({ code: raw }: { code: string }) {
   const status = useRoom((s) => s.status);
   const error = useRoom((s) => s.error);
   useMemberNotices();
+  useRestartFromStart(client, code);
 
   if (!valid || status === "failed") {
     return <RoomUnavailable message={error?.message ?? "Aucune séance avec ce code."} />;
@@ -45,6 +49,19 @@ export function SessionScreen({ code: raw }: { code: string }) {
       <Countdown value={countdown} />
     </>
   );
+}
+
+/**
+ * « Revoir » (`?depuis=debut`): the room goes back to 0 for everyone once
+ * this device is in, then the flag leaves the address so a reload resumes.
+ */
+function useRestartFromStart(client: SyncClient | null, code: string) {
+  const fromStart = wantsFromStart(useSearch());
+  const [, navigate] = useLocation();
+  useEffect(() => {
+    if (!client || !fromStart) return;
+    return restartOnWelcome(client, () => navigate(sessionPath(code), { replace: true }));
+  }, [client, fromStart, code, navigate]);
 }
 
 function RoomUnavailable({ message }: { message: string }) {

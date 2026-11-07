@@ -1,4 +1,4 @@
-import { motion } from "motion/react";
+import { m } from "motion/react";
 import { spring } from "../lib/motion.ts";
 
 /** Where we are in a short sequence: the current step stretches into a peach pill. */
@@ -9,7 +9,7 @@ export function StepDots({ count, current }: { count: number; current: number })
         Étape {current + 1} sur {count}
       </span>
       {Array.from({ length: count }, (_, i) => (
-        <motion.i
+        <m.i
           // biome-ignore lint/suspicious/noArrayIndexKey: the dots are positions in a fixed sequence, nothing else identifies them.
           key={i}
           aria-hidden

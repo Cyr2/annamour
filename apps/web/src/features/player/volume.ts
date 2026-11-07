@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/mini";
 import { create } from "zustand";
 import { readStored, writeStored } from "../../lib/storage.ts";
 
@@ -7,7 +7,7 @@ import { readStored, writeStored } from "../../lib/storage.ts";
  * this device. Muting keeps the level, so unmuting restores it.
  */
 
-const VolumeState = z.object({ level: z.number().min(0).max(1), muted: z.boolean() });
+const VolumeState = z.object({ level: z.number().check(z.gte(0), z.lte(1)), muted: z.boolean() });
 export type VolumeState = z.infer<typeof VolumeState>;
 
 const STORAGE_KEY = "annamour:volume:v1";

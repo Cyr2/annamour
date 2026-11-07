@@ -1,28 +1,396 @@
 diff --git a/dist/index.cjs b/dist/index.cjs
-index 28f5d34cfd831154aa8a64b3ddf135be3072475d..88f40b5211c020140f209f926ae6d6d98c7d4649 100644
+index 28f5d34cfd831154aa8a64b3ddf135be3072475d..5aaa9073e00c7e674037bb913cdcd508e8cb4a77 100644
 --- a/dist/index.cjs
 +++ b/dist/index.cjs
-@@ -1180,7 +1180,8 @@ function refitting(element, fit, properties) {
+@@ -1088,6 +1088,57 @@ function parseColour(context, colour) {
+ 	];
+ }
+ const rims = /* @__PURE__ */ new Map();
++/** The rim each element last asked for: a rim encoded late never replaces a newer one. */
++const rimKeys = /* @__PURE__ */ new WeakMap();
++/**
++* Annamour: the rim's PNG is encoded in a worker (OffscreenCanvas), not on
++* the main thread: toDataURL, and even toBlob, blocked a phone's first
++* paint for tens of ms per glass. Without workers it falls back to toDataURL.
++*/
++let rimEncoder;
++let rimJobs = 0;
++const rimPending = /* @__PURE__ */ new Map();
++const RIM_WORKER = "onmessage=async({data:{id,columns,rows,data}})=>{try{const canvas=new OffscreenCanvas(columns,rows);canvas.getContext(\"2d\").putImageData(new ImageData(data,columns,rows),0,0);postMessage({id,blob:await canvas.convertToBlob()})}catch{postMessage({id,blob:null})}}";
++function rimWorker() {
++	if (rimEncoder !== void 0) return rimEncoder;
++	rimEncoder = null;
++	if (typeof Worker !== "function" || typeof OffscreenCanvas !== "function") return null;
++	try {
++		rimEncoder = new Worker(URL.createObjectURL(new Blob([RIM_WORKER], { type: "text/javascript" })));
++		rimEncoder.onmessage = ({ data: { id, blob } }) => {
++			const job = rimPending.get(id);
++			rimPending.delete(id);
++			job?.(blob);
++		};
++	} catch {
++		rimEncoder = null;
++	}
++	return rimEncoder;
++}
++function encodeOnPage(columns, rows, data) {
++	const canvas = document.createElement("canvas");
++	canvas.width = columns;
++	canvas.height = rows;
++	const context = canvas.getContext("2d");
++	if (!context) return null;
++	const image = context.createImageData(columns, rows);
++	image.data.set(data);
++	context.putImageData(image, 0, 0);
++	return canvas.toDataURL();
++}
++/** A PNG's address (blob: or data:), or null when nothing can draw it. */
++function encodePng(columns, rows, data) {
++	const worker = rimWorker();
++	if (!worker) return Promise.resolve(encodeOnPage(columns, rows, data));
++	return new Promise((resolve) => {
++		const id = ++rimJobs;
++		rimPending.set(id, (blob) => resolve(blob ? URL.createObjectURL(blob) : encodeOnPage(columns, rows, data)));
++		worker.postMessage({ id, columns, rows, data });
++	});
++}
++function encodeRim(columns, rows, data) {
++	return encodePng(columns, rows, data).then((href) => href ? `url("${href}")` : "none");
++}
+ let palette;
+ function paintRim(element) {
+ 	const style = getComputedStyle(element);
+@@ -1109,19 +1160,20 @@ function paintRim(element) {
+ 	let url = rims.get(key);
+ 	if (!url) {
+ 		const { columns, rows, data } = rimMap(shape, shine, density, edge);
+-		const canvas = document.createElement("canvas");
+-		canvas.width = columns;
+-		canvas.height = rows;
+-		const context = canvas.getContext("2d");
+-		if (!context) return;
+-		const image = context.createImageData(columns, rows);
+-		image.data.set(data);
+-		context.putImageData(image, 0, 0);
+-		url = `url("${canvas.toDataURL()}")`;
++		url = encodeRim(columns, rows, data).then((done) => {
++			rims.set(key, done);
++			return done;
++		});
+ 		rims.set(key, url);
+ 	}
+-	element.style.setProperty("--lg-rim", url);
+-	element.setAttribute("data-rim", "");
++	rimKeys.set(element, key);
++	const apply = (value) => {
++		if (rimKeys.get(element) !== key || !element.isConnected) return;
++		element.style.setProperty("--lg-rim", value);
++		element.setAttribute("data-rim", "");
++	};
++	if (typeof url === "string") apply(url);
++	else url.then(apply);
+ }
+ const repaints = /* @__PURE__ */ new Set();
+ let unwatch;
+@@ -1180,7 +1232,8 @@ function refitting(element, fit, properties) {
  	};
  }
  /** Only Chromium applies SVG filters to the live backdrop. */
 -const refractsBackdrop = () => /Chrom(?:e|ium)\//.test(navigator.userAgent);
-+/** Annamour: bending is drawn on the CPU every frame; touch screens and TVs (html[data-tv]) keep the frost and the lit rim instead. */
-+const refractsBackdrop = () => /Chrom(?:e|ium)\//.test(navigator.userAgent) && matchMedia("(pointer: fine)").matches && !document.documentElement.hasAttribute("data-tv");
++/** Annamour: bending is drawn on the CPU every frame and its maps cost ~200 ms to compute; touch screens, phones (even with a mouse) and TVs (html[data-tv]) keep the frost and the lit rim instead. */
++const refractsBackdrop = () => /Chrom(?:e|ium)\//.test(navigator.userAgent) && !/\b(?:Mobi|Android)/.test(navigator.userAgent) && matchMedia("(pointer: fine)").matches && !document.documentElement.hasAttribute("data-tv");
  const MARK = "data-glisse-backdrop";
  function visibleBox(element) {
  	let { left, top, right, bottom } = element.getBoundingClientRect();
+@@ -1304,13 +1357,15 @@ function selectionMaps(width, height, radius) {
+ 	const density = Math.min(devicePixelRatio || 1, 2);
+ 	const bezel = clamp$2(Math.min(width, height) * .12, 4, 10);
+ 	const { samples, maximum } = profile(bezel, clamp$2(Math.min(width, height) * .2, 8, 24));
+-	const canvas = document.createElement("canvas");
+-	canvas.width = Math.ceil(width * density);
+-	canvas.height = Math.ceil(height * density);
+-	const context = canvas.getContext("2d");
+-	const field = context.createImageData(canvas.width, canvas.height);
+-	const shine = context.createImageData(canvas.width, canvas.height);
+-	const bright = context.createImageData(canvas.width, canvas.height);
++	/** Annamour: plain pixels here, PNGs encoded off the main thread (encodePng). */
++	const canvas = {
++		width: Math.ceil(width * density),
++		height: Math.ceil(height * density)
++	};
++	const pixels = () => ({ data: new Uint8ClampedArray(canvas.width * canvas.height * 4) });
++	const field = pixels();
++	const shine = pixels();
++	const bright = pixels();
+ 	for (let y = 0; y < canvas.height; y++) for (let x = 0; x < canvas.width; x++) {
+ 		const px = (x + .5) * width / canvas.width - width / 2;
+ 		const py = (y + .5) * height / canvas.height - height / 2;
+@@ -1359,17 +1414,16 @@ function selectionMaps(width, height, radius) {
+ 		}
+ 		shine.data[i + 3] = Math.round(clamp$2(alpha, 0, 1) * 255);
+ 	}
+-	context.putImageData(field, 0, 0);
+-	const displacement = canvas.toDataURL();
+-	context.putImageData(shine, 0, 0);
+-	const highlight = canvas.toDataURL();
+-	context.putImageData(bright, 0, 0);
+-	return {
++	return Promise.all([
++		field,
++		shine,
++		bright
++	].map((image) => encodePng(canvas.width, canvas.height, image.data))).then(([displacement, highlight, brightHighlight]) => ({
+ 		displacement,
+ 		highlight,
+-		brightHighlight: canvas.toDataURL(),
++		brightHighlight,
+ 		scale: maximum * 2
+-	};
++	}));
+ }
+ function selectionLens(width, height, radius) {
+ 	const key = [
+@@ -1379,8 +1433,8 @@ function selectionLens(width, height, radius) {
+ 	].join("-");
+ 	const cached = selections.get(key);
+ 	if (cached) return cached;
+-	const { displacement, highlight, brightHighlight, scale } = selectionMaps(width, height, radius);
+ 	const id = `glisse-selection-${selections.size}`;
++	const pending = selectionMaps(width, height, radius).then(({ displacement, highlight, brightHighlight, scale }) => {
+ 	const box = {
+ 		x: 0,
+ 		y: 0,
+@@ -1444,23 +1498,26 @@ function selectionLens(width, height, radius) {
+ 		k3: 1
+ 	}));
+ 	container().append(filter);
+-	const result = {
++	return {
+ 		filter: `url("#${id}")`,
+-		rim: `url("${highlight}")`,
+-		brightRim: `url("${brightHighlight}")`
++		rim: highlight ? `url("${highlight}")` : "none",
++		brightRim: brightHighlight ? `url("${brightHighlight}")` : "none"
+ 	};
+-	selections.set(key, result);
+-	return result;
++	});
++	selections.set(key, pending);
++	return pending;
+ }
+ function fitSelection(element, filtered) {
+ 	const width = element.offsetWidth;
+ 	const height = element.offsetHeight;
+ 	if (!width || !height) return;
+ 	const corner = getComputedStyle(element).borderTopLeftRadius;
+-	const { filter, rim, brightRim } = selectionLens(width, height, Math.min(width / 2, height / 2, corner.endsWith("%") ? Math.min(width, height) * parseFloat(corner) / 100 : parseFloat(corner)));
+-	if (filtered) element.style.setProperty("--lg-filter", filter);
+-	element.style.setProperty("--lg-rim", rim);
+-	element.style.setProperty("--lg-rim-bright", brightRim);
++	selectionLens(width, height, Math.min(width / 2, height / 2, corner.endsWith("%") ? Math.min(width, height) * parseFloat(corner) / 100 : parseFloat(corner))).then(({ filter, rim, brightRim }) => {
++		if (!element.isConnected) return;
++		if (filtered) element.style.setProperty("--lg-filter", filter);
++		element.style.setProperty("--lg-rim", rim);
++		element.style.setProperty("--lg-rim-bright", brightRim);
++	});
+ }
+ // src/button.tsx
+ const Button = /* @__PURE__ */ (0, react.forwardRef)(function Button({ icon, variant = "glass", destructive, tint, children, className, style, type = "button", ...props }, forwardedRef) {
 diff --git a/dist/index.js b/dist/index.js
-index 02d488ace3671da61835b1d629c1714cc92fb52c..385665c286c0c56102f0137c656d5b42484706b7 100644
+index 02d488ace3671da61835b1d629c1714cc92fb52c..2d6d4a71b050157533ceb994d2808f07aa57f4f5 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -1179,7 +1179,8 @@ function refitting(element, fit, properties) {
+@@ -1087,6 +1087,57 @@ function parseColour(context, colour) {
+ 	];
+ }
+ const rims = /* @__PURE__ */ new Map();
++/** The rim each element last asked for: a rim encoded late never replaces a newer one. */
++const rimKeys = /* @__PURE__ */ new WeakMap();
++/**
++* Annamour: the rim's PNG is encoded in a worker (OffscreenCanvas), not on
++* the main thread: toDataURL, and even toBlob, blocked a phone's first
++* paint for tens of ms per glass. Without workers it falls back to toDataURL.
++*/
++let rimEncoder;
++let rimJobs = 0;
++const rimPending = /* @__PURE__ */ new Map();
++const RIM_WORKER = "onmessage=async({data:{id,columns,rows,data}})=>{try{const canvas=new OffscreenCanvas(columns,rows);canvas.getContext(\"2d\").putImageData(new ImageData(data,columns,rows),0,0);postMessage({id,blob:await canvas.convertToBlob()})}catch{postMessage({id,blob:null})}}";
++function rimWorker() {
++	if (rimEncoder !== void 0) return rimEncoder;
++	rimEncoder = null;
++	if (typeof Worker !== "function" || typeof OffscreenCanvas !== "function") return null;
++	try {
++		rimEncoder = new Worker(URL.createObjectURL(new Blob([RIM_WORKER], { type: "text/javascript" })));
++		rimEncoder.onmessage = ({ data: { id, blob } }) => {
++			const job = rimPending.get(id);
++			rimPending.delete(id);
++			job?.(blob);
++		};
++	} catch {
++		rimEncoder = null;
++	}
++	return rimEncoder;
++}
++function encodeOnPage(columns, rows, data) {
++	const canvas = document.createElement("canvas");
++	canvas.width = columns;
++	canvas.height = rows;
++	const context = canvas.getContext("2d");
++	if (!context) return null;
++	const image = context.createImageData(columns, rows);
++	image.data.set(data);
++	context.putImageData(image, 0, 0);
++	return canvas.toDataURL();
++}
++/** A PNG's address (blob: or data:), or null when nothing can draw it. */
++function encodePng(columns, rows, data) {
++	const worker = rimWorker();
++	if (!worker) return Promise.resolve(encodeOnPage(columns, rows, data));
++	return new Promise((resolve) => {
++		const id = ++rimJobs;
++		rimPending.set(id, (blob) => resolve(blob ? URL.createObjectURL(blob) : encodeOnPage(columns, rows, data)));
++		worker.postMessage({ id, columns, rows, data });
++	});
++}
++function encodeRim(columns, rows, data) {
++	return encodePng(columns, rows, data).then((href) => href ? `url("${href}")` : "none");
++}
+ let palette;
+ function paintRim(element) {
+ 	const style = getComputedStyle(element);
+@@ -1108,19 +1159,20 @@ function paintRim(element) {
+ 	let url = rims.get(key);
+ 	if (!url) {
+ 		const { columns, rows, data } = rimMap(shape, shine, density, edge);
+-		const canvas = document.createElement("canvas");
+-		canvas.width = columns;
+-		canvas.height = rows;
+-		const context = canvas.getContext("2d");
+-		if (!context) return;
+-		const image = context.createImageData(columns, rows);
+-		image.data.set(data);
+-		context.putImageData(image, 0, 0);
+-		url = `url("${canvas.toDataURL()}")`;
++		url = encodeRim(columns, rows, data).then((done) => {
++			rims.set(key, done);
++			return done;
++		});
+ 		rims.set(key, url);
+ 	}
+-	element.style.setProperty("--lg-rim", url);
+-	element.setAttribute("data-rim", "");
++	rimKeys.set(element, key);
++	const apply = (value) => {
++		if (rimKeys.get(element) !== key || !element.isConnected) return;
++		element.style.setProperty("--lg-rim", value);
++		element.setAttribute("data-rim", "");
++	};
++	if (typeof url === "string") apply(url);
++	else url.then(apply);
+ }
+ const repaints = /* @__PURE__ */ new Set();
+ let unwatch;
+@@ -1179,7 +1231,8 @@ function refitting(element, fit, properties) {
  	};
  }
  /** Only Chromium applies SVG filters to the live backdrop. */
 -const refractsBackdrop = () => /Chrom(?:e|ium)\//.test(navigator.userAgent);
-+/** Annamour: bending is drawn on the CPU every frame; touch screens and TVs (html[data-tv]) keep the frost and the lit rim instead. */
-+const refractsBackdrop = () => /Chrom(?:e|ium)\//.test(navigator.userAgent) && matchMedia("(pointer: fine)").matches && !document.documentElement.hasAttribute("data-tv");
++/** Annamour: bending is drawn on the CPU every frame and its maps cost ~200 ms to compute; touch screens, phones (even with a mouse) and TVs (html[data-tv]) keep the frost and the lit rim instead. */
++const refractsBackdrop = () => /Chrom(?:e|ium)\//.test(navigator.userAgent) && !/\b(?:Mobi|Android)/.test(navigator.userAgent) && matchMedia("(pointer: fine)").matches && !document.documentElement.hasAttribute("data-tv");
  const MARK = "data-glisse-backdrop";
  function visibleBox(element) {
  	let { left, top, right, bottom } = element.getBoundingClientRect();
+@@ -1303,13 +1356,15 @@ function selectionMaps(width, height, radius) {
+ 	const density = Math.min(devicePixelRatio || 1, 2);
+ 	const bezel = clamp$2(Math.min(width, height) * .12, 4, 10);
+ 	const { samples, maximum } = profile(bezel, clamp$2(Math.min(width, height) * .2, 8, 24));
+-	const canvas = document.createElement("canvas");
+-	canvas.width = Math.ceil(width * density);
+-	canvas.height = Math.ceil(height * density);
+-	const context = canvas.getContext("2d");
+-	const field = context.createImageData(canvas.width, canvas.height);
+-	const shine = context.createImageData(canvas.width, canvas.height);
+-	const bright = context.createImageData(canvas.width, canvas.height);
++	/** Annamour: plain pixels here, PNGs encoded off the main thread (encodePng). */
++	const canvas = {
++		width: Math.ceil(width * density),
++		height: Math.ceil(height * density)
++	};
++	const pixels = () => ({ data: new Uint8ClampedArray(canvas.width * canvas.height * 4) });
++	const field = pixels();
++	const shine = pixels();
++	const bright = pixels();
+ 	for (let y = 0; y < canvas.height; y++) for (let x = 0; x < canvas.width; x++) {
+ 		const px = (x + .5) * width / canvas.width - width / 2;
+ 		const py = (y + .5) * height / canvas.height - height / 2;
+@@ -1358,17 +1413,16 @@ function selectionMaps(width, height, radius) {
+ 		}
+ 		shine.data[i + 3] = Math.round(clamp$2(alpha, 0, 1) * 255);
+ 	}
+-	context.putImageData(field, 0, 0);
+-	const displacement = canvas.toDataURL();
+-	context.putImageData(shine, 0, 0);
+-	const highlight = canvas.toDataURL();
+-	context.putImageData(bright, 0, 0);
+-	return {
++	return Promise.all([
++		field,
++		shine,
++		bright
++	].map((image) => encodePng(canvas.width, canvas.height, image.data))).then(([displacement, highlight, brightHighlight]) => ({
+ 		displacement,
+ 		highlight,
+-		brightHighlight: canvas.toDataURL(),
++		brightHighlight,
+ 		scale: maximum * 2
+-	};
++	}));
+ }
+ function selectionLens(width, height, radius) {
+ 	const key = [
+@@ -1378,8 +1432,8 @@ function selectionLens(width, height, radius) {
+ 	].join("-");
+ 	const cached = selections.get(key);
+ 	if (cached) return cached;
+-	const { displacement, highlight, brightHighlight, scale } = selectionMaps(width, height, radius);
+ 	const id = `glisse-selection-${selections.size}`;
++	const pending = selectionMaps(width, height, radius).then(({ displacement, highlight, brightHighlight, scale }) => {
+ 	const box = {
+ 		x: 0,
+ 		y: 0,
+@@ -1443,23 +1497,26 @@ function selectionLens(width, height, radius) {
+ 		k3: 1
+ 	}));
+ 	container().append(filter);
+-	const result = {
++	return {
+ 		filter: `url("#${id}")`,
+-		rim: `url("${highlight}")`,
+-		brightRim: `url("${brightHighlight}")`
++		rim: highlight ? `url("${highlight}")` : "none",
++		brightRim: brightHighlight ? `url("${brightHighlight}")` : "none"
+ 	};
+-	selections.set(key, result);
+-	return result;
++	});
++	selections.set(key, pending);
++	return pending;
+ }
+ function fitSelection(element, filtered) {
+ 	const width = element.offsetWidth;
+ 	const height = element.offsetHeight;
+ 	if (!width || !height) return;
+ 	const corner = getComputedStyle(element).borderTopLeftRadius;
+-	const { filter, rim, brightRim } = selectionLens(width, height, Math.min(width / 2, height / 2, corner.endsWith("%") ? Math.min(width, height) * parseFloat(corner) / 100 : parseFloat(corner)));
+-	if (filtered) element.style.setProperty("--lg-filter", filter);
+-	element.style.setProperty("--lg-rim", rim);
+-	element.style.setProperty("--lg-rim-bright", brightRim);
++	selectionLens(width, height, Math.min(width / 2, height / 2, corner.endsWith("%") ? Math.min(width, height) * parseFloat(corner) / 100 : parseFloat(corner))).then(({ filter, rim, brightRim }) => {
++		if (!element.isConnected) return;
++		if (filtered) element.style.setProperty("--lg-filter", filter);
++		element.style.setProperty("--lg-rim", rim);
++		element.style.setProperty("--lg-rim-bright", brightRim);
++	});
+ }
+ // src/button.tsx
+ const Button = /* @__PURE__ */ forwardRef(function Button({ icon, variant = "glass", destructive, tint, children, className, style, type = "button", ...props }, forwardedRef) {

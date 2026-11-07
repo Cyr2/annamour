@@ -617,6 +617,16 @@ html[data-tv] .am-button.lg-button[data-size="hero"] > svg {
   margin-left: 0.25rem;
 }
 
+/* Fields in rem too: glisse sets their height and text in px. */
+html[data-tv] .am-input.lg-input {
+  height: var(--am-tv-target-large);
+  padding-inline: 1.25rem;
+}
+
+html[data-tv] .am-input.lg-input input {
+  font-size: var(--am-text-md);
+}
+
 html[data-tv] .am-sheet {
   width: min(46rem, 100%);
 }

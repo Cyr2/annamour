@@ -1,6 +1,6 @@
 import type { AccountKey } from "@annamour/protocol";
 import { KeyRound } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import { useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { passkeysSupported } from "../../api/passkeys.ts";
@@ -43,7 +43,7 @@ export function WelcomeScreen() {
           <StepDots count={3} current={index} />
           {/* Each step slides in from the right, the way forward; the old one leaves faster than the new one arrives. */}
           <AnimatePresence mode="popLayout" initial={false}>
-            <motion.div
+            <m.div
               key={step.kind}
               className="w-full"
               initial={{ opacity: 0, x: 28 }}
@@ -58,7 +58,7 @@ export function WelcomeScreen() {
                 />
               ) : null}
               {step.kind === "passkey" ? <PasskeyStep onDone={finish} /> : null}
-            </motion.div>
+            </m.div>
           </AnimatePresence>
         </div>
       </main>

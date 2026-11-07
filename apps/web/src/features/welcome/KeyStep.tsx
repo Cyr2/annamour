@@ -1,6 +1,6 @@
 import type { AccountKey } from "@annamour/protocol";
 import { Copy } from "lucide-react";
-import { motion } from "motion/react";
+import { m } from "motion/react";
 import { useState } from "react";
 import { spring } from "../../lib/motion.ts";
 import { Button } from "../../ui/controls.tsx";
@@ -27,7 +27,7 @@ export function KeyStep({ keyWords, onDone }: { keyWords: AccountKey; onDone: ()
       </p>
       <ol className="grid w-full grid-cols-2 gap-2.5" aria-label="Ta clé de 4 mots">
         {keyWords.map((word, index) => (
-          <motion.li
+          <m.li
             key={word}
             className="surface-tile flex min-w-0 items-baseline gap-2.5 px-4 py-3.5 text-left"
             initial={{ opacity: 0, y: 14, scale: 0.8 }}
@@ -39,7 +39,7 @@ export function KeyStep({ keyWords, onDone }: { keyWords: AccountKey; onDone: ()
               {index + 1}
             </span>
             <span className="truncate font-rounded-tight text-lg font-black text-fg select-all sm:text-xl">{word}</span>
-          </motion.li>
+          </m.li>
         ))}
       </ol>
       <div className="flex w-full flex-wrap gap-2">

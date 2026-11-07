@@ -1,6 +1,6 @@
 import { AccountKey, KEY_WORD_COUNT } from "@annamour/protocol";
 import { ScanFace } from "lucide-react";
-import { motion, useAnimationControls } from "motion/react";
+import { m, useAnimationControls } from "motion/react";
 import { type ClipboardEvent, type FormEvent, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { errorMessage } from "../../api/http.ts";
@@ -70,7 +70,7 @@ export function KeyLoginScreen() {
         <form onSubmit={submit} className="grid w-[min(460px,100%)] justify-items-center gap-5" noValidate>
           <h1 className="type-title">J'ai déjà une clé</h1>
           <p className="type-lede">Tape tes 4 mots dans l'ordre, ou colle-les d'un coup.</p>
-          <motion.div animate={controls} onPaste={paste} className="grid w-full grid-cols-2 gap-2">
+          <m.div animate={controls} onPaste={paste} className="grid w-full grid-cols-2 gap-2">
             {words.map((word, index) => (
               <Input
                 key={ORDINALS[index]}
@@ -84,7 +84,7 @@ export function KeyLoginScreen() {
                 className="text-center font-rounded-tight font-extrabold"
               />
             ))}
-          </motion.div>
+          </m.div>
           <p role="alert" className="min-h-6 text-sm text-danger">
             {error}
           </p>

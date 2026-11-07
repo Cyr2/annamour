@@ -1,6 +1,7 @@
 import type { Member } from "@annamour/protocol";
 import { describe, expect, it, vi } from "vitest";
 import { safeNext, welcomePath } from "./account/AccountGate.tsx";
+import { asksToCreate, CREATE_PATH } from "./home/create/create-link.ts";
 import { memberChanges } from "./player/member-changes.ts";
 import { keyAction, type PlayerKeys } from "./player/player-keys.ts";
 import { presenceOf } from "./session/Presence.tsx";
@@ -8,6 +9,16 @@ import { splitKey } from "./welcome/KeyLoginScreen.tsx";
 import { tokenFromHash } from "./welcome/LinkDeviceScreen.tsx";
 
 const member = (id: string, buffering = false): Member => ({ id, name: id.toUpperCase(), color: "mint", buffering });
+
+describe("create link", () => {
+  it("opens home with the create sheet from an empty « Mes séances »", () => {
+    expect(CREATE_PATH).toBe("/?creer=1");
+    expect(asksToCreate(CREATE_PATH.slice(1))).toBe(true);
+    expect(asksToCreate("?creer=1")).toBe(true);
+    expect(asksToCreate("")).toBe(false);
+    expect(asksToCreate("?creer=0")).toBe(false);
+  });
+});
 
 describe("memberChanges", () => {
   it("reports arrivals and departures, never yourself", () => {

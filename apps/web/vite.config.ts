@@ -42,6 +42,15 @@ export default defineConfig({
   build: {
     // hls.js (~580 kB) is its own lazy chunk, loaded only in a séance; the app's own chunks stay well under this.
     chunkSizeWarningLimit: 600,
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          // What the first screen needs ships as one file, not ~30 small shared chunks: each costs a
+          // round trip on a phone's network, and it was most of the time before the first paint.
+          groups: [{ name: "app", tags: ["$initial"] }],
+        },
+      },
+    },
   },
   server: {
     proxy: {

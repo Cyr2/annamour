@@ -1,6 +1,6 @@
 import { REACTIONS, type Reaction } from "@annamour/protocol";
 import { Smile } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import { useEffect, useMemo, useRef } from "react";
 import { exit, spring } from "../../lib/motion.ts";
 import { createReactionThrottle } from "../../sync/reactions.ts";
@@ -69,7 +69,7 @@ export function ReactionPicker({ open, onOpenChange, onReact }: ReactionPickerPr
       />
       <AnimatePresence>
         {open ? (
-          <motion.div
+          <m.div
             className="absolute right-1 bottom-[calc(100%+12px)] origin-bottom-right sm:right-3"
             initial={{ opacity: 0, y: 10, scale: 0.88 }}
             animate={{ opacity: 1, y: 0, scale: 1, transition: spring.ui }}
@@ -77,7 +77,7 @@ export function ReactionPicker({ open, onOpenChange, onReact }: ReactionPickerPr
           >
             <Surface role="menu" aria-label="Réactions" className="flex gap-0.5 rounded-pill p-1.5 shadow-float">
               {REACTIONS.map((emoji, index) => (
-                <motion.button
+                <m.button
                   key={emoji}
                   ref={index === 0 ? first : undefined}
                   type="button"
@@ -91,10 +91,10 @@ export function ReactionPicker({ open, onOpenChange, onReact }: ReactionPickerPr
                   onClick={() => allowed() && onReact(emoji)}
                 >
                   {emoji}
-                </motion.button>
+                </m.button>
               ))}
             </Surface>
-          </motion.div>
+          </m.div>
         ) : null}
       </AnimatePresence>
     </div>
