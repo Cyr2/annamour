@@ -10,6 +10,7 @@ import { Surface } from "../../ui/Surface.tsx";
 import { ThreadSpinner } from "../../ui/ThreadSpinner.tsx";
 import { safeNext } from "../account/AccountGate.tsx";
 import { refreshAccount, useAccount } from "../account/account.ts";
+import { resetCircles } from "../circles/circles.ts";
 import { resetSessions } from "../sessions/sessions.ts";
 import { resetWatchlist } from "../watchlist/watchlist.ts";
 import type { PairingState } from "./pairing.ts";
@@ -34,6 +35,7 @@ export function TvPairingScreen() {
   const { state, retry } = useTvPairing(async () => {
     resetSessions();
     resetWatchlist();
+    resetCircles();
     await refreshAccount();
     if (useAccount.getState().status !== "member") setFailure(SIGNED_IN_BUT_OFFLINE);
   });

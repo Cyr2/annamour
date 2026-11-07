@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from "react";
 import { playCatalog } from "../../../api/catalog.ts";
 import { errorMessage } from "../../../api/http.ts";
 import { createRoom, fetchRoom } from "../../../api/rooms.ts";
+import { shownCircle, useCircles } from "../../circles/circles.ts";
 
 export type CreateSessionState =
   | { step: "link"; error: string | null }
@@ -10,6 +11,9 @@ export type CreateSessionState =
   | { step: "ready"; room: RoomSnapshot };
 
 const START: CreateSessionState = { step: "link", error: null };
+
+/** A séance made while a circle is on screen belongs to it. */
+const circle = () => shownCircle(useCircles.getState());
 
 /** Link → import (the server fetches the playlist) → the room as everyone will see it. */
 export function useCreateSession() {
@@ -29,8 +33,8 @@ export function useCreateSession() {
     }
   }, []);
 
-  const prepare = useCallback((url: string, title: string) => run(() => createRoom(url, title)), [run]);
-  const prepareFromCatalog = useCallback((play: PlayCatalogRequest) => run(() => playCatalog(play)), [run]);
+  const prepare = useCallback((url: string, title: string) => run(() => createRoom(url, title, circle())), [run]);
+  const prepareFromCatalog = useCallback((play: PlayCatalogRequest) => run(() => playCatalog(play, circle())), [run]);
 
   const reset = useCallback(() => {
     attempt.current++;

@@ -8,6 +8,7 @@ import { BrandBar } from "../../ui/BrandBar.tsx";
 import { CodeInput } from "../../ui/CodeInput.tsx";
 import { Button } from "../../ui/controls.tsx";
 import { cx } from "../../ui/cx.ts";
+import { BackLink } from "../../ui/ScreenTopBar.tsx";
 import { useTv } from "../tv/tv-context.ts";
 
 /** Only a TV downloads its on-screen keyboard. */
@@ -52,7 +53,8 @@ export function JoinScreen() {
 
   return (
     <div className="safe-area mx-auto flex min-h-dvh max-w-[1240px] flex-col">
-      <BrandBar />
+      {/* No tab leads here any more on a phone: a way back to « Ce soir ». The TV keeps its own focus path. */}
+      <BrandBar start={tv ? undefined : <BackLink href="/" />} />
       <main className="grid flex-1 place-items-center py-8 text-center">
         <form
           className={cx("grid justify-items-center gap-[22px]", tv ? "w-[min(40rem,100%)]" : "w-[min(28.75rem,100%)]")}

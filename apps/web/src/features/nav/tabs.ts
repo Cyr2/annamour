@@ -1,9 +1,8 @@
-/** The app's four places, in the tab bar's order. */
+/** The app's three places, in the tab bar's order: tonight, our list, us. */
 export const TABS = [
-  { value: "accueil", href: "/", label: "Accueil" },
-  { value: "rejoindre", href: "/rejoindre", label: "Rejoindre" },
-  { value: "aregarder", href: "/a-regarder", label: "À regarder" },
-  { value: "profil", href: "/profil", label: "Profil" },
+  { value: "cesoir", href: "/", label: "Ce soir" },
+  { value: "liste", href: "/liste", label: "Notre liste" },
+  { value: "nous", href: "/nous", label: "Nous" },
 ] as const;
 
 export type TabValue = (typeof TABS)[number]["value"];
