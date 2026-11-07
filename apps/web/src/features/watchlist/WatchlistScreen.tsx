@@ -66,7 +66,7 @@ export function WatchlistScreen() {
         ) : null}
         <SegmentedControl
           aria-label="Trier"
-          className="am-sort-segments self-start"
+          className="am-sort-segments justify-self-start"
           items={SORTS.map((s) => ({ value: s.value, label: s.label }))}
           value={sort}
           onValueChange={(value) => setSort(value === "recent" ? "recent" : "wants")}
