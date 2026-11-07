@@ -32,14 +32,15 @@ describe("where there is a player to choose", () => {
   const device = (userAgent: string, maxTouchPoints = 0) => ({ userAgent, maxTouchPoints }) as Navigator;
   const withMse = { MediaSource: class {} } as unknown as typeof globalThis;
 
-  it("is an iPhone or an iPad (which says it is a Mac, with touch) that can run our player", () => {
-    expect(offersPlayerChoice(device("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0)"), withMse)).toBe(true);
+  it("is an iPad (which says it is a Mac, with touch), with its full Media Source", () => {
+    expect(offersPlayerChoice(device("Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X)"), withMse)).toBe(true);
     expect(offersPlayerChoice(device("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", 5), withMse)).toBe(true);
   });
 
-  it("is nowhere else, nor on an old iPhone without Media Source", () => {
+  it("is not an iPhone, whose managed Media Source keeps no more lead than Safari, nor anything else", () => {
+    const managedOnly = { ManagedMediaSource: class {} } as unknown as typeof globalThis;
+    expect(offersPlayerChoice(device("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0)"), managedOnly)).toBe(false);
     expect(offersPlayerChoice(device("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"), withMse)).toBe(false);
     expect(offersPlayerChoice(device("Mozilla/5.0 (Linux; Android 14)"), withMse)).toBe(false);
-    expect(offersPlayerChoice(device("Mozilla/5.0 (iPhone; CPU iPhone OS 16_0)"), {} as typeof globalThis)).toBe(false);
   });
 });

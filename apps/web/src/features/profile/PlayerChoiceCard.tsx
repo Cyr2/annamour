@@ -4,10 +4,10 @@ import { Switch } from "../../ui/controls.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 
 /**
- * On an iPhone or iPad: our player instead of Safari's, for a weak link.
- * It keeps minutes of video ahead rather than seconds, so a dip in the 4G
- * passes unnoticed instead of pausing the séance. Takes effect at the next
- * film; switched back off here.
+ * On an iPad: our player instead of Safari's, for a weak link. It keeps
+ * minutes of video ahead rather than seconds, so a dip in the 4G passes
+ * unnoticed instead of pausing the séance. Takes effect at the next film;
+ * switched back off here.
  */
 export function PlayerChoiceCard() {
   const [ownPlayer, setOwnPlayer] = useState(() => playerChoice() === "annamour");
@@ -27,8 +27,8 @@ export function PlayerChoiceCard() {
         <Switch checked={ownPlayer} onCheckedChange={change} aria-labelledby="player-choice-title" />
       </div>
       <p className="text-sm text-pretty text-fg-muted">
-        Garde jusqu'à 10 minutes de film d'avance sur cet appareil, au lieu de quelques secondes avec le lecteur de
-        Safari : une baisse de réseau passe sans couper la séance. Prend effet au prochain film.
+        Garde environ 5 minutes de film d'avance sur cet iPad, bien plus que le lecteur de Safari : une baisse de réseau
+        passe sans couper la séance. AirPlay n'est pas disponible avec ce lecteur. Prend effet au prochain film.
       </p>
     </Surface>
   );

@@ -4,12 +4,12 @@ import { readStored, writeStored } from "../lib/storage.ts";
 /*
  * Which player an Apple device uses, chosen per device.
  *
- * Safari's own player keeps a short, undocumented lead: when a phone's 4G
- * weakens longer than that, the video stops and the whole séance waits. Our
- * player (hls.js, which iPads and recent iPhones can run) downloads up to ten
- * minutes ahead and lowers the quality before running dry. It is tried on one
- * device by opening the app once with `?lecteur=annamour`, and undone with
- * `?lecteur=safari`; the séance's stats compare the two.
+ * Safari's own player keeps a short, undocumented lead: when the 4G weakens
+ * longer than that, the video stops and the whole séance waits. On an iPad our
+ * player (hls.js on Media Source) downloads about five minutes ahead (WebKit's
+ * memory cap, see hls-config.ts) and lowers the quality before running dry.
+ * It is chosen in the profile, or with `?lecteur=annamour` (`?lecteur=safari`
+ * to undo); the séance's stats compare the two.
  */
 
 export type PlayerChoice = "safari" | "annamour";
@@ -33,10 +33,12 @@ export function setPlayerChoice(choice: PlayerChoice): void {
 }
 
 /**
- * An iPhone or iPad that can run our player (Media Source): only there is
- * there a choice to make. iPadOS presents itself as a Mac, touch tells them apart.
+ * An iPad: only there is our player worth choosing. It needs the full Media
+ * Source, which iPads have; iPhones only have the managed kind, whose lead
+ * WebKit keeps at 10–30 s, no better than Safari's own player. iPadOS
+ * presents itself as a Mac: touch tells them apart.
  */
 export function offersPlayerChoice(nav: Navigator = navigator, win: typeof globalThis = globalThis): boolean {
-  const apple = /iPhone|iPad|iPod/.test(nav.userAgent) || (/Macintosh/.test(nav.userAgent) && nav.maxTouchPoints > 1);
-  return apple && ("ManagedMediaSource" in win || "MediaSource" in win);
+  const iPad = /iPad/.test(nav.userAgent) || (/Macintosh/.test(nav.userAgent) && nav.maxTouchPoints > 1);
+  return iPad && "MediaSource" in win;
 }
