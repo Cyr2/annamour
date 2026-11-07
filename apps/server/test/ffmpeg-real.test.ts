@@ -59,7 +59,8 @@ describe.skipIf(!installed)("encoding a real segment", () => {
     const outputs = RUNGS.map((rung) => ({ rung, path: join(dir, `${rung.name}.ts`) }));
     await ffmpegEncoder(source, outputs);
     for (const output of outputs) expect(firstVideoTime(output.path)).toBeCloseTo(firstVideoTime(source), 1);
-  });
+    // Four rungs on a 2-core CI runner take a few seconds; the server has many more cores.
+  }, 60_000);
 });
 
 /** Decodes an ADTS stream to mono 16-bit samples, as a player would play it. */
