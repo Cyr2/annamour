@@ -1,10 +1,7 @@
 import { type Account, API, WebAuthnJson } from "@annamour/protocol";
-import {
-  browserSupportsWebAuthn,
-  type PublicKeyCredentialCreationOptionsJSON,
-  type PublicKeyCredentialRequestOptionsJSON,
-  startAuthentication,
-  startRegistration,
+import type {
+  PublicKeyCredentialCreationOptionsJSON,
+  PublicKeyCredentialRequestOptionsJSON,
 } from "@simplewebauthn/browser";
 import { z } from "zod";
 import { fetchMe } from "./accounts.ts";
@@ -22,17 +19,19 @@ export interface WebAuthnCeremonies {
   authenticate: (optionsJSON: PublicKeyCredentialRequestOptionsJSON) => Promise<unknown>;
 }
 
+/** SimpleWebAuthn is only downloaded when a ceremony actually starts. */
 const browserCeremonies: WebAuthnCeremonies = {
-  register: (optionsJSON) => startRegistration({ optionsJSON }),
-  authenticate: (optionsJSON) => startAuthentication({ optionsJSON }),
+  register: async (optionsJSON) => (await import("@simplewebauthn/browser")).startRegistration({ optionsJSON }),
+  authenticate: async (optionsJSON) => (await import("@simplewebauthn/browser")).startAuthentication({ optionsJSON }),
 };
 
 const CANCELLED = "C'est annulé. Tu peux réessayer quand tu veux.";
 const UNSUPPORTED = "Cet appareil ne sait pas créer de clé d'accès.";
 const Ignored = z.unknown();
 
+/** The same check as SimpleWebAuthn's `browserSupportsWebAuthn`, without loading it. */
 export function passkeysSupported(): boolean {
-  return browserSupportsWebAuthn();
+  return typeof window !== "undefined" && typeof window.PublicKeyCredential === "function";
 }
 
 /** The authenticator refused or the person closed the prompt: not worth a scary message. */

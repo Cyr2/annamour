@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 26 84 52" role="img" aria-label="Annamour">
+  <path d="M20,44 C30,80 66,82 80,38" fill="none" stroke="#FF8C9E" stroke-width="7.5" stroke-linecap="round"/>
+    <circle cx="20" cy="44" r="10" fill="#FF8C9E"/>
+    <circle cx="80" cy="38" r="7.5" fill="#FFC2CC"/>
+</svg>

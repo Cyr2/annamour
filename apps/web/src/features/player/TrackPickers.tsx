@@ -2,16 +2,20 @@ import type { Media } from "@annamour/protocol";
 import type { CSSProperties } from "react";
 import { SegmentedControl } from "../../ui/controls.tsx";
 import { Field } from "../../ui/Field.tsx";
-import { choiceFor, chooseTracks, useTrackChoices } from "./track-choice.ts";
+import { choiceFor, chooseTracks, subtitleLabel, useTrackChoices } from "./track-choice.ts";
 
 const NO_SUBTITLES = "none";
 
-/** Wide enough for "Français" or "Forcés"; the control scrolls if a film has many tracks. */
-const SEGMENT_STYLE = { "--lg-tab-width": "7.25rem", "--lg-tab-height": "40px" } as CSSProperties;
+/*
+ * The row scrolls sideways when a film has many tracks. A scroller clips what
+ * overflows it, so it carries padding (cancelled by negative margins) wide
+ * and tall enough for the segmented control's lens, which swells past the
+ * control while held.
+ */
+const SCROLLER = "-mx-4 -my-3.5 overflow-x-auto px-4 py-3.5";
 
-function subtitleLabel(track: Media["subtitles"][number]): string {
-  return track.forced ? `${track.label} (forcés)` : track.label;
-}
+/** Wide enough for « Français (forcés) »; the control scrolls if a film has many tracks. */
+const SEGMENT_STYLE = { "--lg-tab-width": "7.75rem", "--lg-tab-height": "40px" } as CSSProperties;
 
 /** Audio language and subtitles for this person only. */
 export function TrackPickers({ code, media }: { code: string; media: Pick<Media, "audio" | "subtitles"> }) {
@@ -22,7 +26,7 @@ export function TrackPickers({ code, media }: { code: string; media: Pick<Media,
     <>
       {media.audio.length > 1 ? (
         <Field label="Langue">
-          <div className="overflow-x-auto">
+          <div className={SCROLLER}>
             <SegmentedControl
               aria-label="Langue"
               style={SEGMENT_STYLE}
@@ -35,7 +39,7 @@ export function TrackPickers({ code, media }: { code: string; media: Pick<Media,
       ) : null}
       <Field label="Sous-titres">
         {media.subtitles.length ? (
-          <div className="overflow-x-auto">
+          <div className={SCROLLER}>
             <SegmentedControl
               aria-label="Sous-titres"
               style={SEGMENT_STYLE}

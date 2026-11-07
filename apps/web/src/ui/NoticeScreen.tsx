@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Glass } from "./controls.tsx";
+import { Surface } from "./Surface.tsx";
 import { Wordmark } from "./Wordmark.tsx";
 
 /**
@@ -12,9 +12,9 @@ export function NoticeScreen({ children }: { children: ReactNode }) {
     <main className="safe-area grid min-h-dvh place-items-center text-center">
       <div className="grid w-[min(420px,100%)] justify-items-center gap-6">
         <Wordmark size="lg" />
-        <Glass className="surface-panel grid w-full justify-items-center gap-5 p-6 text-pretty sm:p-8">
+        <Surface className="surface-panel grid w-full justify-items-center gap-5 p-6 text-pretty sm:p-8">
           {children}
-        </Glass>
+        </Surface>
       </div>
     </main>
   );

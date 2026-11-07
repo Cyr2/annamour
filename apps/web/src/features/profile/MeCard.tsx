@@ -3,9 +3,10 @@ import { Check } from "lucide-react";
 import { useState } from "react";
 import { errorMessage } from "../../api/http.ts";
 import { ColorPicker } from "../../ui/ColorPicker.tsx";
-import { Glass, Input } from "../../ui/controls.tsx";
+import { Input } from "../../ui/controls.tsx";
 import { Field } from "../../ui/Field.tsx";
 import { PresenceBubble } from "../../ui/PresenceBubble.tsx";
+import { Surface } from "../../ui/Surface.tsx";
 import { toast } from "../../ui/toast.ts";
 import { updateProfile } from "../account/account.ts";
 
@@ -43,7 +44,7 @@ export function MeCard({ account }: { account: Account }) {
   };
 
   return (
-    <Glass className="surface-panel grid justify-items-center gap-5 p-4 text-center sm:p-6">
+    <Surface className="surface-panel grid justify-items-center gap-5 p-4 text-center sm:p-6">
       <PresenceBubble name={name.trim() || "?"} color={color} size="xl" />
       <Field label="Ton prénom" htmlFor="profile-name" className="w-full">
         <Input
@@ -63,6 +64,6 @@ export function MeCard({ account }: { account: Account }) {
         <ColorPicker value={color} onValueChange={(next) => void saveColor(next)} label="Couleur de ta bulle" />
       </Field>
       <p className="text-xs text-fg-subtle">Enregistré sur ton compte, sans mot de passe.</p>
-    </Glass>
+    </Surface>
   );
 }

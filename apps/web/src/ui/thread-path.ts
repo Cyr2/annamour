@@ -9,6 +9,29 @@ export interface Point {
 
 const SEGMENTS = 40;
 
+/** The marker on the part of an anchor the thread ties onto (a bubble's disc, not its caption). */
+export const KNOT_ATTRIBUTE = "data-thread-knot";
+
+interface Box {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Where the thread ties onto an anchor, relative to the thread's root: the
+ * centre of its knot (the bubble), and the bubble's radius from its layout
+ * size, since a bubble that is still scaling in has a smaller box.
+ */
+export function knotPoint(root: Box, knot: Box, layout: { width: number; height: number }): Point {
+  return {
+    x: Math.round(knot.left - root.left + knot.width / 2),
+    y: Math.round(knot.top - root.top + knot.height / 2),
+    r: Math.round(Math.min(layout.width, layout.height) / 2),
+  };
+}
+
 function segmentPath(from: Point, to: Point, sag: number, amplitude: number, time: number, phase: number): string {
   const centreLength = Math.hypot(to.x - from.x, to.y - from.y) || 1;
   const ux = (to.x - from.x) / centreLength;

@@ -5,7 +5,7 @@ import { errorMessage } from "../../api/http.ts";
 import { fetchRoom } from "../../api/rooms.ts";
 import { CodeInput } from "../../ui/CodeInput.tsx";
 import { Button } from "../../ui/controls.tsx";
-import { ScreenTopBar } from "../../ui/ScreenTopBar.tsx";
+import { Wordmark } from "../../ui/Wordmark.tsx";
 
 /** « Rejoindre la séance »: 4 letters, checked as soon as the last one lands. */
 export function JoinScreen() {
@@ -29,7 +29,9 @@ export function JoinScreen() {
 
   return (
     <div className="safe-area mx-auto flex min-h-dvh max-w-[1240px] flex-col">
-      <ScreenTopBar back="/" />
+      <header className="flex min-h-12 items-center">
+        <Wordmark />
+      </header>
       <main className="grid flex-1 place-items-center py-8 text-center">
         <form
           className="grid w-[min(460px,100%)] justify-items-center gap-[22px]"

@@ -69,6 +69,7 @@ function PresenceBubbleRoot({
       <motion.div
         role="img"
         aria-label={`${name}, ${STATUS_LABEL[status]}`}
+        data-thread-knot=""
         className={cx("relative grid place-items-center rounded-full shadow-bubble", BUBBLE_SIZE_CLASSES[size])}
         initial={{ scale: 0.6, opacity: 0 }}
         animate={breathing ? { scale: [1, 1.06, 1], opacity: 1 } : { scale: 1, opacity: 1 }}

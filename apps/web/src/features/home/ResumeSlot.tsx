@@ -25,6 +25,7 @@ export function ResumeSlot() {
     >
       <GlassLink
         href={`/s/${session.code}`}
+        material="frost"
         className="surface-panel"
         linkClassName="group flex min-h-11 items-center gap-4 p-3.5 pr-4 text-left"
       >

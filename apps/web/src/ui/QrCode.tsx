@@ -1,4 +1,3 @@
-import QRCode from "qrcode";
 import { useEffect, useRef } from "react";
 import { cx } from "./cx.ts";
 
@@ -21,12 +20,16 @@ export function QrCode({ value, label, className }: QrCodeProps) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    QRCode.toCanvas(canvas, value, {
-      margin: 0,
-      scale: 1,
-      errorCorrectionLevel: "M",
-      color: { dark: token("--am-night"), light: token("--am-milk") },
-    })
+    // The encoder is only downloaded where a QR code is shown (the salon, adding a device).
+    import("qrcode")
+      .then(({ default: QRCode }) =>
+        QRCode.toCanvas(canvas, value, {
+          margin: 0,
+          scale: 1,
+          errorCorrectionLevel: "M",
+          color: { dark: token("--am-night"), light: token("--am-milk") },
+        }),
+      )
       .then(() => {
         // The renderer pins the canvas to its pixel size inline; the CSS box decides the size instead.
         canvas.style.removeProperty("width");

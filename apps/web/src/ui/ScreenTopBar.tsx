@@ -16,11 +16,14 @@ export function BackLink({ href, label = "Retour" }: { href: string; label?: str
   );
 }
 
-/** Back button and a centred title, balanced by an empty column on the right. */
-export function ScreenTopBar({ back, title }: { back: string; title?: ReactNode }) {
+/**
+ * Back button and a centred title, balanced by an empty column on the right.
+ * Without `back` (a screen of the tab bar, which is its own way back), the title alone.
+ */
+export function ScreenTopBar({ back, title }: { back?: string; title?: ReactNode }) {
   return (
     <header className="grid min-h-12 grid-cols-[44px_1fr_44px] items-center gap-3">
-      <BackLink href={back} />
+      {back ? <BackLink href={back} /> : <span aria-hidden />}
       <div className="min-w-0 truncate text-center font-rounded-tight text-md font-extrabold text-fg">{title}</div>
     </header>
   );

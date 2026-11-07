@@ -8,11 +8,12 @@ import { cx } from "../../ui/cx.ts";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { ControlsBar } from "./ControlsBar.tsx";
 import { FloatingReactions } from "./FloatingReactions.tsx";
+import { toggleFullscreen } from "./fullscreen.ts";
 import { BlockedNotice, CenterPlay, PlayerError, WaitBanner } from "./PlayerOverlays.tsx";
 import { PlayerTopBar } from "./PlayerTopBar.tsx";
 import { TrackPickers } from "./TrackPickers.tsx";
 import { useIdle, usePlaybackNotices, useTrackChoice, useVolumeOnVideo } from "./usePlayerEffects.ts";
-import { toggleFullscreen, usePlayerKeyboard } from "./usePlayerKeyboard.ts";
+import { usePlayerKeyboard, useSurfaceTap } from "./usePlayerKeyboard.ts";
 import { useVolume } from "./volume.ts";
 
 interface PlayerViewProps {
@@ -49,6 +50,7 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
   // The position is read when the key is pressed, not subscribed to: no re-render per frame here.
   const seekBy = (delta: number) => seek(Math.max(0, (video?.currentTime ?? 0) + delta));
   usePlayerKeyboard(active && !tracksOpen, { toggle, seekBy, toggleMute, fullscreen });
+  const surfaceTap = useSurfaceTap(toggle);
 
   return (
     <section
@@ -56,9 +58,9 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
       data-watching={active || undefined}
       className={cx("fixed inset-0 overflow-hidden bg-screen", !active && "invisible")}
     >
-      {/* The film is glisse's backdrop: the glass controls bend the picture under them. */}
+      {/* Not a glisse backdrop: bending a playing film costs a full-screen filter every frame. */}
       {/* biome-ignore lint/a11y/useMediaCaption: subtitle tracks come from the room's media at runtime (mapped below). */}
-      <video ref={onVideo} data-glisse-backdrop="" className="absolute inset-0 size-full object-contain" playsInline>
+      <video ref={onVideo} className="absolute inset-0 size-full object-contain" playsInline>
         {media?.subtitles.map((track) => (
           <track
             key={track.id}
@@ -71,10 +73,12 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
         ))}
       </video>
       <FloatingReactions />
+      {/* The film's surface: tapping it plays or pauses (Space and K do it from the keyboard). Hidden controls take no taps. */}
       <div
+        {...surfaceTap}
         className={cx(
           "safe-area absolute inset-0 z-10 flex flex-col justify-between py-4 transition-opacity duration-300 ease-out",
-          idle && "cursor-none opacity-0",
+          idle && "cursor-none opacity-0 [&>*]:pointer-events-none",
         )}
       >
         {/* Shades at both edges so titles and clocks read over a bright frame; they fade with the controls. */}

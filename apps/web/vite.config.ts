@@ -4,6 +4,8 @@ import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 const NIGHT = "#12101A";
+/** The top of the starry sky (tokens.css --am-sky-top): the status bar blends into it. */
+const SKY_TOP = "#0D1122";
 
 export default defineConfig({
   plugins: [
@@ -22,7 +24,7 @@ export default defineConfig({
         display: "standalone",
         orientation: "any",
         background_color: NIGHT,
-        theme_color: NIGHT,
+        theme_color: SKY_TOP,
         icons: [
           { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
           { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
@@ -32,16 +34,14 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
-        // Only pre-cache the Latin font subsets; browsers fetch the others on demand.
-        globIgnores: ["**/*-{cyrillic,cyrillic-ext,greek,greek-ext,vietnamese}-*.woff2"],
         // The API, the socket and the video stream must always hit the network.
         navigateFallbackDenylist: [/^\/api/, /^\/ws/, /^\/media/],
       },
     }),
   ],
   build: {
-    // hls.js (~580 kB) is its own lazy chunk, loaded only on the watch screen.
-    chunkSizeWarningLimit: 700,
+    // hls.js (~580 kB) is its own lazy chunk, loaded only in a séance; the app's own chunks stay well under this.
+    chunkSizeWarningLimit: 600,
   },
   server: {
     proxy: {

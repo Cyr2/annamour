@@ -110,4 +110,14 @@ describe("serving the built app", () => {
 
     expect((await app.request("/api/health")).status).toBe(200);
   });
+
+  it("gzips the app's scripts for browsers that accept it", async () => {
+    await writeFile(join(dist, "assets", "big.js"), `console.info("${"annamour ".repeat(400)}")`);
+    const app = createApp(testServices(), { webDist: dist });
+
+    const asset = await app.request("/assets/big.js", { headers: { "accept-encoding": "gzip" } });
+    expect(asset.status).toBe(200);
+    expect(asset.headers.get("content-encoding")).toBe("gzip");
+    expect(asset.headers.get("cache-control")).toContain("immutable");
+  });
 });

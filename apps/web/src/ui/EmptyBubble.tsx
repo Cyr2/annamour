@@ -9,6 +9,7 @@ export function EmptyBubble({ size = "lg", label }: { size?: BubbleSize; label: 
     <motion.div
       role="img"
       aria-label={label}
+      data-thread-knot=""
       className={cx(
         "grid place-items-center rounded-full border-2 border-dashed border-line-strong font-rounded-tight font-extrabold text-fg-subtle select-none",
         BUBBLE_SIZE_CLASSES[size],

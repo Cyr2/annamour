@@ -2,7 +2,7 @@ import { motion, useAnimationFrame, useMotionValue, useReducedMotion, useSpring 
 import { createContext, type ReactNode, use, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { spring } from "../lib/motion.ts";
 import { cx } from "./cx.ts";
-import { type Point, threadPath } from "./thread-path.ts";
+import { KNOT_ATTRIBUTE, knotPoint, type Point, threadPath } from "./thread-path.ts";
 
 /*
  * The red thread: drawn from bubble to bubble, in the order of their `index`.
@@ -53,13 +53,9 @@ function Root({ synced, className, children }: RootProps) {
     const next = [...anchors.current.entries()]
       .sort(([a], [b]) => a - b)
       .map(([, el]): Point => {
-        const r = el.getBoundingClientRect();
-        return {
-          x: Math.round(r.left - box.left + r.width / 2),
-          y: Math.round(r.top - box.top + r.height / 2),
-          // Layout size, not the box: an entering bubble may still be scaled down.
-          r: Math.round(Math.min(el.offsetWidth, el.offsetHeight) / 2),
-        };
+        // Tie onto the bubble itself, not the whole anchor (a caption under it would pull the thread down).
+        const knot = el.querySelector<HTMLElement>(`[${KNOT_ATTRIBUTE}]`) ?? el;
+        return knotPoint(box, knot.getBoundingClientRect(), { width: knot.offsetWidth, height: knot.offsetHeight });
       });
     setPoints((prev) => (samePoints(prev, next) ? prev : next));
   }, []);

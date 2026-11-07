@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <title>Annamour</title>
   <rect width="512" height="512" rx="112" fill="#12101A"/>
-  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="62" y="128" width="124" height="90" rx="22" fill="#1D1828" stroke="#F6F2FA" stroke-width="14"/>
-    <rect x="326" y="128" width="124" height="90" rx="22" fill="#1D1828" stroke="#F6F2FA" stroke-width="14"/>
-    <path d="M150 218C150 320 217 390 256 360C282 340 316 318 316 288C316 256 276 248 256 278C236 248 196 256 196 288C196 318 230 340 256 360C295 390 362 320 362 218" stroke="#FF8C9E" stroke-width="20"/>
+  <g transform="translate(256 262) scale(4.6) translate(-50 -56)">
+    <path d="M20,44 C30,80 66,82 80,38" fill="none" stroke="#FF8C9E" stroke-width="8.625" stroke-linecap="round"/>
+    <circle cx="20" cy="44" r="11.5" fill="#FF8C9E"/>
+    <circle cx="80" cy="38" r="8.625" fill="#FFC2CC"/>
   </g>
 </svg>

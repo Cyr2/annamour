@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="description" content="Une soirée ensemble" />
-    <meta name="theme-color" content="#12101A" />
+    <meta name="theme-color" content="#0D1122" />
     <meta name="color-scheme" content="dark" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -12,6 +12,8 @@
     <meta name="apple-mobile-web-app-title" content="Annamour" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- Who this device is: asked while the scripts download, not after (the account gate waits for it). -->
+    <link rel="preload" href="/api/me" as="fetch" crossorigin />
     <title>Annamour</title>
   </head>
   <body>

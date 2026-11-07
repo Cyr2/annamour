@@ -1,8 +1,24 @@
 import { cx } from "./cx.ts";
+import { LOGO, LOGO_WORD, SYMBOL } from "./logo.ts";
 
-/** The logo geometry (512 grid), shared with public/icon.svg. */
-const THREAD_HEART =
-  "M150 218C150 320 217 390 256 360C282 340 316 318 316 288C316 256 276 248 256 278C236 248 196 256 196 288C196 318 230 340 256 360C295 390 362 320 362 218";
+type Drawing = typeof LOGO | typeof SYMBOL;
+
+/** The thread and its two dots, coloured by the tokens. */
+function Thread({ drawing }: { drawing: Drawing }) {
+  return (
+    <>
+      <path
+        d={drawing.thread}
+        fill="none"
+        strokeWidth={drawing.threadWidth}
+        strokeLinecap="round"
+        className="stroke-thread"
+      />
+      <circle {...drawing.you} className="fill-thread" />
+      <circle {...drawing.other} className="fill-thread-light" />
+    </>
+  );
+}
 
 interface MarkProps {
   className?: string;
@@ -10,21 +26,17 @@ interface MarkProps {
   title?: string;
 }
 
-/** Two screens joined by a red thread that ties itself into a heart. */
+/** The symbol alone: two dots joined by the red thread, smiling. */
 export function Mark({ className, title }: MarkProps) {
   return (
     <svg
-      viewBox="40 110 432 300"
+      viewBox={SYMBOL.viewBox}
       className={cx("shrink-0", className)}
       role={title ? "img" : undefined}
       aria-hidden={title ? undefined : true}
       aria-label={title}
     >
-      <g fill="none" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="62" y="128" width="124" height="90" rx="22" strokeWidth="18" className="fill-surface stroke-fg" />
-        <rect x="326" y="128" width="124" height="90" rx="22" strokeWidth="18" className="fill-surface stroke-fg" />
-        <path d={THREAD_HEART} strokeWidth="24" className="stroke-thread" />
-      </g>
+      <Thread drawing={SYMBOL} />
     </svg>
   );
 }
@@ -34,19 +46,17 @@ interface WordmarkProps {
   className?: string;
 }
 
-/** "Annamour" set in the rounded face, with the mark leading. */
+/** The logo « le sourire »: « Annamour » with the thread smiling under it, from one dot to the other. */
 export function Wordmark({ size = "sm", className }: WordmarkProps) {
-  const large = size === "lg";
   return (
-    <span
-      className={cx(
-        "inline-flex items-center font-rounded-tight font-extrabold text-fg",
-        large ? "gap-3 text-xl" : "gap-2 text-lg",
-        className,
-      )}
+    <svg
+      viewBox={LOGO.viewBox}
+      role="img"
+      aria-label="Annamour"
+      className={cx("w-auto shrink-0", size === "lg" ? "h-12" : "h-8", className)}
     >
-      <Mark className={large ? "h-9 w-auto" : "h-6 w-auto"} />
-      <span translate="no">Annamour</span>
-    </span>
+      <Thread drawing={LOGO} />
+      <path d={LOGO_WORD} className="fill-fg" />
+    </svg>
   );
 }
