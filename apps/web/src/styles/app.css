@@ -325,6 +325,68 @@
   }
 }
 
+/* ---- The red thread (ui/RedThread.tsx): its glow, a filter on the wrapper so the path repaints cheaply ---- */
+
+.am-thread-line {
+  filter: drop-shadow(0 0 6px var(--am-thread-glow));
+}
+
+/* The TV's glow instead of the filter (see the TV section). */
+.am-thread-halo {
+  display: none;
+  stroke: var(--am-thread-glow);
+  stroke-width: 7px;
+  opacity: 0.5;
+}
+
+/*
+ * ---- Endless decorative loops (bubbles, the heart) ----
+ * CSS on the `scale` property, which the compositor animates by itself: as
+ * Motion keyframes they ran script and a repaint on every frame, for as long
+ * as a seat stayed empty (a TV spent a fifth of its idle time on it). They
+ * compose with the entrance Motion plays on `transform`.
+ */
+.am-breathe {
+  animation: am-breathe var(--am-breathe) ease-in-out infinite;
+}
+
+.am-breathe-soft {
+  animation: am-breathe-soft var(--am-breathe) ease-in-out infinite;
+}
+
+.am-heartbeat {
+  animation: am-heartbeat var(--am-heartbeat) ease-in-out infinite;
+}
+
+@keyframes am-breathe {
+  50% {
+    scale: 1.06;
+  }
+}
+
+@keyframes am-breathe-soft {
+  50% {
+    scale: 1.05;
+  }
+}
+
+/* Two beats, then a rest. */
+@keyframes am-heartbeat {
+  16% {
+    scale: 1.18;
+  }
+  32% {
+    scale: 1;
+  }
+  48% {
+    scale: 1.1;
+  }
+  64%,
+  100% {
+    scale: 1;
+  }
+}
+
 /* ---- Waiting for a screen's code (ui/RouteFallback.tsx): shows only if it takes a moment ---- */
 
 .am-route-spinner {
@@ -634,10 +696,31 @@ html[data-tv] :is(a, button, [role="slider"]) {
     color var(--am-duration-base) ease;
 }
 
+/*
+ * No live blur on a TV: its chip redraws a blurred backdrop on every frame
+ * where anything on or behind the glass moves (a focus lift, the waving
+ * thread). The glass keeps its tint, denser (tokens.css).
+ */
+html[data-tv] :is(.am-frost, .am-sheet, .lg-glass, .lg-switch-thumb, .lg-slider-thumb, .lg-menu-surface) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* The thread's glow is a wide faint stroke under it, not a drop-shadow filter redrawn on every frame of its wave. */
+html[data-tv] .am-thread-line {
+  filter: none;
+}
+
+html[data-tv] .am-thread-halo {
+  display: inline;
+}
+
 /* Lighter motion: the sky holds still (TV chips are slow), no shooting star. */
 html[data-tv] .am-sky-stars {
   animation: none;
   opacity: 0.85;
+  /* Still, it needs no layer of its own: four full-screen textures a TV's memory is better spent on. */
+  will-change: auto;
 }
 
 html[data-tv] .am-sky-shooting {

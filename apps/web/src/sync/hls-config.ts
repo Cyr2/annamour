@@ -1,4 +1,7 @@
 import type { HlsConfig } from "hls.js";
+// The ES module build of hls.js cannot start its own worker: without this file, every segment is
+// remuxed on the main thread, 100–150 ms per segment on a TV, a hitch the remote and the UI feel.
+import hlsWorkerUrl from "hls.js/dist/hls.worker.js?url";
 
 /*
  * hls.js tuned for weak, jittery links (a phone's shared 4G) without costing
@@ -55,6 +58,7 @@ const isWebKit = (nav: Navigator) => /Apple/.test(nav.vendor);
 export function hlsConfig(startPosition: number, nav: Navigator = navigator): Partial<HlsConfig> {
   return {
     enableWorker: true,
+    workerPath: hlsWorkerUrl,
     startPosition,
     lowLatencyMode: false,
     maxBufferLength: MAX_LEAD_SECONDS,

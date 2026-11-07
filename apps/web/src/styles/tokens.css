@@ -162,6 +162,9 @@
   --am-duration-fast: 150ms;
   --am-duration-base: 220ms;
   --am-duration-slow: 300ms;
+  /* Endless loops: a bubble breathing while someone is away, the favourite's heart beating (then resting). */
+  --am-breathe: 2.6s;
+  --am-heartbeat: 2.2s;
   --am-ease-out: cubic-bezier(0.32, 0.72, 0, 1);
   --am-ease-in: cubic-bezier(0.4, 0, 1, 1);
 
@@ -193,10 +196,15 @@ html[data-tv] {
   --am-tv-ring: 0.25rem;
   --am-tv-ring-offset: 0.25rem;
   --am-tv-lift: 1.06;
-  --am-tv-glow: 0 0 2rem rgb(246 242 250 / 0.28);
+  /* Two soft bands past the ring, without blur: a blurred glow cost the TV a third of each press's time to paint. */
+  --am-tv-glow: 0 0 0 0.75rem rgb(246 242 250 / 0.1), 0 0 0 1.25rem rgb(246 242 250 / 0.05);
   --am-radius-control: 1rem;
   --am-radius-panel: 1.75rem;
   --am-radius-sheet: 2.25rem;
+  /* Glass without the live blur (a TV chip redraws it every frame): a denser tint, so the stars don't show through sharp. */
+  --am-frost: rgb(29 24 40 / 0.86);
+  --lg-glass: rgb(29 24 40 / 0.78);
+  --lg-glass-active: rgb(56 47 74 / 0.86);
 }
 
 /*

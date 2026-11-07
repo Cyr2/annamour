@@ -9,6 +9,13 @@ describe("our player's settings", () => {
     expect(config).toMatchObject({ maxBufferLength: 600, maxMaxBufferLength: 600 });
   });
 
+  it("remux segments in hls.js's worker, off the main thread", () => {
+    expect(hlsConfig(0, browser("Google Inc."))).toMatchObject({
+      enableWorker: true,
+      workerPath: expect.stringMatching(/hls\.worker\.js/),
+    });
+  });
+
   it("stay under WebKit's memory caps on an iPad, on full Media Source, and climb carefully on 4G", () => {
     const config = hlsConfig(0, browser("Apple Computer, Inc."));
     expect(config).toMatchObject({

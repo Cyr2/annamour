@@ -61,7 +61,6 @@ function PresenceBubbleRoot({
 }: PresenceBubbleProps) {
   const reduceMotion = useReducedMotion() ?? false;
   const waiting = status === "waiting";
-  const breathing = status !== "here" && !reduceMotion;
   const style = { "--bubble": bubbleColor(color) } as CSSProperties;
 
   return (
@@ -70,14 +69,14 @@ function PresenceBubbleRoot({
         role="img"
         aria-label={`${name}, ${STATUS_LABEL[status]}`}
         data-thread-knot=""
-        className={cx("relative grid place-items-center rounded-full shadow-bubble", BUBBLE_SIZE_CLASSES[size])}
+        className={cx(
+          "relative grid place-items-center rounded-full shadow-bubble",
+          status !== "here" && "am-breathe",
+          BUBBLE_SIZE_CLASSES[size],
+        )}
         initial={{ scale: 0.6, opacity: 0 }}
-        animate={breathing ? { scale: [1, 1.06, 1], opacity: 1 } : { scale: 1, opacity: 1 }}
-        transition={
-          breathing
-            ? { scale: { duration: 2.6, ease: "easeInOut", repeat: Infinity }, opacity: spring.bubble }
-            : spring.bubble
-        }
+        animate={{ scale: 1, opacity: 1 }}
+        transition={spring.bubble}
       >
         {/* Glass body: the colour, lit from the top left like a drop. */}
         <span

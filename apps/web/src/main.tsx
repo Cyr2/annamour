@@ -12,6 +12,7 @@ import { startAppUpdates } from "./lib/app-update.ts";
 import { spring } from "./lib/motion.ts";
 import { suppressTouchLinkMenus } from "./lib/native-feel.ts";
 import { rememberPlayerChoice } from "./sync/player-choice.ts";
+import { CalmMotionContext } from "./ui/calm-motion.ts";
 
 startAppUpdates();
 suppressTouchLinkMenus();
@@ -31,11 +32,13 @@ if (tv) document.documentElement.setAttribute("data-tv", "");
 createRoot(root).render(
   <StrictMode>
     <TvContext value={tv}>
-      <LazyMotion features={loadMotionFeatures} strict>
-        <MotionConfig reducedMotion="user" transition={spring.ui}>
-          <App />
-        </MotionConfig>
-      </LazyMotion>
+      <CalmMotionContext value={tv}>
+        <LazyMotion features={loadMotionFeatures} strict>
+          <MotionConfig reducedMotion="user" transition={spring.ui}>
+            <App />
+          </MotionConfig>
+        </LazyMotion>
+      </CalmMotionContext>
     </TvContext>
   </StrictMode>,
 );
