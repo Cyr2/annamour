@@ -25,12 +25,12 @@ export async function onboard(page: Page, name: string, path = "/") {
   if (await later.isVisible()) await later.click({ force: true });
 }
 
-/** From home, creates a séance from the HLS link and opens its salon; returns the salon's path. */
-export async function createSession(page: Page, title: string): Promise<string> {
+/** From home, creates a séance from an HLS link (the public test stream by default) and opens its salon; returns its path. */
+export async function createSession(page: Page, title: string, url = HLS_URL): Promise<string> {
   await page.getByRole("button", { name: "Créer une séance" }).click();
   // The sheet opens on the title search; a link stays one tap away.
   await page.getByRole("button", { name: "Coller un lien" }).click();
-  await page.getByLabel("Lien de la vidéo (.m3u8)").fill(HLS_URL);
+  await page.getByLabel("Lien de la vidéo (.m3u8)").fill(url);
   await page.getByLabel("Nom de la séance").fill(title);
   await page.getByRole("button", { name: "Préparer la séance" }).click();
   await page.getByRole("button", { name: "Ouvrir la séance" }).click();

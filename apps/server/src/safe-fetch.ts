@@ -49,11 +49,18 @@ async function assertPublicHost(url: URL): Promise<void> {
   }
 }
 
+type HostCheck = (url: URL) => Promise<void>;
+
 /** Follows redirects by hand, checking every hop's host, and returns the final successful response. */
-async function safeResponse(input: URL, maxBytes: number, timeoutMs: number): Promise<Response> {
+async function safeResponse(
+  input: URL,
+  maxBytes: number,
+  timeoutMs: number,
+  checkHost: HostCheck = assertPublicHost,
+): Promise<Response> {
   let url = input;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    await assertPublicHost(url);
+    await checkHost(url);
     const response = await fetch(url, {
       redirect: "manual",
       headers: { "user-agent": USER_AGENT, accept: "*/*" },
@@ -72,20 +79,39 @@ async function safeResponse(input: URL, maxBytes: number, timeoutMs: number): Pr
   throw new FetchError("Too many redirects");
 }
 
-export const safeFetchText: TextFetcher = async (url) => {
-  const body = await (await safeResponse(url, MAX_BYTES, TIMEOUT_MS)).text();
-  if (body.length > MAX_BYTES) throw new FetchError("Response too large");
-  return body;
-};
-
 export type BytesFetcher = (url: URL) => Promise<Uint8Array>;
 
 /** A video segment is a few MB; a slow source gets more time than a playlist. */
 const MAX_SEGMENT_BYTES = 64 * 1024 * 1024;
 const SEGMENT_TIMEOUT_MS = 60_000;
 
-export const safeFetchBytes: BytesFetcher = async (url) => {
-  const body = new Uint8Array(await (await safeResponse(url, MAX_SEGMENT_BYTES, SEGMENT_TIMEOUT_MS)).arrayBuffer());
-  if (body.byteLength > MAX_SEGMENT_BYTES) throw new FetchError("Response too large");
-  return body;
+function textFetcher(checkHost: HostCheck): TextFetcher {
+  return async (url) => {
+    const body = await (await safeResponse(url, MAX_BYTES, TIMEOUT_MS, checkHost)).text();
+    if (body.length > MAX_BYTES) throw new FetchError("Response too large");
+    return body;
+  };
+}
+
+function bytesFetcher(checkHost: HostCheck): BytesFetcher {
+  return async (url) => {
+    const response = await safeResponse(url, MAX_SEGMENT_BYTES, SEGMENT_TIMEOUT_MS, checkHost);
+    const body = new Uint8Array(await response.arrayBuffer());
+    if (body.byteLength > MAX_SEGMENT_BYTES) throw new FetchError("Response too large");
+    return body;
+  };
+}
+
+export const safeFetchText = textFetcher(assertPublicHost);
+export const safeFetchBytes = bytesFetcher(assertPublicHost);
+
+/**
+ * For the end-to-end tests only (E2E_ALLOW_LOCAL_MEDIA, refused in production
+ * by config.ts): a fake CDN on localhost, over plain http. Sizes and time
+ * limits still apply.
+ */
+const localTestHost: HostCheck = async (url) => {
+  if (url.protocol !== "https:" && url.protocol !== "http:") throw new FetchError("Only web links are supported");
 };
+export const localTestFetchText = textFetcher(localTestHost);
+export const localTestFetchBytes = bytesFetcher(localTestHost);

@@ -25,6 +25,15 @@ export const HeightTime = z.object({
 });
 export type HeightTime = z.infer<typeof HeightTime>;
 
+/**
+ * Lower bounds, in seconds, of the forward-lead buckets: under 5 s, 5–15,
+ * 15–30, 30–60, 1–3 min, 3 min and more. Enough to tell a player that lives
+ * hand to mouth from one that keeps minutes ahead, in six numbers.
+ */
+export const LEAD_BUCKETS = [0, 5, 15, 30, 60, 180] as const;
+
+const Count = z.number().check(z.int(), z.gte(0), z.lte(100_000));
+
 export const PlaybackReport = z.object({
   viewingId: z.string().check(z.regex(/^[A-Za-z0-9_-]{8,64}$/)),
   name: Name,
@@ -33,12 +42,26 @@ export const PlaybackReport = z.object({
   /** Seconds the film actually played while the séance was playing. */
   watchedSeconds: Seconds,
   /** Times the picture froze waiting for data (seeks excluded). */
-  stallCount: z.number().check(z.int(), z.gte(0), z.lte(100_000)),
+  stallCount: Count,
   stallSeconds: Seconds,
   /** From the séance starting to play to the first picture moving here; null until then. */
   startupMs: z.nullable(z.number().check(z.gte(0), z.lte(600_000))),
   /** Seconds played at each picture height. */
   heights: z.array(HeightTime).check(z.maxLength(MAX_HEIGHT_BUCKETS)),
+  /*
+   * Finer measures, added later: optional so that older pages and the
+   * reports already kept still read.
+   */
+  /** Seconds played with each forward lead (see LEAD_BUCKETS), downloaded past the position. */
+  leadSeconds: z.optional(z.array(Seconds).check(z.length(LEAD_BUCKETS.length))),
+  /** The middle forward lead while playing, seconds. */
+  leadMedian: z.optional(Seconds),
+  /** Times the picture height changed while playing. */
+  qualitySwitches: z.optional(Count),
+  /** Seconds the séance stood paused waiting for someone else to load. */
+  waitSeconds: z.optional(Seconds),
+  /** Of the freezes, those that began within a few seconds of a seek (the rest came on their own). */
+  afterSeekStallCount: z.optional(Count),
 });
 export type PlaybackReport = z.infer<typeof PlaybackReport>;
 
@@ -69,6 +92,29 @@ export function addHeightTime(heights: readonly HeightTime[], height: number, se
   if (!known && heights.length >= MAX_HEIGHT_BUCKETS) return [...heights];
   if (!known) return [...heights, { height, seconds }];
   return heights.map((bucket) => (bucket.height === height ? { height, seconds: bucket.seconds + seconds } : bucket));
+}
+
+/** The bucket a forward lead counts in (index into LEAD_BUCKETS). */
+export function leadBucket(lead: number): number {
+  return Math.max(
+    0,
+    LEAD_BUCKETS.findLastIndex((from) => lead >= from),
+  );
+}
+
+/** Adds played seconds at a forward lead to a histogram over LEAD_BUCKETS. */
+export function addLeadTime(histogram: readonly number[], lead: number, seconds: number): number[] {
+  const bucket = leadBucket(lead);
+  return LEAD_BUCKETS.map((_, index) => (histogram[index] ?? 0) + (index === bucket ? seconds : 0));
+}
+
+/** The middle value; the mean of the two middle ones for an even count; null for none. */
+export function median(values: readonly number[]): number | null {
+  const sorted = [...values].sort((a, b) => a - b);
+  if (sorted.length === 0) return null;
+  const mid = Math.floor(sorted.length / 2);
+  const upper = sorted[mid] ?? 0;
+  return sorted.length % 2 ? upper : ((sorted[mid - 1] ?? upper) + upper) / 2;
 }
 
 const ANDROID_TV = /\b(?:Android ?TV|Google ?TV|GoogleTV|AFT[A-Z]\w*|BRAVIA|Leanback)\b/i;

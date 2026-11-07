@@ -2,7 +2,7 @@ import { deviceKind } from "@annamour/protocol";
 import { useEffect, useRef } from "react";
 import type { PlaybackEngine } from "./PlayerSync.ts";
 import { beaconSender, PlaybackStats } from "./playback-stats.ts";
-import { type RoomState, useRoom } from "./room.ts";
+import { type RoomState, useRoom, waitingForOthers } from "./room.ts";
 import type { SyncClient } from "./SyncClient.ts";
 
 const myName = ({ members, you }: RoomState) => members.find((member) => member.id === you)?.name ?? null;
@@ -21,6 +21,7 @@ export function usePlaybackStats(
     const stats = new PlaybackStats({
       video,
       roomPlaying: () => useRoom.getState().playback?.status === "playing",
+      waitingForOthers: () => waitingForOthers(useRoom.getState()),
       name: () => myName(useRoom.getState()),
       engine: () => engineRef.current,
       device: deviceKind(navigator.userAgent, navigator.maxTouchPoints),
