@@ -12,9 +12,10 @@ export interface WatchlistServiceOptions {
 const NOT_IN_LIST = "Ce titre n'est plus dans ta liste.";
 
 /**
- * « À regarder ensemble ». A title is shared with people its author already
- * watched with; everyone it is shared with sees it and may vote, start it or
- * remove it. Nobody can push a title onto a stranger's list.
+ * « À regarder ensemble ». A title is shared with chosen people its author
+ * watched with, or with « Tout le monde »: everyone in the author's history,
+ * people met after it was added included. Everyone who sees it may vote,
+ * start it or remove it. Nobody can push a title onto a stranger's list.
  */
 export class WatchlistService {
   private readonly repositories: WatchlistServiceOptions["repositories"];
@@ -38,8 +39,10 @@ export class WatchlistService {
    */
   add(accountId: string, request: AddToWatchlistRequest): string {
     const { watchlist, participations } = this.repositories;
+    // « Tout le monde » is not a list of names taken now: it follows the author's history (see the repository).
+    const everyone = request.shareWith === "everyone";
+    const chosen: readonly string[] = request.shareWith === "everyone" ? [] : request.shareWith;
     const companions = participations.companionIds(accountId);
-    const chosen = request.shareWith === "everyone" ? companions : request.shareWith;
     if (chosen.some((id) => !companions.includes(id)))
       throw new BadRequestError("On ne partage qu'avec des gens avec qui tu as déjà regardé une séance.");
     const memberIds = [accountId, ...new Set(chosen)];
@@ -47,6 +50,7 @@ export class WatchlistService {
     const existing = watchlist.findToWatch(accountId, key);
     if (existing) {
       for (const id of memberIds) watchlist.addMember(existing, id, false);
+      if (everyone) watchlist.shareWithEveryone(existing);
       if (request.want) watchlist.setWant(existing, accountId, true);
       return existing;
     }
@@ -58,6 +62,7 @@ export class WatchlistService {
       addedBy: accountId,
       addedAt: this.now(),
       memberIds,
+      everyone,
       wantedBy: request.want ? [accountId] : [],
     });
     return id;
@@ -80,6 +85,6 @@ export class WatchlistService {
   }
 
   private requireMember(accountId: string, itemId: string): void {
-    if (!this.repositories.watchlist.isMember(itemId, accountId)) throw new NotFoundError(NOT_IN_LIST);
+    if (!this.repositories.watchlist.canSee(itemId, accountId)) throw new NotFoundError(NOT_IN_LIST);
   }
 }

@@ -1,3 +1,4 @@
+import { DatabaseSync } from "node:sqlite";
 import {
   API,
   type CatalogTitle,
@@ -7,6 +8,7 @@ import {
   type WatchlistResponse,
 } from "@annamour/protocol";
 import { describe, expect, it } from "vitest";
+import { migrate } from "../src/storage/database.ts";
 import { jsonRequest, media, sessionCookieOf, testApp } from "./helpers.ts";
 
 const film: CatalogTitle = { id: 157336, type: "movie", title: "Interstellar", year: 2014, runtime: 169 };
@@ -72,6 +74,46 @@ describe("the shared watchlist", () => {
     await add(darius.cookie, { title: series, shareWith: "everyone", want: false });
     expect(await list(ines.cookie)).toHaveLength(1);
     expect((await list(lea.cookie))[0]?.wantedBy).toEqual([]);
+  });
+
+  it("shows a « Tout le monde » title to people I watch with after adding it", async () => {
+    const { account, watchTogether, add, list, put } = setup();
+    const darius = await account("Darius");
+    const annou = await account("Annou", "rose");
+    await add(darius.cookie, { title: series, shareWith: "everyone", want: true });
+    expect(await list(annou.cookie)).toEqual([]);
+
+    watchTogether(darius.id, annou.id);
+    const seen = await list(annou.cookie);
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.sharedWith.map((p) => p.name)).toEqual(["Darius", "Annou"]);
+
+    // Seeing it through « Tout le monde » is enough to say « J'ai envie ».
+    expect((await put(annou.cookie, WATCHLIST_API.want, seen[0]?.id ?? "", { want: true })).status).toBe(204);
+    expect((await list(darius.cookie))[0]?.wantedBy.sort()).toEqual([annou.id, darius.id].sort());
+  });
+
+  it("turns a title shared with its author alone into « Tout le monde » (saved before it existed)", () => {
+    const db = new DatabaseSync(":memory:");
+    db.exec("PRAGMA foreign_keys = ON");
+    migrate(db);
+    // The database as it was before « Tout le monde » followed the history.
+    db.exec("ALTER TABLE watchlist_items DROP COLUMN everyone; PRAGMA user_version = 5;");
+    db.exec(
+      "INSERT INTO accounts (id, key_hash, name, color, created_at) VALUES ('d', 'h1', 'Darius', 'peach', 0), ('l', 'h2', 'Léa', 'lilac', 0)",
+    );
+    db.exec(`INSERT INTO watchlist_items (id, catalog_key, title, added_by, added_at) VALUES
+      ('alone', 'tv:1', '{"id":1,"type":"tv","title":"Campus Drivers"}', 'd', 0),
+      ('shared', 'movie:2', '{"id":2,"type":"movie","title":"Interstellar"}', 'd', 0)`);
+    db.exec(
+      "INSERT INTO watchlist_members (item_id, account_id) VALUES ('alone', 'd'), ('shared', 'd'), ('shared', 'l')",
+    );
+
+    migrate(db);
+
+    const everyone = (id: string) => db.prepare("SELECT everyone FROM watchlist_items WHERE id = ?").get(id);
+    expect(everyone("alone")).toEqual({ everyone: 1 });
+    expect(everyone("shared")).toEqual({ everyone: 0 });
   });
 
   it("never puts a title on a stranger's list", async () => {
