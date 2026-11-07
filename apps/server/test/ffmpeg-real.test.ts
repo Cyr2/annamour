@@ -104,6 +104,10 @@ describe.skipIf(!installed)("making a real MPEG-TS audio segment lighter (what N
     const sourceStart = firstVideoTimeOf(join(dir, "seg1.ts"));
     expect(firstVideoTimeOf(lighterFile)).toBeCloseTo(sourceStart, 3);
     expect(tsFrames(lighterFile)).toBe(tsFrames(join(dir, "seg1.ts")));
+    // Lighter for real: ~64 kb/s of AAC, with the MPEG-TS wrapping kept small (frames grouped per PES).
+    // One frame per PES once doubled it to ~150 kb/s, heavier than the source it replaced.
+    const seconds = (tsFrames(lighterFile) * 1024) / 48_000;
+    expect((lighter.byteLength * 8) / seconds / 1000).toBeLessThan(95);
 
     const played = join(dir, "played.ts");
     writeFileSync(played, joinBytes([segment(0), lighter, segment(2)]));
