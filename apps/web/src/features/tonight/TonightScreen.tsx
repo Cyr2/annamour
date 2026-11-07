@@ -21,9 +21,11 @@ import { WatchlistItemSheet } from "../watchlist/WatchlistItemSheet.tsx";
 import { WatchlistShelf } from "../watchlist/WatchlistShelf.tsx";
 import { useWatchlist } from "../watchlist/watchlist.ts";
 import { TonightCard } from "./TonightCard.tsx";
+import { TonightHero } from "./TonightHero.tsx";
 
 /**
- * « Ce soir », the home screen: with whom (« Avec qui ce soir ? »), the one
+ * « Ce soir », the home screen: the red thread and « Une soirée ensemble »,
+ * with whom (« Avec qui ce soir ? »), the one
  * thing to watch (« On regarde ? »), what is under way, and our list.
  */
 export function TonightScreen() {
@@ -53,7 +55,7 @@ export function TonightScreen() {
     <div className="safe-area mx-auto flex min-h-dvh w-full max-w-[1240px] flex-col">
       <BrandBar />
       <main className="mx-auto grid w-full max-w-[760px] content-start gap-6 py-6">
-        <h1 className="sr-only">Ce soir{withWhom}</h1>
+        <TonightHero circle={circle} />
         <CircleSwitcher />
         <TonightCard pick={pick} me={me} onOpenItem={setOpenItem} onAdd={() => setAdding(true)} />
         {ongoing.length > 0 && meBubble ? (

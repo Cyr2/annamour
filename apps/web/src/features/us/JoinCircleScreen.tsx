@@ -52,9 +52,7 @@ export function JoinCircleScreen({ token }: { token: string }) {
                 className="scale-150"
               />
               <h1 className="type-title">Rejoindre « {circleTitle(preview, me)} » ?</h1>
-              <p className="type-lede">
-                Tu verras ses séances et sa liste, et chacun pourra te proposer quoi regarder.
-              </p>
+              <p className="type-lede">Tu verras sa liste, et vos prochaines séances s'y rangeront toutes seules.</p>
               {already ? (
                 <LinkButton href="/" variant="filled" size="large" icon={<House />}>
                   Tu en fais déjà partie

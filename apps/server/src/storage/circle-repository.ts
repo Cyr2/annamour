@@ -41,6 +41,26 @@ export class CircleRepository {
       .run(circleId, circleId);
   }
 
+  /**
+   * Whether a circle is still forming around this one séance: nobody named it,
+   * and no other séance, title or invitation hangs on it yet.
+   */
+  isForming(circleId: string, code: string): boolean {
+    const row = this.db
+      .prepare(
+        `SELECT 1 FROM circles c WHERE c.id = ? AND c.name IS NULL
+           AND NOT EXISTS (SELECT 1 FROM rooms r WHERE r.circle_id = c.id AND r.code <> ?)
+           AND NOT EXISTS (SELECT 1 FROM watchlist_items w WHERE w.circle_id = c.id)
+           AND NOT EXISTS (SELECT 1 FROM circle_invites i WHERE i.circle_id = c.id)`,
+      )
+      .get(circleId, code);
+    return row !== undefined;
+  }
+
+  remove(circleId: string): void {
+    this.db.prepare("DELETE FROM circles WHERE id = ?").run(circleId);
+  }
+
   rename(circleId: string, name: string): boolean {
     return changedRows(this.db.prepare("UPDATE circles SET name = ? WHERE id = ?").run(name, circleId)) > 0;
   }
