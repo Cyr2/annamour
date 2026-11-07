@@ -3,7 +3,16 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { joinBytes } from "./adts.ts";
 import { id3Timestamp } from "./audio-timeline.ts";
-import { type AudioSegments, EncodeError, ffmpeg, KEY_FRAMES, lighterAudioFrames, QUIET } from "./ffmpeg.ts";
+import {
+  type AudioSegmentEncoder,
+  type AudioSegments,
+  EncodeError,
+  ffmpeg,
+  KEY_FRAMES,
+  lighterAudioFrames,
+  QUIET,
+  sourceFrames,
+} from "./ffmpeg.ts";
 import type { HevcRung } from "./hevc.ts";
 
 /** Makes the HEVC rungs of one source segment, each as one fragmented MP4 (init + fragments). */
@@ -28,7 +37,7 @@ function x265Params(rung: HevcRung): string {
   return [
     `vbv-maxrate=${rung.maxrateKbps}`,
     `vbv-bufsize=${rung.bufsizeKbps}`,
-    "level-idc=30",
+    `level-idc=${rung.level}`,
     "keyint=600:min-keyint=1:scenecut=0:open-gop=0",
     "repeat-headers=0:info=0",
     "pools=4:frame-threads=2:rc-lookahead=10",
@@ -48,14 +57,32 @@ export function hevcArguments(input: string, outputs: ReadonlyArray<{ rung: Hevc
   return [...QUIET, "-copyts", "-i", input, "-filter_complex", [split, ...scales].join(";"), ...perOutput];
 }
 
-export const ffmpegHevcEncoder: HevcEncoder = (input, outputs) => ffmpeg(hevcArguments(input, outputs));
+/** x265 runs in the background: the OS gives the H.264 encodes the CPU first. */
+export const ffmpegHevcEncoder: HevcEncoder = (input, outputs) =>
+  ffmpeg(hevcArguments(input, outputs), { background: true });
+
+type SourceAudio = Awaited<ReturnType<typeof sourceFrames>>;
 
 /** The lighter audio (see ffmpeg.ts) in fragmented MP4, its `tfdt` at the source segment's start. */
 export async function fmp4AudioEncoder(segments: AudioSegments, workDir: string): Promise<Uint8Array> {
   const { frames, source } = await lighterAudioFrames(segments, workDir);
+  return fmp4Audio(frames, source, workDir);
+}
+
+/**
+ * The source's own audio, frames untouched, repackaged in fragmented MP4 on
+ * its clock: the sound of the complete HEVC ladder's higher rungs, as good as
+ * the H.264 source's, for no encoding at all.
+ */
+export const fmp4SourceAudio: AudioSegmentEncoder = async ({ current }, workDir) => {
+  const source = await sourceFrames(current, workDir, "current");
+  return fmp4Audio(source.segment.frames, source, workDir);
+};
+
+async function fmp4Audio(frames: Uint8Array[], source: SourceAudio, workDir: string): Promise<Uint8Array> {
   const start = source.container === "mpegts" ? source.start : id3Timestamp(source.segment.id3);
   if (start === undefined) throw new EncodeError("Audio segment has no timestamp to keep");
-  const [adts, mp4] = [join(workDir, "light.aac"), join(workDir, "light.mp4")];
+  const [adts, mp4] = [join(workDir, "fmp4.aac"), join(workDir, "fmp4.mp4")];
   await writeFile(adts, joinBytes(frames));
   await ffmpeg([
     // MP4 stores AAC without ADTS headers: the bitstream filter strips them (frames unchanged).

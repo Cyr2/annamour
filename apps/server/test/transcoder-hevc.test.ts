@@ -2,7 +2,8 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { HEVC_RUNGS } from "../src/media/hevc.ts";
+import type { AudioSegments } from "../src/media/ffmpeg.ts";
+import { HEVC_HIGH_RUNGS, HEVC_RUNGS } from "../src/media/hevc.ts";
 import type { HevcChecker, HevcEncoder } from "../src/media/hevc-ffmpeg.ts";
 import { RUNGS } from "../src/media/ladder.ts";
 import { type AudioTrack, type HevcTrack, Transcoder, type TranscoderOptions } from "../src/media/transcoder.ts";
@@ -13,6 +14,7 @@ const segments = (count: number, kind: string) =>
 
 const hevcTrack = (count = 20): HevcTrack => ({
   kind: "hevc",
+  part: "low",
   code: "ABCD",
   episode: 0,
   segments: segments(count, "video"),
@@ -124,6 +126,83 @@ describe("making the HEVC rungs (Apple only)", () => {
     await vi.waitFor(() => expect(fetched).toHaveLength(6));
     // The first HEVC job had already started; then the three H.264 segments, then HEVC again.
     expect(fetched.slice(1, 4)).toEqual(["video-10", "video-11", "video-12"].map((s) => `https://cdn.test/${s}.ts`));
+  });
+
+  it("runs one x265 at a time, so the H.264 rungs always keep a worker of their own", async () => {
+    const running = { hevc: 0, most: 0 };
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const t = transcoder(
+      {
+        encode: async (input, outputs) => {
+          running.hevc++;
+          running.most = Math.max(running.most, running.hevc);
+          await gate;
+          running.hevc--;
+          await encodeHevc()(input, outputs);
+        },
+      },
+      { workers: 3, ahead: 4 },
+    );
+    const high: HevcTrack = { ...hevcTrack(), part: "high", rungs: HEVC_HIGH_RUNGS };
+    t.prepareFrom(hevcTrack(), 0);
+    t.prepareFrom(high, 0);
+    await vi.waitFor(() => expect(running.hevc).toBe(1));
+    // HEVC holds one worker; a player waiting for H.264 is served at once by another.
+    const h264 = { kind: "video", code: "ABCD", episode: 0, segments: segments(20, "video"), rungs: RUNGS } as const;
+    expect(await t.segment(h264, "q360", 5)).toBe(join(dir, "ABCD", "0", "q360", "00005.ts"));
+    expect(running.most).toBe(1);
+    release();
+    await vi.waitFor(() => expect(existsSync(join(dir, "ABCD", "0", "h720", "00003.m4s"))).toBe(true));
+    expect(running.most).toBe(1);
+  });
+
+  it("serves a player waiting for H.264 before one waiting for HEVC", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const t = transcoder(
+      {},
+      {
+        ahead: 0,
+        encode: async (_input, outputs) => {
+          await gate;
+          for (const output of outputs) writeFileSync(output.path, "h264");
+        },
+      },
+    );
+    const h264 = { kind: "video", code: "ABCD", episode: 0, segments: segments(20, "video"), rungs: RUNGS } as const;
+    // A first job holds the only worker, so both requests queue up behind it.
+    void t.segment(h264, "q360", 0);
+    await vi.waitFor(() => expect(fetched).toHaveLength(1));
+    const hevc = t.segment(hevcTrack(), "h360", 7);
+    const video = t.segment(h264, "q360", 9);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    release();
+    await Promise.all([hevc, video]);
+    expect(fetched.indexOf("https://cdn.test/video-9.ts")).toBeLessThan(
+      fetched.lastIndexOf("https://cdn.test/video-7.ts"),
+    );
+  });
+
+  it("repackages the source's sound for the higher rungs, from that one source segment", async () => {
+    const sourceAudio = vi.fn(async ({ current, previous, next }: AudioSegments) => {
+      expect([previous, next]).toEqual([undefined, undefined]);
+      return hevcMp4(current.length);
+    });
+    const t = transcoder({ sourceAudio }, { ahead: 0 });
+    expect(t.makesFullHevc).toBe(true);
+    const track: AudioTrack = {
+      ...{ kind: "audio", code: "ABCD", episode: 0, name: "hs-a0", container: "fmp4", sound: "source" },
+      ...{ sourceOf: "lo-a0", segments: segments(3, "audio") },
+    };
+    expect(await t.segment(track, "hs-a0", 1)).toBe(join(dir, "ABCD", "0", "hs-a0", "00001.m4s"));
+    expect(sourceAudio).toHaveBeenCalledOnce();
+    expect(fetched).toEqual(["https://cdn.test/audio-1.ts"]);
+    expect(transcoder().makesFullHevc).toBe(false);
   });
 
   it("says how long HEVC segments take in the speed line", async () => {

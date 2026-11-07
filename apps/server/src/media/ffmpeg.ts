@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
+import { setPriority } from "node:os";
 import { join } from "node:path";
 import { audioContainer, cut, joinBytes, overlapped, splitAdts } from "./adts.ts";
 import type { Rung } from "./ladder.ts";
@@ -78,9 +79,14 @@ export function encodeArguments(input: string, outputs: ReadonlyArray<{ rung: Ru
   ];
 }
 
-export function ffmpeg(args: readonly string[]): Promise<void> {
+/** How much the OS lets a background encode (HEVC) yield the CPU to the others (nice 10). */
+const BACKGROUND_NICENESS = 10;
+
+/** Runs ffmpeg; `background` encodes yield the CPU to the others (H.264 rungs are never slowed by HEVC). */
+export function ffmpeg(args: readonly string[], { background = false } = {}): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn("ffmpeg", args, { stdio: ["ignore", "ignore", "pipe"] });
+    if (background && child.pid !== undefined) lowerPriority(child.pid);
     let errors = "";
     child.stderr.on("data", (chunk: Buffer) => {
       errors = (errors + chunk.toString()).slice(-2000);
@@ -88,6 +94,14 @@ export function ffmpeg(args: readonly string[]): Promise<void> {
     child.on("error", (cause) => reject(new EncodeError(`ffmpeg could not start: ${cause.message}`)));
     child.on("close", (code) => (code === 0 ? resolve() : reject(new EncodeError(`ffmpeg exited ${code}: ${errors}`))));
   });
+}
+
+function lowerPriority(pid: number): void {
+  try {
+    setPriority(pid, BACKGROUND_NICENESS);
+  } catch {
+    // Not allowed here (some containers): it then simply runs at the same priority.
+  }
 }
 
 export const ffmpegEncoder: SegmentEncoder = (input, outputs) => ffmpeg(encodeArguments(input, outputs));
@@ -112,7 +126,7 @@ export const QUIET = ["-hide_banner", "-loglevel", "error", "-y"];
  * MPEG-TS audio segment (what Naka's `.aac` files turned out to be) has its
  * AAC frames copied out, untouched, along with where it starts on the clock.
  */
-async function sourceFrames(bytes: Uint8Array, workDir: string, name: string) {
+export async function sourceFrames(bytes: Uint8Array, workDir: string, name: string) {
   const container = audioContainer(bytes);
   if (container === "adts") return { container, segment: splitAdts(bytes), start: undefined };
   if (container === "other") throw new EncodeError("Audio segment is neither ADTS nor MPEG-TS");

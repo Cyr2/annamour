@@ -87,6 +87,26 @@ export const PrepStatus = z.object({
 export type PrepStatus = z.infer<typeof PrepStatus>;
 
 /**
+ * Our hls.js player on an iPad that decodes HEVC asks for the complete HEVC
+ * ladder by adding `?hevc=1` to the master playlist's address (and to /prep,
+ * so the server checks it ahead). hls.js never leaves the codec family it
+ * starts on, so whoever does not ask (Chrome, the Android TV app, Safari's
+ * own player) never gets that ladder.
+ */
+export const HEVC_LADDER_PARAM = "hevc";
+const HevcLadderFlag = z.literal("1");
+
+/** The value of `?hevc=` asks for the complete HEVC ladder: only "1" does. */
+export function asksHevcLadder(value: string | null | undefined): boolean {
+  return HevcLadderFlag.safeParse(value).success;
+}
+
+/** `url` asking for the complete HEVC ladder. */
+export function withHevcLadder(url: string): string {
+  return `${url}${url.includes("?") ? "&" : "?"}${HEVC_LADDER_PARAM}=1`;
+}
+
+/**
  * Passkey ceremonies exchange WebAuthn JSON (as produced by SimpleWebAuthn);
  * the library validates those payloads, so they stay opaque here.
  */

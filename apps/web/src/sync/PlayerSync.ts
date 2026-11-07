@@ -10,6 +10,7 @@ import {
   readyToResume,
   STALL_GRACE_MS,
   shouldReportLead,
+  withHevcLadder,
 } from "@annamour/protocol";
 import type Hls from "hls.js";
 import { hlsConfig } from "./hls-config.ts";
@@ -51,6 +52,11 @@ export interface PlayerSyncOptions {
    * a lead of minutes rather than seconds, for a weak link.
    */
   ownPlayer?: () => boolean;
+  /**
+   * Our player on this device asks for the complete HEVC ladder (see
+   * hevc-ladder.ts): lighter video for the same picture, same lead.
+   */
+  hevcLadder?: () => boolean;
 }
 
 export const initialPlayerSyncState: PlayerSyncState = {
@@ -102,6 +108,7 @@ export class PlayerSync {
   private readonly emit: (state: PlayerSyncState) => void;
   private readonly fromDevice: (src: string) => boolean;
   private readonly ownPlayer: () => boolean;
+  private readonly hevcLadder: () => boolean;
   private state: PlayerSyncState = { ...initialPlayerSyncState };
 
   private playback: PlaybackState | null = null;
@@ -114,6 +121,8 @@ export class PlayerSync {
   private hls: Hls | null = null;
   /** Safari's own player refused this source: hls.js (Media Source, on recent iPads too) gets a go. */
   private nativeFailed = false;
+  /** This source's HEVC ladder failed in Media Source: H.264 from then on. */
+  private hevcFailed = false;
   private fatalRecoveries = 0;
   /** Element events only count as a person's actions once the source has settled (first canplay). */
   private armed = false;
@@ -145,13 +154,14 @@ export class PlayerSync {
     video: HTMLVideoElement,
     client: SyncClient,
     emit: (state: PlayerSyncState) => void,
-    { fromDevice = () => false, ownPlayer = () => false }: PlayerSyncOptions = {},
+    { fromDevice = () => false, ownPlayer = () => false, hevcLadder = () => false }: PlayerSyncOptions = {},
   ) {
     this.video = video;
     this.client = client;
     this.emit = emit;
     this.fromDevice = fromDevice;
     this.ownPlayer = ownPlayer;
+    this.hevcLadder = hevcLadder;
 
     video.playsInline = true;
     video.preload = "auto";
@@ -221,6 +231,7 @@ export class PlayerSync {
     this.src = src;
     this.lastLead = null; // another film: what we had downloaded ahead no longer counts
     this.nativeFailed = false;
+    this.hevcFailed = false;
     const token = ++this.sourceToken;
     this.teardownSource();
     if (!src) return;
@@ -302,8 +313,14 @@ export class PlayerSync {
     const hls = new HlsClass(hlsConfig(playback ? this.target(playback) : -1));
     this.hls = hls;
     this.fatalRecoveries = 0;
+    const hevc = this.asksHevcLadder(src);
     hls.on(HlsClass.Events.ERROR, (_event, data) => {
       if (!data.fatal || hls !== this.hls) return;
+      // HEVC this Media Source claimed but cannot play: the same film in H.264 rather than an error.
+      if (hevc && data.type === HlsClass.ErrorTypes.MEDIA_ERROR) {
+        this.dropHevcLadder(src);
+        return;
+      }
       if (this.fatalRecoveries++ >= MAX_FATAL_RECOVERIES) {
         this.update({ error: "La vidéo ne se charge plus. Vérifiez la connexion." });
         hls.destroy();
@@ -319,10 +336,22 @@ export class PlayerSync {
     hls.on(HlsClass.Events.FRAG_BUFFERED, () => {
       this.fatalRecoveries = 0;
     });
-    hls.loadSource(src);
+    hls.loadSource(hevc ? withHevcLadder(src) : src);
     hls.attachMedia(video);
     this.sourceReady = true;
     this.update({ engine: "hls.js", error: null });
+  }
+
+  /** Streamed through our player (not from the device), on a device that decodes HEVC, which has not failed it. */
+  private asksHevcLadder(src: string): boolean {
+    return this.ownPlayer() && !this.fromDevice(src) && !this.hevcFailed && this.hevcLadder();
+  }
+
+  private dropHevcLadder(src: string): void {
+    this.hevcFailed = true;
+    const token = ++this.sourceToken;
+    this.teardownSource();
+    void this.attach(src, token);
   }
 
   private attachNative(src: string): void {

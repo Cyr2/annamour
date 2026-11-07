@@ -4,18 +4,30 @@ import { PlayerSync, type PlayerSyncState } from "./PlayerSync.ts";
 import { FakeClient, FakeVideo } from "./test-doubles.ts";
 
 /** A stand-in for hls.js: records what the player asks of it. */
-const hlsCalls = vi.hoisted(() => ({ loaded: [] as string[], supported: true }));
+const hlsCalls = vi.hoisted(() => ({
+  loaded: [] as string[],
+  supported: true,
+  recovered: 0,
+  /** The latest hls.js instance's handlers, by event. */
+  handlers: new Map<string, (event: string, data: unknown) => void>(),
+}));
 vi.mock("hls.js", () => {
   class FakeHls {
     static isSupported = () => hlsCalls.supported;
     static Events = { ERROR: "error", AUDIO_TRACKS_UPDATED: "audio", FRAG_BUFFERED: "frag" };
     static ErrorTypes = { NETWORK_ERROR: "network", MEDIA_ERROR: "media" };
     audioTracks = [];
-    on() {}
+    on(event: string, handler: (event: string, data: unknown) => void) {
+      hlsCalls.handlers.set(event, handler);
+    }
     loadSource(src: string) {
       hlsCalls.loaded.push(src);
     }
     attachMedia() {}
+    recoverMediaError() {
+      hlsCalls.recovered++;
+    }
+    startLoad() {}
     destroy() {}
   }
   return { default: FakeHls };
@@ -47,6 +59,8 @@ async function startOwnPlayer(): Promise<PlayerSync> {
 
 beforeEach(() => {
   hlsCalls.loaded.length = 0;
+  hlsCalls.recovered = 0;
+  hlsCalls.handlers.clear();
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "performance", "Date"] });
   // Safari plays HLS natively: no hls.js to load in tests.
   Object.defineProperty(navigator, "vendor", { value: "Apple Computer, Inc.", configurable: true });
@@ -87,6 +101,40 @@ describe("PlayerSync", () => {
     sync.setSource("/api/rooms/YWEK/hls/master.m3u8");
     await vi.waitFor(() => expect(lastState()?.engine).toBe("native"));
     hlsCalls.supported = true;
+  });
+
+  describe("the complete HEVC ladder", () => {
+    const SRC = "/api/rooms/YWEK/hls/master.m3u8";
+    const withOptions = (options: ConstructorParameters<typeof PlayerSync>[3]) => {
+      sync = new PlayerSync(video.asElement(), client.asClient(), (s) => states.push(s), options);
+      sync.setSource(SRC);
+    };
+    const mediaError = () => hlsCalls.handlers.get("error")?.("error", { fatal: true, type: "media" });
+
+    it("is asked for by our player on a device that decodes HEVC", async () => {
+      withOptions({ ownPlayer: () => true, hevcLadder: () => true });
+      await vi.waitFor(() => expect(hlsCalls.loaded).toEqual([`${SRC}?hevc=1`]));
+    });
+
+    it("is never asked for by Safari's own player, nor for a film read from the device", async () => {
+      withOptions({ hevcLadder: () => true });
+      expect(lastState()?.engine).toBe("native");
+      sync.destroy();
+      withOptions({ ownPlayer: () => true, fromDevice: () => true, hevcLadder: () => true });
+      await vi.waitFor(() => expect(hlsCalls.loaded).toEqual([SRC]));
+    });
+
+    it("gives way to the same film in H.264 when HEVC fails in Media Source, without a word to the person", async () => {
+      withOptions({ ownPlayer: () => true, hevcLadder: () => true });
+      await vi.waitFor(() => expect(hlsCalls.loaded).toHaveLength(1));
+      mediaError();
+      await vi.waitFor(() => expect(hlsCalls.loaded).toEqual([`${SRC}?hevc=1`, SRC]));
+      expect(lastState()).toMatchObject({ engine: "hls.js", error: null });
+      // From then on, a media error is an ordinary one: recovered, H.264 kept.
+      mediaError();
+      expect(hlsCalls.recovered).toBe(1);
+      expect(hlsCalls.loaded).toHaveLength(2);
+    });
   });
 
   it("switches to the device's copy as soon as the download completes", async () => {

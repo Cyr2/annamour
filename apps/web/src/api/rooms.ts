@@ -6,6 +6,7 @@ import {
   PrepStatus,
   RoomSnapshot,
   SeanceReport,
+  withHevcLadder,
 } from "@annamour/protocol";
 import { ApiRequestError, request } from "./http.ts";
 
@@ -40,9 +41,13 @@ export async function addEpisode(code: string, url: string, label: string): Prom
   return episode;
 }
 
-/** How ready the séance's lighter qualities are; asking also gets the server making them. */
-export async function fetchPrep(code: string): Promise<PrepStatus> {
-  return request(PrepStatus, `/api/rooms/${encodeURIComponent(code)}/prep`, { messages: { 404: ROOM_GONE } });
+/**
+ * How ready the séance's lighter qualities are; asking also gets the server
+ * making them, and with `hevcLadder` checking the complete HEVC ladder.
+ */
+export async function fetchPrep(code: string, { hevcLadder = false } = {}): Promise<PrepStatus> {
+  const path = `/api/rooms/${encodeURIComponent(code)}/prep`;
+  return request(PrepStatus, hevcLadder ? withHevcLadder(path) : path, { messages: { 404: ROOM_GONE } });
 }
 
 /** How the film played on each device of the séance, against the targets. */

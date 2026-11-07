@@ -30,7 +30,7 @@ const CHROME = "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Ge
 /** Safari's own player, as it fetches playlists and segments. */
 const PLAYER = "AppleCoreMedia/1.0.0.22A3354 (iPad; U; CPU OS 18_0 like Mac OS X; fr_fr)";
 
-function setup({ hevc = true, check }: { hevc?: boolean; check?: HevcChecker } = {}) {
+function setup({ hevc = true, full = false, check }: { hevc?: boolean; full?: boolean; check?: HevcChecker } = {}) {
   const log = vi.fn();
   const transcoder = new Transcoder({
     dir: mkdtempSync(join(tmpdir(), "annamour-hevc-http-")),
@@ -47,6 +47,7 @@ function setup({ hevc = true, check }: { hevc?: boolean; check?: HevcChecker } =
             },
             check: check ?? (async () => ({ frameRate: 23.976 })),
             encodeAudio: async () => hevcMp4(0),
+            ...(full ? { sourceAudio: async () => hevcMp4(0) } : {}),
           },
         }
       : {}),
@@ -127,11 +128,93 @@ describe("the HEVC rungs", () => {
     expect((await get(`/api/rooms/${code}/e/0/hls/h360.m3u8`, PLAYER)).status).toBe(404);
   });
 
+  it("do not exist when HEVC is switched off, whoever asks", async () => {
+    const { create, get } = setup({ hevc: false });
+    const code = await create();
+    await get(`/api/rooms/${code}/prep?hevc=1`, IPAD);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(await (await get(`/api/rooms/${code}/e/0/hls/master.m3u8?hevc=1`, IPAD)).text()).not.toContain("hvc1");
+  });
+
   it("do not exist when HEVC is switched off", async () => {
     const { create, get } = setup({ hevc: false });
     const code = await create();
     await get(`/api/rooms/${code}/prep`, IPAD);
     await new Promise((resolve) => setTimeout(resolve, 100));
     expect(await (await get(`/api/rooms/${code}/e/0/hls/master.m3u8`, PLAYER)).text()).not.toContain("hvc1");
+  });
+});
+
+describe("the complete HEVC ladder (our iPad player, HEVC_FULL=on)", () => {
+  const LADDER = "?hevc=1";
+  type Get = (path: string, userAgent: string) => Response | Promise<Response>;
+  const ladderMaster = async (get: Get, code: string, userAgent = IPAD) =>
+    (await get(`/api/rooms/${code}/e/0/hls/master.m3u8${LADDER}`, userAgent)).text();
+
+  async function offered(options: Parameters<typeof setup>[0] = { full: true }) {
+    const context = setup(options);
+    const code = await context.create();
+    await context.get(`/api/rooms/${code}/prep${LADDER}`, IPAD);
+    return { ...context, code };
+  }
+
+  it("is given alone to our player on an iPad that asks, once both its parts passed their checks", async () => {
+    const { get, log, code } = await offered();
+    await expect.poll(() => ladderMaster(get, code), { timeout: 3000 }).toContain("h720.m3u8");
+    const text = await ladderMaster(get, code);
+    for (const name of ["h480", "h540", "h720", "h360", "h288", "h234"]) expect(text).toContain(`\n${name}.m3u8`);
+    expect(text).not.toMatch(/avc1|q\d+\.m3u8|v\/index\.m3u8|a\/fr\.m3u8/);
+    expect(text).toContain('GROUP-ID="a-hevc-src",NAME="Français",DEFAULT=YES,LANGUAGE="fr",URI="hs-a0.m3u8"');
+    expect(text).toMatch(/RESOLUTION=1280x720,CODECS="hvc1\.1\.6\.L90\.B0,mp4a\.40\.2",[^\n]*AUDIO="a-hevc-src"/);
+    expect(log.mock.calls.flat().join("\n")).toContain("HEVC offered to our iPad player (complete ladder)");
+  });
+
+  it("is never given to Chrome or the Android TV app, even asking, nor to a page that did not ask", async () => {
+    const { get, code } = await offered();
+    await expect.poll(() => ladderMaster(get, code), { timeout: 3000 }).toContain("h720.m3u8");
+    expect(await ladderMaster(get, code, CHROME)).not.toContain("hvc1");
+    expect(await (await get(`/api/rooms/${code}/e/0/hls/master.m3u8`, IPAD)).text()).not.toContain("hvc1");
+    // Safari's own player keeps its H.264 ladder with the lowest HEVC rungs beside it.
+    const player = await (await get(`/api/rooms/${code}/e/0/hls/master.m3u8`, PLAYER)).text();
+    expect(player).toContain("h360.m3u8");
+    expect(player).toContain("avc1");
+    expect(player).not.toContain("h720.m3u8");
+  });
+
+  it("serves the higher rungs and the source's sound in fMP4", async () => {
+    const { get, code } = await offered();
+    await expect.poll(() => ladderMaster(get, code), { timeout: 3000 }).toContain("h720.m3u8");
+    const playlist = await (await get(`/api/rooms/${code}/e/0/hls/h720.m3u8`, IPAD)).text();
+    expect(playlist).toContain('#EXT-X-MAP:URI="h720/init.mp4"');
+    expect((await get(`/api/rooms/${code}/e/0/hls/h720/init.mp4`, IPAD)).status).toBe(200);
+    const segment = await get(`/api/rooms/${code}/e/0/hls/h720/00001.m4s`, IPAD);
+    expect(segment.headers.get("content-type")).toBe("video/mp4");
+    expect((await get(`/api/rooms/${code}/e/0/hls/hs-a0.m3u8`, IPAD)).status).toBe(200);
+    expect((await get(`/api/rooms/${code}/e/0/hls/hs-a0/00000.m4s`, IPAD)).status).toBe(200);
+  });
+
+  it("keeps the H.264 ladder while its higher rungs fail their checks, and the log says so", async () => {
+    const { get, log, code } = await offered({
+      full: true,
+      check: async (_source, output) => {
+        if (output.includes("h720")) throw new Error("HEVC segment does not start on a key frame");
+        return { frameRate: 23.976 };
+      },
+    });
+    await expect
+      .poll(() => log.mock.calls.flat().join("\n"), { timeout: 3000 })
+      .toContain("HEVC not offered to our iPad player (complete ladder)");
+    const text = await ladderMaster(get, code);
+    expect(text).not.toContain("hvc1");
+    expect(text).toContain("avc1");
+    expect((await get(`/api/rooms/${code}/e/0/hls/h720.m3u8`, IPAD)).status).toBe(404);
+  });
+
+  it("does not exist without HEVC_FULL: the flag then changes nothing", async () => {
+    const { get, code } = await offered({});
+    await expect
+      .poll(async () => (await get(`/api/rooms/${code}/e/0/hls/master.m3u8`, PLAYER)).text(), { timeout: 3000 })
+      .toContain("h360.m3u8");
+    expect(await ladderMaster(get, code)).not.toContain("hvc1");
   });
 });

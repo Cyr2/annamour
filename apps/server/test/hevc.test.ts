@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   firstDecodeTime,
   fmp4Playlist,
+  HEVC_HIGH_RUNGS,
   HEVC_RUNGS,
+  HEVC_SOUND_KBPS,
   hevcAudio,
   hevcCodecs,
+  hevcLadderMaster,
   hevcRungNamed,
   isAppleDevice,
   isAppleNativePlayer,
@@ -133,14 +136,113 @@ describe("the HEVC playlists and master", () => {
     if (!h360) throw new Error("h360");
     const out = withHevc(master, info, {
       rungs: [{ rung: h360, codecs: "hvc1.1.6.L90.B0", width: 640, frameRate: 23.976 }],
-      audioGroup: "audio-hevc",
-      audioLines: ['#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio-hevc",NAME="Français",URI="h-a0.m3u8"'],
+      audio: {
+        group: "audio-hevc",
+        lines: ['#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio-hevc",NAME="Français",URI="h-a0.m3u8"'],
+        codec: "mp4a.40.2",
+        kbps: HEVC_SOUND_KBPS.light,
+      },
     });
     expect(out).toContain(
       '#EXT-X-STREAM-INF:BANDWIDTH=450000,AVERAGE-BANDWIDTH=374000,RESOLUTION=640x360,CODECS="hvc1.1.6.L90.B0,mp4a.40.2",FRAME-RATE=23.976,VIDEO-RANGE=SDR,AUDIO="audio-hevc"\nh360.m3u8',
     );
     expect(out.indexOf("h-a0.m3u8")).toBeLessThan(out.indexOf("h360.m3u8"));
     expect(out.indexOf("h360.m3u8")).toBeLessThan(out.indexOf("p2.m3u8"));
+  });
+
+  it("twin the source's own audio into a second fMP4 group, for the higher rungs", () => {
+    const twin = hevcAudio(
+      {
+        group: "audio-lo",
+        renditions: [
+          {
+            name: "lo-a1",
+            sourceUri: "p1.m3u8",
+            line: '#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio-lo",NAME="English",LANGUAGE="en",URI="lo-a1.m3u8"',
+            isDefault: false,
+          },
+        ],
+      },
+      "source",
+    );
+    expect(twin.group).toBe("audio-hevc-src");
+    expect(twin.renditions[0]).toMatchObject({
+      name: "hs-a1",
+      sourceOf: "lo-a1",
+      line: '#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio-hevc-src",NAME="English",LANGUAGE="en",URI="hs-a1.m3u8"',
+    });
+  });
+});
+
+describe("the complete HEVC ladder's master (our iPad player)", () => {
+  const rung = (name: string) => {
+    const found = hevcRungNamed(name);
+    if (!found) throw new Error(name);
+    return found;
+  };
+  const offer = (names: string[], group: string, codec: string, kbps: number) => ({
+    rungs: names.map((name) => ({ rung: rung(name), codecs: "hvc1.1.6.L93.90", width: 1280, frameRate: 25 })),
+    audio: {
+      group,
+      lines: [`#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="${group}",NAME="Français",URI="${group}.m3u8"`],
+      codec,
+      kbps,
+    },
+  });
+  const master = [
+    "#EXTM3U",
+    "#EXT-X-VERSION:4",
+    "#EXT-X-INDEPENDENT-SEGMENTS",
+    '#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="a",NAME="Français",URI="fr.m3u8"',
+    '#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="a-lo",NAME="Français",URI="lo-a0.m3u8"',
+    '#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="s",NAME="Français",URI="subs.m3u8"',
+    '#EXT-X-STREAM-INF:BANDWIDTH=1072000,CODECS="avc1.64001e,mp4a.40.2",AUDIO="a"',
+    "q480.m3u8",
+    '#EXT-X-STREAM-INF:BANDWIDTH=3000000,CODECS="avc1.640028,mp4a.40.2",AUDIO="a"',
+    "p2.m3u8",
+    '#EXT-X-I-FRAME-STREAM-INF:BANDWIDTH=300000,CODECS="avc1.640028",URI="iframes.m3u8"',
+    "",
+  ].join("\n");
+  const out = hevcLadderMaster(master, [
+    offer(["h480", "h540", "h720"], "a-hevc-src", "mp4a.40.5", HEVC_SOUND_KBPS.source),
+    offer(["h360", "h288", "h234"], "a-hevc", "mp4a.40.2", HEVC_SOUND_KBPS.light),
+  ]);
+
+  it("lists HEVC alone, so hls.js starts on it and never has H.264 to mix in", () => {
+    expect(out).not.toMatch(/avc1|q480\.m3u8|p2\.m3u8|iframes|fr\.m3u8|lo-a0/);
+    for (const name of ["h480", "h540", "h720", "h360", "h288", "h234"]) expect(out).toContain(`\n${name}.m3u8`);
+    expect(out.match(/#EXT-X-STREAM-INF/g)).toHaveLength(6);
+  });
+
+  it("keeps the source's header and subtitles, with both audio groups before any variant", () => {
+    expect(out.startsWith("#EXTM3U\n#EXT-X-VERSION:4\n#EXT-X-INDEPENDENT-SEGMENTS")).toBe(true);
+    expect(out).toContain("TYPE=SUBTITLES");
+    expect(out.lastIndexOf("#EXT-X-MEDIA")).toBeLessThan(out.indexOf("#EXT-X-STREAM-INF"));
+  });
+
+  it("gives the higher rungs the source's sound and the lowest ones the lighter sound", () => {
+    expect(out).toContain(
+      'BANDWIDTH=1660000,AVERAGE-BANDWIDTH=1360000,RESOLUTION=1280x720,CODECS="hvc1.1.6.L93.90,mp4a.40.5",FRAME-RATE=25.000,VIDEO-RANGE=SDR,AUDIO="a-hevc-src"\nh720.m3u8',
+    );
+    expect(out).toMatch(/CODECS="hvc1\.1\.6\.L93\.90,mp4a\.40\.2",[^\n]*AUDIO="a-hevc"\nh234\.m3u8/);
+  });
+});
+
+describe("the complete HEVC ladder's rungs", () => {
+  it("climb from 234p to 720p, each lighter than its H.264 twin, the top one about half the 3 Mb/s source", () => {
+    const all = [...HEVC_RUNGS, ...HEVC_HIGH_RUNGS].sort((a, b) => a.height - b.height);
+    expect(all.map((r) => r.height)).toEqual([234, 288, 360, 480, 540, 720]);
+    for (const [i, r] of all.entries()) if (i > 0) expect(r.maxrateKbps).toBeGreaterThan(all[i - 1]?.maxrateKbps ?? 0);
+    expect(hevcRungNamed("h480")?.maxrateKbps).toBeLessThan(1000);
+    expect(hevcRungNamed("h540")?.maxrateKbps).toBeLessThan(1600);
+    expect(hevcRungNamed("h720")?.maxrateKbps).toBeLessThanOrEqual(1600);
+  });
+
+  it("pin level 3.1 for 720p, past level 3.0's picture size", () => {
+    const h720 = hevcRungNamed("h720");
+    if (!h720) throw new Error("h720");
+    expect(hevcArguments("in.ts", [{ rung: h720, path: "h720.mp4" }]).join(" ")).toContain("level-idc=31");
+    expect(HEVC_RUNGS.every((r) => r.level === 30)).toBe(true);
   });
 });
 
