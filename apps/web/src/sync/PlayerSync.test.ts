@@ -37,6 +37,14 @@ function start(): PlayerSync {
 
 const lastState = () => states.at(-1);
 
+/** Our player (hls.js), which keeps downloading while paused: the one that tells the room its lead. */
+async function startOwnPlayer(): Promise<PlayerSync> {
+  sync = new PlayerSync(video.asElement(), client.asClient(), (s) => states.push(s), { ownPlayer: () => true });
+  sync.setSource("/api/rooms/YWEK/hls/master.m3u8");
+  await vi.waitFor(() => expect(lastState()?.engine).toBe("hls.js"));
+  return sync;
+}
+
 beforeEach(() => {
   hlsCalls.loaded.length = 0;
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "performance", "Date"] });
@@ -204,9 +212,9 @@ describe("PlayerSync", () => {
     expect(client.of("buffering").at(-1)).toEqual({ type: "buffering", buffering: false });
   });
 
-  it("tells the room how much it has downloaded ahead while paused, without repeating itself", () => {
+  it("tells the room how much it has downloaded ahead while paused, without repeating itself", async () => {
     video.bufferedRanges = [[0, 35]];
-    start();
+    await startOwnPlayer();
     sync.setPlayback(paused(30));
     expect(client.of("lead")).toEqual([{ type: "lead", seconds: 5 }]);
     vi.advanceTimersByTime(5000);
@@ -216,22 +224,23 @@ describe("PlayerSync", () => {
     expect(client.of("lead").at(-1)).toEqual({ type: "lead", seconds: 22 });
   });
 
-  it("keeps telling it while the room waits to start together, so the room notices its deadline", () => {
+  it("keeps telling it while the room waits to start together, so the room notices its deadline", async () => {
     video.bufferedRanges = [[0, 35]];
-    start();
+    await startOwnPlayer();
     sync.setPlayback(paused(30));
     sync.setReadying({ target: 30, until: 25_000 });
-    vi.advanceTimersByTime(4100);
+    // Every 2 s, whatever the phase of the player's own loop.
+    vi.advanceTimersByTime(4600);
     expect(client.of("lead").length).toBeGreaterThanOrEqual(3);
   });
 
-  it("tells its lead at the new position at once when a jump during the film makes the room wait", () => {
+  it("tells its lead at the new position at once when a jump during the film makes the room wait", async () => {
     // Downloaded far ahead around 10, and a little around 600 where someone jumps.
     video.bufferedRanges = [
       [0, 300],
       [600, 612],
     ];
-    start();
+    await startOwnPlayer();
     sync.setPlayback(paused(10));
     sync.setPlayback(playing(10));
     vi.advanceTimersByTime(100);
@@ -242,9 +251,9 @@ describe("PlayerSync", () => {
     expect(client.of("lead")).toEqual([{ type: "lead", seconds: 12 }]);
   });
 
-  it("tells it again when the room pauses elsewhere, even if the amount ahead looks the same", () => {
+  it("tells it again when the room pauses elsewhere, even if the amount ahead looks the same", async () => {
     video.bufferedRanges = [[0, 7826]];
-    start();
+    await startOwnPlayer();
     sync.setPlayback(paused(10));
     sync.setPlayback(paused(20, 50));
     expect(client.of("lead")).toHaveLength(2);
@@ -257,13 +266,35 @@ describe("PlayerSync", () => {
     expect(client.of("lead")).toEqual([]);
   });
 
-  it("tells its lead again after a reconnection, since the server forgot it", () => {
+  it("tells its lead again after a reconnection, since the server forgot it", async () => {
     video.bufferedRanges = [[0, 35]];
-    start();
+    await startOwnPlayer();
     sync.setPlayback(paused(30));
     client.reopen();
     vi.advanceTimersByTime(600);
     expect(client.of("lead")).toHaveLength(2);
+  });
+
+  it("does not tell its lead with Safari's own player, which hardly downloads while paused", () => {
+    video.bufferedRanges = [[0, 35]];
+    start();
+    sync.setPlayback(paused(30));
+    vi.advanceTimersByTime(5000);
+    expect(client.of("lead")).toEqual([]);
+  });
+
+  it("resumes a few tenths off without seeking (a seek makes Safari reload), but seeks a real gap", () => {
+    start();
+    sync.setPlayback(paused(30));
+    expect(video.currentTime).toBe(30);
+    // The resume arrives 0.4 s late over a 4G link: it plays on from 30, no jump to 30.4.
+    client.now = 400;
+    sync.setPlayback(playing(30, 0));
+    expect(video.currentTime).toBe(30);
+    expect(video.paused).toBe(false);
+
+    sync.setPlayback(paused(50, 400));
+    expect(video.currentTime).toBe(50);
   });
 
   it("reports buffering again after a reconnection, since the server forgot it", () => {

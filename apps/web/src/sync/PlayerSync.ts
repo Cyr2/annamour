@@ -63,8 +63,13 @@ export const initialPlayerSyncState: PlayerSyncState = {
 const LOOP_MS = 500;
 /** Letting go of the room is quick; holding it waits for STALL_GRACE_MS. */
 const READY_DEBOUNCE_MS = 400;
-/** While paused, how far off we tolerate before seeking (s). */
-const PAUSED_TOLERANCE = 0.15;
+/**
+ * While paused, how far off we tolerate before seeking (s). Loose on purpose: a
+ * seek makes Safari's own player reload, and resuming catches small gaps by speed.
+ */
+const PAUSED_TOLERANCE = 0.5;
+/** Resuming further off than this seeks; closer, playback catches up by speed (s). */
+const RESUME_SEEK_TOLERANCE = 1;
 /** A seek we didn't make is only a "user seek" if it lands this far from the shared position (s). */
 const USER_SEEK_TOLERANCE = 1;
 /** After a correction seek, let playback settle before judging drift again (ms). */
@@ -405,6 +410,9 @@ export class PlayerSync {
    * only starts once every device has some (see readying.ts in the protocol).
    */
   private reportLead(): void {
+    // Safari's own player hardly downloads while paused: waiting for its lead would only cost every
+    // resume the « stuck » delay. Unreported, it is never waited for (our player, which does fill up, is).
+    if (this.state.engine === "native") return;
     const lead = Math.round(bufferedAhead(this.bufferedRanges(), this.video.currentTime) * 10) / 10;
     const at = now();
     const target = this.readying?.target ?? READY_LEAD;
@@ -419,7 +427,9 @@ export class PlayerSync {
     if (this.state.blocked) return; // waiting for a tap; nothing we can do
 
     if (video.paused) {
-      if (Math.abs(video.currentTime - target) > PAUSED_TOLERANCE * 2) this.doSeek(target + this.seekLead);
+      // A resume a few tenths off (the 4G's latency) is caught up by the drift correction's speed:
+      // a seek there would make Safari's own player reload what it already had.
+      if (Math.abs(video.currentTime - target) > RESUME_SEEK_TOLERANCE) this.doSeek(target + this.seekLead);
       this.doPlay();
       return;
     }
