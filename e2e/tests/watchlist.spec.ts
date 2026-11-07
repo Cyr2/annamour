@@ -36,6 +36,6 @@ test("« Notre liste » est commune : un titre ajouté et une envie se voient ch
   await lea.getByRole("button", { name: /^Interstellar/ }).click();
   await lea.getByRole("button", { name: "C'est vu" }).click();
   await darius.reload();
-  await darius.getByText("Vus", { exact: true }).click();
+  await darius.getByRole("radio", { name: "Vus" }).click();
   await expect(darius.getByRole("list", { name: "Titres" })).toContainText("Interstellar");
 });
