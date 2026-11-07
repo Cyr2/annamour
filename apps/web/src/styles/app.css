@@ -574,6 +574,12 @@
   font-size: var(--am-text-md);
 }
 
+/* The watchlist's sort: two labels a little longer than glisse's default tab. */
+.am-sort-segments {
+  --lg-tab-width: 9.5rem;
+  --lg-tab-height: 2.5rem;
+}
+
 /* ---- TV (html[data-tv]): the same screens, for a remote and 3 m away (sizes in tokens.css) ---- */
 
 /* The whole width, 5 % clear of the edges a TV may crop. */

@@ -8,6 +8,7 @@ import { toast } from "../../ui/toast.ts";
 import { logout, registerPasskey, useAccount } from "../account/account.ts";
 import { resetSessions } from "../sessions/sessions.ts";
 import { useTv } from "../tv/tv-context.ts";
+import { resetWatchlist } from "../watchlist/watchlist.ts";
 import { AccountKeyBox } from "./AccountKeyBox.tsx";
 import { AccountRow } from "./AccountRow.tsx";
 import { AddDeviceSheet } from "./AddDeviceSheet.tsx";
@@ -25,6 +26,7 @@ export function AccountCard() {
     try {
       await logout();
       resetSessions();
+      resetWatchlist();
       navigate("/bienvenue", { replace: true });
     } catch (failure) {
       toast({ message: errorMessage(failure) });

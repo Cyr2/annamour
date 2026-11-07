@@ -86,6 +86,24 @@ const MIGRATIONS: readonly string[] = [
   `
   ALTER TABLE room_episodes ADD COLUMN catalog TEXT;
   `,
+  // The shared watchlist: a title (catalog JSON), and the people it is shared with, each saying « J'ai envie » or not.
+  `
+  CREATE TABLE watchlist_items (
+    id TEXT PRIMARY KEY,
+    catalog_key TEXT NOT NULL,
+    title TEXT NOT NULL,
+    added_by TEXT NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    added_at INTEGER NOT NULL,
+    watched_at INTEGER
+  );
+  CREATE TABLE watchlist_members (
+    item_id TEXT NOT NULL REFERENCES watchlist_items (id) ON DELETE CASCADE,
+    account_id TEXT NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    wants INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (item_id, account_id)
+  );
+  CREATE INDEX watchlist_members_account_id ON watchlist_members (account_id);
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

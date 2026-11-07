@@ -14,6 +14,7 @@ import {
   SessionScreen,
   TvLinkScreen,
   TvPairingScreen,
+  WatchlistScreen,
   WelcomeScreen,
 } from "./routes.ts";
 import { Ambient } from "./ui/Ambient.tsx";
@@ -48,6 +49,7 @@ export function App() {
           <Route path="/">{() => gated(<HomeScreen />)}</Route>
           <Route path="/rejoindre">{() => gated(<JoinScreen />)}</Route>
           <Route path="/profil">{() => gated(<ProfileScreen />)}</Route>
+          <Route path="/a-regarder">{() => gated(<WatchlistScreen />)}</Route>
           <Route path="/tv">{() => gated(<TvLinkScreen />)}</Route>
           <Route path="/s/:code">{(params) => gated(<SessionScreen code={params.code} />)}</Route>
           <Route>

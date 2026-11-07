@@ -9,6 +9,7 @@ import { LinkButton } from "../../ui/LinkButton.tsx";
 import { type BubbleSize, PresenceBubble } from "../../ui/PresenceBubble.tsx";
 import { RedThread } from "../../ui/RedThread.tsx";
 import { useTv } from "../tv/tv-context.ts";
+import { WatchlistShelf } from "../watchlist/WatchlistShelf.tsx";
 import { CreateSessionSheet } from "./create/CreateSessionSheet.tsx";
 import { asksToCreate } from "./create/create-link.ts";
 import { HomeTopBar } from "./HomeTopBar.tsx";
@@ -54,6 +55,12 @@ export function HomeScreen() {
             </>
           )}
         </div>
+        {/* Below the fold: the home screen above stays as it was. */}
+        {tv ? null : (
+          <div className="mt-10 w-full">
+            <WatchlistShelf />
+          </div>
+        )}
         {tv ? (
           <Suspense fallback={null}>
             <TvHomeShelf />

@@ -11,6 +11,7 @@ import { Wordmark } from "../../ui/Wordmark.tsx";
 import { safeNext } from "../account/AccountGate.tsx";
 import { refreshAccount, useAccount } from "../account/account.ts";
 import { resetSessions } from "../sessions/sessions.ts";
+import { resetWatchlist } from "../watchlist/watchlist.ts";
 import type { PairingState } from "./pairing.ts";
 import { useTvPairing } from "./useTvPairing.ts";
 
@@ -32,6 +33,7 @@ export function TvPairingScreen() {
   const [failure, setFailure] = useState<string | null>(null);
   const { state, retry } = useTvPairing(async () => {
     resetSessions();
+    resetWatchlist();
     await refreshAccount();
     if (useAccount.getState().status !== "member") setFailure(SIGNED_IN_BUT_OFFLINE);
   });

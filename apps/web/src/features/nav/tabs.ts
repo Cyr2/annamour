@@ -1,7 +1,8 @@
-/** The app's three places, in the tab bar's order. */
+/** The app's four places, in the tab bar's order. */
 export const TABS = [
   { value: "accueil", href: "/", label: "Accueil" },
   { value: "rejoindre", href: "/rejoindre", label: "Rejoindre" },
+  { value: "aregarder", href: "/a-regarder", label: "À regarder" },
   { value: "profil", href: "/profil", label: "Profil" },
 ] as const;
 

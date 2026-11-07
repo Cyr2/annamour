@@ -8,14 +8,15 @@ import { useAccount } from "../account/account.ts";
 import { SessionDetails } from "../profile/SessionRow.tsx";
 import { isFinished } from "../sessions/session-rules.ts";
 import { useSessions } from "../sessions/sessions.ts";
+import { WatchlistShelf } from "../watchlist/WatchlistShelf.tsx";
 import { ResumeSlot } from "./ResumeSlot.tsx";
 
 const CREATE_HINT = "Pour créer une séance, colle le lien sur ton téléphone : elle apparaîtra ici.";
 
 /**
  * The home screen's lower half on a TV: the « Reprendre » card alone in the
- * middle (joining with a code sits in the top bar), then « Mes séances » as a
- * row to browse with ← →.
+ * middle (joining with a code sits in the top bar), then « À regarder
+ * ensemble » and « Mes séances » as rows to browse with ← →.
  * Creating a séance stays on the phone (pasting a link with a remote is no fun).
  */
 export function TvHomeShelf() {
@@ -23,6 +24,7 @@ export function TvHomeShelf() {
   return (
     <div className="grid w-full justify-items-center gap-6">
       <ResumeSlot className="w-[min(36rem,100%)]" />
+      <WatchlistShelf />
       {sessions.length > 0 ? (
         <TvSessions sessions={sessions} />
       ) : (

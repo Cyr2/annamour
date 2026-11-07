@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { tabFor } from "./tabs.ts";
 
 describe("tab bar", () => {
-  it("follows the route on its three screens", () => {
+  it("follows the route on its four screens", () => {
+    expect(tabFor("/a-regarder")).toBe("aregarder");
     expect(tabFor("/")).toBe("accueil");
     expect(tabFor("/rejoindre")).toBe("rejoindre");
     expect(tabFor("/profil/")).toBe("profil");
