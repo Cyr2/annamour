@@ -38,7 +38,7 @@ Watch-together PWA : deux personnes à distance regardent la même vidéo HLS, s
 - L'appli n'importe jamais `glisse` directement : passer par `apps/web/src/ui/`.
 - Tout message réseau passe par les schémas zod de `@annamour/protocol`.
 - Toujours les dernières versions des dépendances.
-- Le serveur ne relaie pas la vidéo : seulement les playlists (en cache) et les sous-titres.
+- Le serveur ne relaie pas la vidéo d'origine : seulement les playlists (en cache) et les sous-titres. Seule exception, les qualités légères (480p, 360p) qu'il fabrique lui-même pour les réseaux faibles (`apps/server/src/media/`), effacées 6 h après la dernière lecture.
 
 ## Règles de développement (strictes, non négociables)
 
