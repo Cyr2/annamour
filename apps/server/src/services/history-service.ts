@@ -35,6 +35,11 @@ export class HistoryService {
       position: this.store.livePosition(room.code, now) ?? room.position,
       lastUsedAt: room.lastUsedAt,
       participants: companions.get(room.code) ?? [],
+      episode: {
+        index: room.episode.index,
+        count: room.episode.count,
+        ...(room.episode.label === undefined ? {} : { label: room.episode.label }),
+      },
     }));
   }
 

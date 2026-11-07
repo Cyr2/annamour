@@ -73,12 +73,12 @@ describe("room files", () => {
     const app = testApp({ fetchText: okFetch }).app;
     const { code } = (await (await post(app, JSON.stringify({ url: MASTER }))).json()) as { code: string };
 
-    const subs = await app.request(`/api/rooms/${code}/subs/subs_fre.vtt`);
+    const subs = await app.request(`/api/rooms/${code}/e/0/subs/subs_fre.vtt`);
     expect(subs.headers.get("content-type")).toContain("text/vtt");
     expect(await subs.text()).toContain("Salut");
 
-    expect((await app.request(`/api/rooms/${code}/subs/subs_eng.vtt`)).status).toBe(404);
-    expect((await app.request(`/api/rooms/${code}/hls/p9.m3u8`)).status).toBe(404);
+    expect((await app.request(`/api/rooms/${code}/e/0/subs/subs_eng.vtt`)).status).toBe(404);
+    expect((await app.request(`/api/rooms/${code}/e/0/hls/p9.m3u8`)).status).toBe(404);
     expect((await app.request("/api/rooms/abcd")).status).toBe(404);
     expect((await app.request("/api/nothing")).status).toBe(404);
   });

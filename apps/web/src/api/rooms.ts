@@ -1,4 +1,10 @@
-import { CreateRoomRequest, CreateRoomResponse, RoomSnapshot } from "@annamour/protocol";
+import {
+  AddEpisodeRequest,
+  AddEpisodeResponse,
+  CreateRoomRequest,
+  CreateRoomResponse,
+  RoomSnapshot,
+} from "@annamour/protocol";
 import { ApiRequestError, request } from "./http.ts";
 
 /* Rooms: created from an HLS link, then looked up by their 4-letter code. */
@@ -14,6 +20,17 @@ export async function createRoom(url: string, title?: string): Promise<string> {
     messages: { 400: "Colle un lien https vers une playlist .m3u8." },
   });
   return code;
+}
+
+/** Imports the next episode of a séance and queues it for everyone in it; returns its index. */
+export async function addEpisode(code: string, url: string, label: string): Promise<number> {
+  const input = AddEpisodeRequest.safeParse({ url: url.trim(), ...(label.trim() ? { label: label.trim() } : {}) });
+  if (!input.success) throw new ApiRequestError(400, "Colle un lien https vers une playlist .m3u8.");
+  const { episode } = await request(AddEpisodeResponse, `/api/rooms/${encodeURIComponent(code)}/episodes`, {
+    body: input.data,
+    messages: { 400: "Colle un lien https vers une playlist .m3u8.", 404: ROOM_GONE },
+  });
+  return episode;
 }
 
 export async function fetchRoom(code: string): Promise<RoomSnapshot> {

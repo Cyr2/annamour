@@ -32,7 +32,7 @@ describe("Room", () => {
     const welcome = a.inbox[0];
     expect(welcome?.type).toBe("welcome");
     if (welcome?.type !== "welcome") return;
-    expect(welcome.room.media.src).toBe(`/api/rooms/${room.code}/hls/master.m3u8`);
+    expect(welcome.room.media.src).toBe(`/api/rooms/${room.code}/e/0/hls/master.m3u8`);
     expect(room.members().map((m) => m.name)).toEqual(["Darius", "Anna"]);
   });
 

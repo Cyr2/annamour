@@ -59,6 +59,10 @@ const room: RoomSnapshot = {
     { id: "m1", name: "Darius", color: "sky", buffering: false },
     { id: "m2", name: "Anna", color: "lilac", buffering: false },
   ],
+  episodes: [{}],
+  current: 0,
+  finished: false,
+  countdownUntil: null,
 };
 
 const identity = () => ({ clientId: "device-1234", name: "Darius", color: "sky" as const });
@@ -165,6 +169,21 @@ describe("room store", () => {
 
     socket().receive({ type: "members", members: room.members.slice(0, 1) });
     expect(useRoom.getState().members).toHaveLength(1);
+
+    // The next episode starts: the whole room again, the new video from its start.
+    const next = {
+      ...room,
+      media: { ...room.media, title: "Film · É2", src: "/api/rooms/YWEK/e/1/hls/master.m3u8" },
+      playback: { status: "playing" as const, position: 0, at: 20 },
+      episodes: [{}, { label: "É2" }],
+      current: 1,
+    };
+    socket().receive({ type: "room", room: next, by: "m2" });
+    expect(useRoom.getState()).toMatchObject({
+      room: { current: 1 },
+      playback: { position: 0 },
+      members: room.members,
+    });
 
     socket().receive({ type: "error", code: "bad_message", message: "Message illisible." });
     expect(useRoom.getState().error?.code).toBe("bad_message");

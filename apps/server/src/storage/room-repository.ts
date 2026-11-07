@@ -4,11 +4,23 @@ import { z } from "zod";
 import type { ImportedMedia } from "../hls.ts";
 import { parseOptionalRow, parseRows } from "./rows.ts";
 
+/** One video of a séance. Its id never changes, so links to its files stay right when the queue changes. */
+export interface StoredEpisode {
+  id: number;
+  label: string | undefined;
+  media: ImportedMedia;
+}
+
 export interface StoredRoom {
   code: string;
   title: string;
-  media: ImportedMedia;
-  /** Last saved position, in seconds. */
+  /** In watching order. */
+  episodes: StoredEpisode[];
+  /** Index (in `episodes`) of the episode everyone is on. */
+  current: number;
+  /** The id the next added episode gets: ids only grow, a removed one is never given again. */
+  nextEpisodeId: number;
+  /** Last saved position in the current episode, in seconds. */
   position: number;
   createdAt: number;
   lastUsedAt: number;
@@ -28,11 +40,14 @@ const StoredMedia = z.object({
 const RoomRow = z.object({
   code: z.string(),
   title: z.string(),
-  media: z.string(),
   position: z.number(),
+  current_episode: z.number(),
+  next_episode_id: z.number(),
   created_at: z.number(),
   last_used_at: z.number(),
 });
+
+const EpisodeRow = z.object({ id: z.number(), label: z.string().nullable(), media: z.string() });
 
 function serializeMedia(media: ImportedMedia): string {
   return JSON.stringify({
@@ -63,20 +78,23 @@ export class RoomRepository {
   }
 
   insert(room: StoredRoom): void {
+    const current = room.episodes[room.current];
     this.db
       .prepare(
-        `INSERT INTO rooms (code, title, media, duration, position, created_at, last_used_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO rooms (code, title, duration, position, current_episode, next_episode_id, created_at, last_used_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         room.code,
         room.title,
-        serializeMedia(room.media),
-        room.media.duration ?? null,
+        current?.media.duration ?? null,
         room.position,
+        room.current,
+        room.nextEpisodeId,
         room.createdAt,
         room.lastUsedAt,
       );
+    for (const episode of room.episodes) this.insertEpisode(room.code, episode);
   }
 
   exists(code: string): boolean {
@@ -89,11 +107,23 @@ export class RoomRepository {
     return {
       code: row.code,
       title: row.title,
-      media: deserializeMedia(row.media),
+      episodes: this.episodes(code),
+      current: row.current_episode,
+      nextEpisodeId: row.next_episode_id,
       position: row.position,
       createdAt: row.created_at,
       lastUsedAt: row.last_used_at,
     };
+  }
+
+  /** Queues an episode and moves the room's id counter past it. */
+  addEpisode(code: string, episode: StoredEpisode): void {
+    this.insertEpisode(code, episode);
+    this.db.prepare("UPDATE rooms SET next_episode_id = ? WHERE code = ?").run(episode.id + 1, code);
+  }
+
+  removeEpisode(code: string, id: number): void {
+    this.db.prepare("DELETE FROM room_episodes WHERE room_code = ? AND id = ?").run(code, id);
   }
 
   /** Saving a position also marks the room as used now. */
@@ -101,9 +131,33 @@ export class RoomRepository {
     this.db.prepare("UPDATE rooms SET position = ?, last_used_at = ? WHERE code = ?").run(position, now, code);
   }
 
-  /** Deletes rooms (and, by cascade, their participations) unused since `cutoff`. */
+  /** The séance moved to another episode: from its start, with its own duration. */
+  saveCurrentEpisode(code: string, current: number, duration: number | undefined, now: number): void {
+    this.db
+      .prepare("UPDATE rooms SET current_episode = ?, duration = ?, position = 0, last_used_at = ? WHERE code = ?")
+      .run(current, duration ?? null, now, code);
+  }
+
+  /** Deletes rooms (and, by cascade, their episodes and participations) unused since `cutoff`. */
   deleteUnusedSince(cutoff: number): string[] {
     const rows = this.db.prepare("DELETE FROM rooms WHERE last_used_at < ? RETURNING code").all(cutoff);
     return parseRows(z.object({ code: z.string() }), rows).map((row) => row.code);
+  }
+
+  private insertEpisode(code: string, episode: StoredEpisode): void {
+    this.db
+      .prepare("INSERT INTO room_episodes (room_code, id, label, media) VALUES (?, ?, ?, ?)")
+      .run(code, episode.id, episode.label ?? null, serializeMedia(episode.media));
+  }
+
+  private episodes(code: string): StoredEpisode[] {
+    const rows = this.db
+      .prepare("SELECT id, label, media FROM room_episodes WHERE room_code = ? ORDER BY id")
+      .all(code);
+    return parseRows(EpisodeRow, rows).map((row) => ({
+      id: row.id,
+      label: row.label ?? undefined,
+      media: deserializeMedia(row.media),
+    }));
   }
 }

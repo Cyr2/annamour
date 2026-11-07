@@ -35,6 +35,10 @@ const welcome = (playback: PlaybackState): ServerMessage => ({
     media: { title: "Film", src: "/api/rooms/YWEK/hls/master.m3u8", audio: [], subtitles: [], duration: 6100 },
     playback,
     members: [{ id: "m1", name: "Darius", color: "sky", buffering: false }],
+    episodes: [{ duration: 6100 }],
+    current: 0,
+    finished: false,
+    countdownUntil: null,
   },
 });
 

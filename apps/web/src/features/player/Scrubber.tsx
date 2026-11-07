@@ -1,9 +1,8 @@
 import { type KeyboardEvent, type PointerEvent, useRef, useState } from "react";
 import { formatClock } from "../../lib/format.ts";
 import { cx } from "../../ui/cx.ts";
+import { timelineKeyTarget } from "./seek.ts";
 import type { VideoClock } from "./usePlayerEffects.ts";
-
-const KEY_STEP = 10;
 
 /** The film's timeline: the buffered part, the watched part; drag or tap to move everyone there. */
 interface ScrubberProps {
@@ -40,11 +39,11 @@ export function Scrubber({ clock, onSeek, className }: ScrubberProps) {
     setPreview(null);
   };
   const key = (event: KeyboardEvent<HTMLDivElement>) => {
-    const delta = event.key === "ArrowRight" ? KEY_STEP : event.key === "ArrowLeft" ? -KEY_STEP : 0;
-    if (!delta) return;
+    const target = timelineKeyTarget(event.key, clock.current, duration);
+    if (target === null) return;
     event.preventDefault();
     event.stopPropagation();
-    onSeek(Math.min(duration, Math.max(0, clock.current + delta)));
+    onSeek(target);
   };
 
   return (

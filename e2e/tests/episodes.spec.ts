@@ -1,0 +1,41 @@
+import { expect, test } from "@playwright/test";
+import { createSession, HLS_URL, onboard, person, videoTime } from "./helpers.ts";
+
+test("à la fin d'un épisode, le suivant démarre chez tout le monde", async ({ browser }) => {
+  const darius = await person(browser);
+  const anna = await person(browser);
+
+  await onboard(darius, "Darius");
+  const roomUrl = await createSession(darius, "The Bear");
+  await onboard(anna, "Anna", roomUrl);
+  await expect(darius.getByRole("heading", { name: "Anna est là" })).toBeVisible();
+  await darius.getByRole("button", { name: "Lancer le film" }).click();
+  await expect.poll(() => videoTime(anna), { timeout: 30_000 }).toBeGreaterThan(1);
+
+  // Anna queues the next episode from « À suivre »; the label is guessed for her.
+  await anna.mouse.move(10, 10);
+  await anna.getByRole("button", { name: "À suivre" }).click();
+  await anna.getByLabel("Lien de l'épisode d'après (.m3u8)").fill(HLS_URL);
+  await expect(anna.getByLabel("Titre", { exact: true })).toHaveValue("Épisode 2");
+  await anna.getByRole("button", { name: "Ajouter à la suite" }).click();
+  await expect(anna.getByRole("dialog", { name: "À suivre" })).toBeHidden({ timeout: 30_000 });
+
+  // Darius jumps to the end: the countdown shows on both screens.
+  await darius.mouse.move(20, 20);
+  const position = darius.getByRole("slider", { name: "Position dans le film" });
+  await position.focus();
+  await position.press("End");
+  for (const page of [darius, anna]) {
+    await expect(page.getByRole("button", { name: "Lancer maintenant" })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: "Épisode 2" })).toBeVisible();
+  }
+
+  // One tap starts it for everyone: the same séance, the next episode, from its start.
+  await anna.getByRole("button", { name: "Lancer maintenant" }).click();
+  for (const page of [darius, anna]) {
+    await expect(page.getByText("The Bear · Épisode 2")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Lancer maintenant" })).toBeHidden();
+  }
+  await expect.poll(() => videoTime(darius), { timeout: 30_000 }).toBeGreaterThan(1);
+  expect(await videoTime(darius)).toBeLessThan(60);
+});

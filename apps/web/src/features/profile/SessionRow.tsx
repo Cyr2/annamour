@@ -7,11 +7,19 @@ import { sessionPath } from "../../sync/restart.ts";
 import { BubbleStack, type StackedPerson } from "../../ui/BubbleStack.tsx";
 import { Button, Menu } from "../../ui/controls.tsx";
 import { cx } from "../../ui/cx.ts";
+import { EpisodeBars } from "../../ui/EpisodeBars.tsx";
 import { LinkButton } from "../../ui/LinkButton.tsx";
 import { Progress } from "../../ui/Progress.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import { toast } from "../../ui/toast.ts";
-import { companionsLabel, isFinished, progressOf, relativeDay, stopLabel } from "../sessions/session-rules.ts";
+import {
+  companionsLabel,
+  isFinished,
+  progressOf,
+  relativeDay,
+  sessionTitle,
+  stopLabel,
+} from "../sessions/session-rules.ts";
 import { useTv } from "../tv/tv-context.ts";
 
 interface SessionRowProps {
@@ -44,7 +52,7 @@ export function SessionDetails({ session, me, now }: Omit<SessionRowProps, "onRe
 
   return (
     <div className="grid min-w-0 gap-2">
-      <strong className="truncate font-rounded-tight text-md font-extrabold text-fg">{session.title}</strong>
+      <strong className="truncate font-rounded-tight text-md font-extrabold text-fg">{sessionTitle(session)}</strong>
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-fg-muted">
         <span translate="no" className="rounded-chip bg-fill-strong px-2 py-0.5 font-bold tracking-[0.12em] text-fg">
           {session.code}
@@ -53,7 +61,14 @@ export function SessionDetails({ session, me, now }: Omit<SessionRowProps, "onRe
         <BubbleStack people={people} />
         <span>{companionsLabel(session)}</span>
       </div>
-      {progress === null ? null : (
+      {session.episode.count > 1 ? (
+        <EpisodeBars
+          count={session.episode.count}
+          current={session.episode.index}
+          progress={progress}
+          className="mt-1"
+        />
+      ) : progress === null ? null : (
         <Progress.Bar value={progress} label={`${Math.round(progress * 100)} % regardé`} className="mt-1" />
       )}
       <p className="text-xs text-fg-muted">{stopLabel(session)}</p>

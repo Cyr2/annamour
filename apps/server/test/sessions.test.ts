@@ -39,7 +39,15 @@ describe("my sessions", () => {
     const darius = await account("Darius");
     const code = await createRoom(darius.cookie, "Harry");
     expect(await sessions(darius.cookie)).toEqual([
-      { code, title: "Harry", duration: 120, position: 0, lastUsedAt: clock.now, participants: [] },
+      {
+        code,
+        title: "Harry",
+        duration: 120,
+        position: 0,
+        lastUsedAt: clock.now,
+        participants: [],
+        episode: { index: 0, count: 1 },
+      },
     ]);
   });
 

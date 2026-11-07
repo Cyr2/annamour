@@ -60,6 +60,8 @@ export const SessionSummary = z.object({
   lastUsedAt: z.number(),
   /** The other people of the session; never includes the requester. */
   participants: z.array(Participant),
+  /** Where the séance is among its episodes; `duration` and `position` are this episode's. */
+  episode: z.object({ index: z.number(), count: z.number(), label: z.optional(z.string()) }),
 });
 export type SessionSummary = z.infer<typeof SessionSummary>;
 export const SessionList = z.object({ sessions: z.array(SessionSummary) });

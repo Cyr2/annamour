@@ -1,3 +1,5 @@
+import { MAX_EPISODES, nextEpisodeLabel } from "@annamour/protocol";
+import { NotFoundError, TooManyEpisodesError } from "../errors.ts";
 import { importHls } from "../hls.ts";
 import type { RoomStore } from "../room-store.ts";
 import type { Room } from "../rooms.ts";
@@ -27,5 +29,18 @@ export class RoomService {
     const room = store.create(title ?? DEFAULT_ROOM_TITLE, imported, now());
     if (accountId !== undefined) history.recordParticipation(room.code, accountId);
     return room;
+  }
+
+  /**
+   * Queues the next episode of a séance, imported like a new séance. Without
+   * a label it follows the last one's (« É5 » → « É6 »). Returns its index.
+   */
+  async addEpisode(code: string, url: URL, label: string | undefined): Promise<number> {
+    const { store, fetchText } = this.options;
+    const room = store.get(code);
+    if (!room) throw new NotFoundError("Cette séance n'existe plus.");
+    if (room.episodeCount >= MAX_EPISODES) throw new TooManyEpisodesError();
+    const imported = await importHls(url, fetchText);
+    return store.addEpisode(room, label ?? nextEpisodeLabel(room.lastEpisodeLabel, room.episodeCount), imported);
   }
 }

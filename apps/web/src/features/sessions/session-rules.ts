@@ -1,4 +1,4 @@
-import type { BubbleColor, SessionSummary } from "@annamour/protocol";
+import { type BubbleColor, episodeTitle, type SessionSummary } from "@annamour/protocol";
 import { formatClock, formatDuration, joinNames } from "../../lib/format.ts";
 
 /* What the sessions history means: finished or not, how far, with whom, and when, in French. */
@@ -10,6 +10,16 @@ export const FAVORITE_MIN_SESSIONS = 2;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEKDAYS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"] as const;
+
+/** « The Bear · S2 · É5 »: the séance, and the episode it is on when it has a name. */
+export function sessionTitle(session: SessionSummary): string {
+  return episodeTitle(session.title, session.episode.label);
+}
+
+/** The home card's kicker: « Reprendre », or « Reprendre · épisode 5 » for a séance of several episodes. */
+export function resumeKicker(session: SessionSummary): string {
+  return session.episode.count > 1 ? `Reprendre · épisode ${session.episode.index + 1}` : "Reprendre";
+}
 
 export function isFinished(session: SessionSummary): boolean {
   return session.duration !== undefined && session.position >= session.duration - FINISHED_MARGIN_SECONDS;
