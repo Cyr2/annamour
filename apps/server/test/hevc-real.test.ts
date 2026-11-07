@@ -3,7 +3,6 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { splitAdts } from "../src/media/adts.ts";
 import { ffmpegAvailable } from "../src/media/ffmpeg.ts";
 import { firstDecodeTime, HEVC_RUNGS, hevcCodecs, splitMp4 } from "../src/media/hevc.ts";
 import {
@@ -67,7 +66,8 @@ describe.skipIf(!installed)("real HEVC segments, the way Safari needs them", () 
       const [one, two] = [splitMp4(output.mp4), splitMp4(next.mp4)];
       // Safari reads the init once, then every segment with it.
       expect(Buffer.from(two.init).equals(Buffer.from(one.init)), `${output.rung.name} init`).toBe(true);
-      expect(hevcCodecs(one.init)).toMatch(/^hvc1\.1\.6\.L\d+\.B0$/);
+      // Main profile at the pinned level 3.0; x265 sets its own constraint flags (e.g. ".90").
+      expect(hevcCodecs(one.init)).toMatch(/^hvc1\.1\.6\.L90(\.[0-9A-F]{2})*$/);
       // On one clock: the second segment's decode time is the first's plus its duration (90 kHz).
       const gap = (firstDecodeTime(two.segment) ?? 0) - (firstDecodeTime(one.segment) ?? 0);
       expect(Math.abs(gap - SECONDS * 90_000), `${output.rung.name} tfdt`).toBeLessThan(90_000 / FPS);
@@ -79,9 +79,13 @@ describe.skipIf(!installed)("real HEVC segments, the way Safari needs them", () 
 });
 
 /** How many AAC frames an audio file holds (copied out as ADTS). */
-function aacFrames(file: string, format: string): number {
-  const adts = execFileSync("ffmpeg", ["-v", "error", "-f", format, "-i", file, "-c:a", "copy", "-f", "adts", "-"]);
-  return splitAdts(new Uint8Array(adts)).frames.length;
+/** How many AAC frames (packets) an audio file holds, whatever its container. */
+function aacFrames(file: string): number {
+  const out = execFileSync("ffprobe", [
+    ...["-v", "error", "-select_streams", "a:0", "-count_packets"],
+    ...["-show_entries", "stream=nb_read_packets", "-of", "csv=p=0", file],
+  ]);
+  return Number.parseInt(out.toString(), 10);
 }
 
 function firstAudioTime(file: string): number {
@@ -109,6 +113,6 @@ describe.skipIf(!installed)("the HEVC rungs' audio, in fMP4", () => {
     expect(Math.abs(firstAudioTime(file) - sourceStart)).toBeLessThan(0.002);
     const { segment: fragments } = splitMp4(mp4);
     expect(Math.abs((firstDecodeTime(fragments) ?? 0) / 48_000 - sourceStart)).toBeLessThan(0.002);
-    expect(aacFrames(file, "mp4")).toBe(aacFrames(join(dir, "seg1.ts"), "mpegts"));
+    expect(aacFrames(file)).toBe(aacFrames(join(dir, "seg1.ts")));
   }, 120_000);
 });
