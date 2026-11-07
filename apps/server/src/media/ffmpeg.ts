@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { cut, joinBytes, overlapped, splitAdts } from "./adts.ts";
+import { audioContainer, cut, joinBytes, overlapped, splitAdts } from "./adts.ts";
 import type { Rung } from "./ladder.ts";
 
 /** Makes the lighter rungs of one source segment. */
@@ -105,20 +105,61 @@ export interface AudioSegments {
 /** Re-encodes one packed-audio segment lighter, frame for frame on the source's timing (see adts.ts). */
 export type AudioSegmentEncoder = (segments: AudioSegments, workDir: string) => Promise<Uint8Array>;
 
+const QUIET = ["-hide_banner", "-loglevel", "error", "-y"];
+
+/**
+ * A source audio segment as ADTS frames. Packed ADTS is split as is; an
+ * MPEG-TS audio segment (what Naka's `.aac` files turned out to be) has its
+ * AAC frames copied out, untouched, along with where it starts on the clock.
+ */
+async function sourceFrames(bytes: Uint8Array, workDir: string, name: string) {
+  const container = audioContainer(bytes);
+  if (container === "adts") return { container, segment: splitAdts(bytes), start: undefined };
+  if (container === "other") throw new EncodeError("Audio segment is neither ADTS nor MPEG-TS");
+  const [ts, adts] = [join(workDir, `${name}.ts`), join(workDir, `${name}.adts`)];
+  await writeFile(ts, bytes);
+  await ffmpeg([...QUIET, "-f", "mpegts", "-i", ts, "-map", "0:a:0", "-c:a", "copy", "-f", "adts", adts]);
+  return { container, segment: splitAdts(await readFile(adts)), start: await firstTimestamp(ts) };
+}
+
 export const ffmpegAudioEncoder: AudioSegmentEncoder = async ({ previous, current, next }, workDir) => {
-  const source = splitAdts(current);
-  const neighbour = (bytes: Uint8Array | undefined) => (bytes ? splitAdts(bytes).frames : []);
-  const input = overlapped(source.frames, neighbour(previous), neighbour(next));
+  const source = await sourceFrames(current, workDir, "current");
+  const neighbour = async (bytes: Uint8Array | undefined, name: string) =>
+    bytes ? (await sourceFrames(bytes, workDir, name)).segment.frames : [];
+  const input = overlapped(source.segment.frames, await neighbour(previous, "previous"), await neighbour(next, "next"));
   const [inFile, outFile] = [join(workDir, "in.aac"), join(workDir, "out.aac")];
   await writeFile(inFile, joinBytes(input.frames));
   await ffmpeg([
-    ...["-hide_banner", "-loglevel", "error", "-y", "-f", "aac", "-i", inFile],
-    ...["-c:a", "aac", "-b:a", `${LOW_AUDIO_KBPS}k`, "-f", "adts", outFile],
+    ...QUIET,
+    "-f",
+    "aac",
+    "-i",
+    inFile,
+    "-c:a",
+    "aac",
+    "-b:a",
+    `${LOW_AUDIO_KBPS}k`,
+    "-f",
+    "adts",
+    outFile,
   ]);
-  const encoded = splitAdts(await readFile(outFile)).frames;
-  // The source's timestamp tag, if it has one, goes back in front: the timing is the source's.
-  return joinBytes([source.id3, ...cut(encoded, input)]);
+  const kept = cut(splitAdts(await readFile(outFile)).frames, input);
+  // Packed audio: the source's timestamp tag, if it has one, goes back in front.
+  if (source.container === "adts") return joinBytes([source.segment.id3, ...kept]);
+  return asTransportStream(kept, source.start, workDir);
 };
+
+/** The lighter frames back in MPEG-TS, starting at the very instant the source segment does. */
+async function asTransportStream(frames: Uint8Array[], start: number | undefined, workDir: string) {
+  if (start === undefined) throw new EncodeError("Audio segment has no timestamp to keep");
+  const [adts, ts] = [join(workDir, "light.aac"), join(workDir, "light.ts")];
+  await writeFile(adts, joinBytes(frames));
+  await ffmpeg([
+    ...[...QUIET, "-f", "aac", "-i", adts, "-c:a", "copy"],
+    ...["-output_ts_offset", start.toFixed(6), "-muxdelay", "0", "-muxpreload", "0", "-f", "mpegts", ts],
+  ]);
+  return new Uint8Array(await readFile(ts));
+}
 
 /** When a media file's first packet plays (seconds), as ffprobe reads it; undefined if it cannot. */
 export function firstTimestamp(file: string): Promise<number | undefined> {

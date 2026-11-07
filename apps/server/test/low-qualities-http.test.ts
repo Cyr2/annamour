@@ -25,6 +25,7 @@ const fetchText: TextFetcher = async (url) => {
 function setup(withTranscoder = true, ahead = 0, lighterAudio = false) {
   const dir = mkdtempSync(join(tmpdir(), "annamour-http-"));
   let slow = false;
+  let audioFails = false;
   let encodes = 0;
   const probeLog = vi.fn();
   const transcoder = new Transcoder({
@@ -35,10 +36,18 @@ function setup(withTranscoder = true, ahead = 0, lighterAudio = false) {
       if (slow) await new Promise((resolve) => setTimeout(resolve, 200));
       for (const output of outputs) writeFileSync(output.path, "video");
     },
-    ...(lighterAudio ? { encodeAudio: async () => new TextEncoder().encode("light audio") } : {}),
+    ...(lighterAudio
+      ? {
+          encodeAudio: async () => {
+            if (audioFails) throw new Error("Audio segment is neither ADTS nor MPEG-TS");
+            return new TextEncoder().encode("light audio");
+          },
+        }
+      : {}),
     workers: 1,
     ahead,
     waitMs: 50,
+    retryDelayMs: 1,
     log: () => {},
   });
   const timelineProbe = { source: async () => new Uint8Array(10), firstTimestamp: async () => 1.4, log: probeLog };
@@ -51,7 +60,14 @@ function setup(withTranscoder = true, ahead = 0, lighterAudio = false) {
     });
     return ((await created.json()) as { code: string }).code;
   };
-  return { app, create, slowDown: () => (slow = true), encodes: () => encodes, probeLog };
+  return {
+    app,
+    create,
+    slowDown: () => (slow = true),
+    failAudio: () => (audioFails = true),
+    encodes: () => encodes,
+    probeLog,
+  };
 }
 
 describe("a séance's lighter qualities", () => {
@@ -61,10 +77,12 @@ describe("a séance's lighter qualities", () => {
     await expect.poll(encodes, { timeout: 2000 }).toBe(2);
   });
 
-  it("come with a lighter audio in each language for the lightest rungs", async () => {
+  it("come with a lighter audio in each language for the lightest rungs, once it proved to work", async () => {
     const { app, create } = setup(true, 0, true);
     const code = await create();
-    const master = await (await app.request(`/api/rooms/${code}/e/0/hls/master.m3u8`)).text();
+    const fetchMaster = async () => (await app.request(`/api/rooms/${code}/e/0/hls/master.m3u8`)).text();
+    await expect.poll(fetchMaster, { timeout: 2000 }).toContain('GROUP-ID="a-lo"');
+    const master = await fetchMaster();
     expect(master).toContain('GROUP-ID="a-lo",NAME="Français",URI="lo-a0.m3u8"');
     expect(master).toMatch(/RESOLUTION=416x234[^\n]*AUDIO="a-lo"/);
     const playlist = await (await app.request(`/api/rooms/${code}/e/0/hls/lo-a0.m3u8`)).text();
@@ -76,6 +94,19 @@ describe("a séance's lighter qualities", () => {
     expect(segment.headers.get("content-type")).toBe("audio/aac");
     expect(await segment.text()).toBe("light audio");
     expect((await app.request(`/api/rooms/${code}/e/0/hls/lo-a0/00001.ts`)).status).toBe(404);
+  });
+
+  it("never announce a lighter audio that could not be made: the lightest rungs keep the source's sound", async () => {
+    const { app, create, failAudio } = setup(true, 0, true);
+    failAudio();
+    const code = await create();
+    const master = async () => (await app.request(`/api/rooms/${code}/e/0/hls/master.m3u8`)).text();
+    await master();
+    // Give the check its time (it retries a few times before giving up).
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(await master()).not.toContain("a-lo");
+    expect(await master()).toMatch(/RESOLUTION=416x234[^\n]*AUDIO="a"/);
+    expect((await app.request(`/api/rooms/${code}/e/0/hls/lo-a0.m3u8`)).status).toBe(404);
   });
 
   it("are only ready once the lighter audio is too", async () => {

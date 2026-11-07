@@ -34,6 +34,19 @@ function id3Length(bytes: Uint8Array): number {
   return 10 + size + footer;
 }
 
+/** How a packed-audio segment is really stored, whatever its name says. */
+export type AudioContainer = "adts" | "mpegts" | "other";
+
+const TS_PACKET = 188;
+
+/** ADTS (after an optional ID3 tag), MPEG-TS (sync byte every 188 bytes), or something we do not handle. */
+export function audioContainer(bytes: Uint8Array): AudioContainer {
+  const at = id3Length(bytes);
+  if (bytes[at] === 0xff && ((bytes[at + 1] ?? 0) & 0xf0) === 0xf0) return "adts";
+  if (bytes[0] === 0x47 && (bytes.length <= TS_PACKET || bytes[TS_PACKET] === 0x47)) return "mpegts";
+  return "other";
+}
+
 /** The ADTS frame starting at `at`. */
 function frameAt(bytes: Uint8Array, at: number): Uint8Array {
   if (bytes[at] !== 0xff || ((bytes[at + 1] ?? 0) & 0xf0) !== 0xf0) throw new AdtsError(`No ADTS frame at ${at}`);

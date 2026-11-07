@@ -27,13 +27,22 @@ interface Planned<T extends Track> {
   playlist: string;
 }
 
+/**
+ * Whether the lighter audio is offered. It is only announced once a real
+ * segment of the film was made lighter: a source format we cannot handle must
+ * never leave the lightest rungs without sound.
+ */
+type LightAudioState = "none" | "unchecked" | "checking" | "offered" | "refused";
+
 interface FilmPlan {
-  master: string;
+  /** The master without, then with, the lighter audio group. */
+  masters: { plain: string; withLightAudio: string };
   video: Planned<VideoTrack>;
   /** The lighter audio of each language, by track name; empty when the source's audio cannot be made lighter. */
   audio: Map<string, Planned<AudioTrack>>;
   /** Prepared from the start: the language players pick when nobody chose. */
   defaultAudio: Planned<AudioTrack> | undefined;
+  lightAudio: LightAudioState;
 }
 
 export interface LowQualityServiceOptions {
@@ -42,6 +51,7 @@ export interface LowQualityServiceOptions {
   now: () => number;
   /** Logs how each film's source audio lines up with its video, once. */
   probe?: TimelineProbe;
+  log?: (message: string) => void;
 }
 
 /**
@@ -57,12 +67,14 @@ export class LowQualityService {
   private readonly plans = new Map<string, FilmPlan | null>();
   private readonly lastUse = new Map<string, number>();
   private readonly probe: TimelineProbe | undefined;
+  private readonly log: (message: string) => void;
 
-  constructor({ store, transcoder, now, probe }: LowQualityServiceOptions) {
+  constructor({ store, transcoder, now, probe, log = console.info }: LowQualityServiceOptions) {
     this.store = store;
     this.transcoder = transcoder;
     this.now = now;
     this.probe = probe;
+    this.log = log;
   }
 
   /** The master with our tracks, or one of our tracks' playlists; undefined to serve the stored playlist as is. */
@@ -71,7 +83,7 @@ export class LowQualityService {
     if (!plan) return undefined;
     if (file === "master.m3u8") {
       this.prepareWhereWatched(plan);
-      return plan.master;
+      return plan.lightAudio === "offered" ? plan.masters.withLightAudio : plan.masters.plain;
     }
     const name = file.replace(/\.m3u8$/, "");
     const planned = this.planned(plan, name);
@@ -101,7 +113,8 @@ export class LowQualityService {
     const plan = this.plan(code, room.currentEpisode.id);
     if (!plan || !this.transcoder) return { available: false, readySeconds: 0, targetSeconds: PREP_TARGET_SECONDS };
     this.prepareWhereWatched(plan);
-    const tracks = [plan.video, ...(plan.defaultAudio ? [plan.defaultAudio] : [])];
+    const audio = plan.lightAudio === "offered" && plan.defaultAudio ? [plan.defaultAudio] : [];
+    const tracks = [plan.video, ...audio];
     const ready = await Promise.all(tracks.map((planned) => this.readiness(planned)));
     // Near the end of the film, what is left is all there is to prepare.
     const target = Math.min(...ready.map((r) => r.target));
@@ -124,7 +137,7 @@ export class LowQualityService {
   /** Our video rung or lighter audio track of that name. */
   private planned(plan: FilmPlan, name: string): Planned<Track> | undefined {
     if (plan.video.track.rungs.some((rung) => rung.name === name)) return plan.video;
-    return plan.audio.get(name);
+    return plan.lightAudio === "offered" ? plan.audio.get(name) : undefined;
   }
 
   /** Seconds encoded in a row from where the séance is, up to a minute (or what is left). */
@@ -146,7 +159,24 @@ export class LowQualityService {
   /** Starts encoding the video and the default lighter audio where the séance is, before anyone asks. */
   private prepareWhereWatched(plan: FilmPlan): void {
     this.prepare(plan.video);
-    if (plan.defaultAudio) this.prepare(plan.defaultAudio);
+    if (plan.lightAudio === "unchecked") this.checkLightAudio(plan);
+    if (plan.lightAudio === "offered" && plan.defaultAudio) this.prepare(plan.defaultAudio);
+  }
+
+  /** Makes one real segment of the default language lighter; only then is the lighter audio announced. */
+  private checkLightAudio(plan: FilmPlan): void {
+    const planned = plan.defaultAudio;
+    if (!planned || !this.transcoder) return;
+    plan.lightAudio = "checking";
+    const { track, playlist } = planned;
+    void this.transcoder.ensure(track, this.startIndex(track, playlist)).then((made) => {
+      plan.lightAudio = made ? "offered" : "refused";
+      if (made) this.prepare(planned);
+      else
+        this.log(
+          `Lighter audio not offered for ${track.code}/${track.episode}: its source audio could not be made lighter`,
+        );
+    });
   }
 
   private prepare({ track, playlist }: Planned<Track>): void {
@@ -182,7 +212,11 @@ export class LowQualityService {
     const audio = lightAudio ? audioTracks(code, episode, lightAudio, playlistOf) : new Map();
     const defaultName = lightAudio?.renditions.find((r) => r.isDefault)?.name ?? lightAudio?.renditions[0]?.name;
     return {
-      master: withLowQualities(master, source, rungs, lightAudio),
+      masters: {
+        plain: withLowQualities(master, source, rungs),
+        withLightAudio: withLowQualities(master, source, rungs, lightAudio),
+      },
+      lightAudio: lightAudio && defaultName ? "unchecked" : "none",
       video: {
         track: { kind: "video", code, episode, segments: segmentSources(sourcePlaylist), rungs },
         playlist: sourcePlaylist,

@@ -124,6 +124,12 @@ export class Transcoder {
     return ready ? path : null;
   }
 
+  /** Makes this segment first and waits for it however long it takes: true once made, false if it cannot be. */
+  async ensure(track: Track, index: number): Promise<boolean> {
+    if (await this.isReady(track, index)) return true;
+    return this.enqueue(track, index, NOW).done;
+  }
+
   /** Every output of this segment is encoded. */
   async isReady(track: Track, index: number): Promise<boolean> {
     const ready = await Promise.all(outputNames(track).map((name) => exists(this.path(track, name, index))));
