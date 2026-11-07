@@ -1,4 +1,4 @@
-import { CircleUserRound, House, LogIn } from "lucide-react";
+import { CircleUserRound, House, LogIn, Popcorn } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { preloadRoute } from "../../routes.ts";
@@ -9,6 +9,7 @@ import { TABS, type TabValue, tabFor } from "./tabs.ts";
 const ICONS: Record<TabValue, TabBarItem["icon"]> = {
   accueil: <House aria-hidden />,
   rejoindre: <LogIn aria-hidden />,
+  aregarder: <Popcorn aria-hidden />,
   profil: <CircleUserRound aria-hidden />,
 };
 
@@ -20,6 +21,7 @@ function usePreloadNextScreens(enabled: boolean): void {
     if (!enabled) return;
     const preload = () => {
       preloadRoute("join");
+      preloadRoute("watchlist");
       preloadRoute("profile");
       preloadRoute("session");
     };
@@ -32,8 +34,8 @@ function usePreloadNextScreens(enabled: boolean): void {
 }
 
 /**
- * The glass tab bar floating at the bottom: Accueil, Rejoindre, Profil. Only
- * on those three screens, once the account is known: never over the film,
+ * The glass tab bar floating at the bottom: Accueil, Rejoindre, À regarder,
+ * Profil. Only on those four screens, once the account is known: never over the film,
  * the salon or the first launch. Screens leave room for it (see `safe-area`).
  */
 export function TabNav() {

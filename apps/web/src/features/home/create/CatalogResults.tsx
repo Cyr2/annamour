@@ -1,5 +1,6 @@
 import type { CatalogTitle } from "@annamour/protocol";
 import { formatDuration, plural } from "../../../lib/format.ts";
+import { Poster } from "../../../ui/Poster.tsx";
 
 /** « Film · 2014 · 2 h 49 », « Série · 2019 · 3 saisons ». */
 export function describeTitle(title: CatalogTitle): string {
@@ -10,21 +11,6 @@ export function describeTitle(title: CatalogTitle): string {
     title.seasons ? plural(title.seasons, "saison") : null,
   ];
   return parts.filter(Boolean).join(" · ");
-}
-
-export function Poster({ title, size = "regular" }: { title: CatalogTitle; size?: "regular" | "small" }) {
-  const box = size === "small" ? "h-[54px] w-[36px] rounded-[8px]" : "h-[72px] w-[48px] rounded-[10px]";
-  return (
-    <div
-      aria-hidden
-      className={`relative shrink-0 overflow-hidden ${box}`}
-      style={{ background: "var(--am-poster-glow), var(--am-poster)" }}
-    >
-      {title.posterUrl ? (
-        <img src={title.posterUrl} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
-      ) : null}
-    </div>
-  );
 }
 
 interface CatalogResultsProps {

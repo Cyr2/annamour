@@ -10,6 +10,7 @@ import { PasskeyService, type RelyingParty, type WebAuthn } from "./passkey-serv
 import { RoomService } from "./room-service.ts";
 import type { RandomInt } from "./secrets.ts";
 import { TvPairingService } from "./tv-pairing-service.ts";
+import { WatchlistService } from "./watchlist-service.ts";
 
 export interface ServiceOptions {
   db: DatabaseSync;
@@ -36,6 +37,7 @@ export interface Services {
   history: HistoryService;
   tvPairings: TvPairingService;
   catalog: CatalogService;
+  watchlist: WatchlistService;
   now: () => number;
 }
 
@@ -55,6 +57,7 @@ export function createServices(options: ServiceOptions): Services {
     accounts,
     tvPairings: new TvPairingService({ repositories, accounts, now, randomInt: options.tvCodeRandomInt }),
     passkeys: new PasskeyService({ repositories, relyingParty, now, webAuthn: options.webAuthn }),
+    watchlist: new WatchlistService({ repositories, now }),
     now,
   };
 }

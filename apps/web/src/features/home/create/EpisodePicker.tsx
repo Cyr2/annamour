@@ -3,8 +3,9 @@ import { useEffect, useState } from "react";
 import { fetchSeason } from "../../../api/catalog.ts";
 import { errorMessage } from "../../../api/http.ts";
 import { Button } from "../../../ui/controls.tsx";
+import { Poster } from "../../../ui/Poster.tsx";
 import { ThreadSpinner } from "../../../ui/ThreadSpinner.tsx";
-import { describeTitle, Poster } from "./CatalogResults.tsx";
+import { describeTitle } from "./CatalogResults.tsx";
 
 type SeasonState =
   | { status: "loading" }

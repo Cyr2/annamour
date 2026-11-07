@@ -5,6 +5,7 @@ import { ParticipationRepository } from "./participation-repository.ts";
 import { PasskeyRepository } from "./passkey-repository.ts";
 import { RoomRepository } from "./room-repository.ts";
 import { TvPairingRepository } from "./tv-pairing-repository.ts";
+import { WatchlistRepository } from "./watchlist-repository.ts";
 
 /** The only way to reach the database: services get these, never the connection. */
 export interface Repositories {
@@ -15,6 +16,7 @@ export interface Repositories {
   passkeys: PasskeyRepository;
   participations: ParticipationRepository;
   tvPairings: TvPairingRepository;
+  watchlist: WatchlistRepository;
 }
 
 export function createRepositories(db: DatabaseSync): Repositories {
@@ -26,5 +28,6 @@ export function createRepositories(db: DatabaseSync): Repositories {
     passkeys: new PasskeyRepository(db),
     participations: new ParticipationRepository(db),
     tvPairings: new TvPairingRepository(db),
+    watchlist: new WatchlistRepository(db),
   };
 }
