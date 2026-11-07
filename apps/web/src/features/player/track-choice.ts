@@ -46,6 +46,16 @@ export function chooseTracks(
   }));
 }
 
+/**
+ * A subtitle track's name in the picker. The server already names forced
+ * tracks (« Français (forcés) », « English (forced) »): only an unnamed one
+ * gets « (forcés) » added, never twice.
+ */
+export function subtitleLabel(track: Pick<SubtitleTrack, "label" | "forced">): string {
+  if (!track.forced || /forc/i.test(track.label)) return track.label;
+  return `${track.label} (forcés)`;
+}
+
 /** "Français", "2 langues", or nothing when the stream has a single unnamed track. */
 export function describeAudio(media: Pick<Media, "audio">): string | null {
   if (media.audio.length > 1) return `${media.audio.length} langues`;

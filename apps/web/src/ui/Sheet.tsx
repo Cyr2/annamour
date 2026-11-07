@@ -76,7 +76,7 @@ function SheetPanel({ onClose, title, children }: Omit<SheetProps, "open">) {
         tabIndex={-1}
         className={cx(
           "absolute bottom-0 left-1/2 flex max-h-[92dvh] w-[min(560px,100%)] -translate-x-1/2 flex-col gap-4 overflow-y-auto overscroll-contain",
-          "rounded-t-sheet bg-sheet px-6 pt-2.5 pb-[max(28px,var(--am-safe-bottom))] shadow-sheet backdrop-blur-2xl outline-none sm:px-8",
+          "am-sheet rounded-t-sheet px-6 pt-2.5 pb-[max(28px,var(--am-safe-bottom))] outline-none sm:px-8",
         )}
         initial={{ y: "105%" }}
         animate={{ y: 0, transition: spring.ui }}

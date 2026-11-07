@@ -16,7 +16,7 @@ export function ProfileScreen() {
   const account = useAccount((s) => s.account);
   return (
     <div className="safe-area mx-auto flex min-h-dvh max-w-[1240px] flex-col">
-      <ScreenTopBar back="/" title={<h1 className="truncate">Profil</h1>} />
+      <ScreenTopBar title={<h1 className="truncate">Profil</h1>} />
       {account ? (
         // On a phone: me, then my séances, then the account settings. Wide: me and the account on the left.
         <main className="grid flex-1 items-start gap-4 py-6 sm:gap-6 lg:grid-cols-[380px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:gap-8">

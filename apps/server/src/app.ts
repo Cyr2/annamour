@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
+import { compress } from "hono/compress";
 import { UserFacingError } from "./errors.ts";
 import type { AppEnv, HttpOptions } from "./http/context.ts";
 import { accountRoutes } from "./routes/account.ts";
@@ -17,6 +18,9 @@ export interface AppOptions extends Partial<HttpOptions> {
 }
 
 function serveWebApp(app: Hono<AppEnv>, webDist: string): void {
+  // The app's text (scripts, styles, the page) goes out gzipped: a third of the bytes on a phone's network.
+  // Registered after the API, so only the web app's responses pass through it.
+  app.use("*", compress());
   // Vite fingerprints everything under /assets, so those files never change.
   // (serveStatic's onFound hook does not reach the response in @hono/node-server 2, hence this wrapper.)
   app.use(

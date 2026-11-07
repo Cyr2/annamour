@@ -4,3 +4,5 @@ packages:
   - e2e
 onlyBuiltDependencies:
   - esbuild
+patchedDependencies:
+  glisse@0.5.0: patches/glisse@0.5.0.patch

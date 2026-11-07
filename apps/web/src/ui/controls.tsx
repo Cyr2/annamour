@@ -1,6 +1,14 @@
 /**
  * Our thin layer over glisse (Liquid Glass). The app imports controls from
  * here, never from glisse, so defaults and fixes live in one place.
+ *
+ * glisse's glass bends what is behind it, redrawn every frame: kept for small
+ * controls (buttons, pills, the segmented control, the tab bar), where it is
+ * cheap and seen. Cards, panels and sheets use the frosted `Surface` instead.
+ * On touch screens glisse is patched (patches/glisse@0.5.0.patch) not to bend
+ * at all: Chromium draws that filter on the CPU, measured at 36 img/s on a
+ * phone against 144 without it, and computing its maps blocked the first
+ * second. Phones keep glisse's frost, lit rim and press springs.
  */
 import {
   Button as GlisseButton,
@@ -13,15 +21,17 @@ import {
   SegmentedControl as GlisseSegmentedControl,
   Slider as GlisseSlider,
   Switch as GlisseSwitch,
+  TabBar as GlisseTabBar,
   type MenuProps,
   type SegmentedControlProps,
   type SliderProps,
   type SwitchProps,
+  type TabBarProps,
 } from "glisse";
 import type { Ref } from "react";
 import { cx } from "./cx.ts";
 
-export type { MenuEntry, MenuItem, SegmentedControlItem } from "glisse";
+export type { MenuEntry, MenuItem, SegmentedControlItem, TabBarItem } from "glisse";
 
 /* ---------- Button ---------- */
 
@@ -63,7 +73,7 @@ export function Button({
   );
 }
 
-/* ---------- Glass ---------- */
+/* ---------- Glass (small surfaces only; see Surface.tsx for large ones) ---------- */
 
 export function Glass({ ref, ...props }: GlisseGlassProps & { ref?: Ref<HTMLDivElement> }) {
   return <GlisseGlass ref={ref} {...props} />;
@@ -92,4 +102,9 @@ export function SegmentedControl(props: SegmentedControlProps) {
 /** An overflow menu (ellipsis by default). Our class gives its trigger and rows the 44px touch size. */
 export function Menu({ align = "end", className, ...props }: MenuProps) {
   return <GlisseMenu align={align} {...props} className={cx("am-menu", className)} />;
+}
+
+/** iOS 26's tab bar: tabs with an `href` are links, so the bar is the app's navigation. */
+export function TabBar({ className, ...props }: TabBarProps) {
+  return <GlisseTabBar {...props} className={cx("am-tab-bar", className)} />;
 }

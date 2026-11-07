@@ -4,9 +4,10 @@ import { motion } from "motion/react";
 import { useMemo } from "react";
 import { exit, spring } from "../../lib/motion.ts";
 import { BubbleStack, type StackedPerson } from "../../ui/BubbleStack.tsx";
-import { Glass, Menu } from "../../ui/controls.tsx";
+import { Menu } from "../../ui/controls.tsx";
 import { LinkButton } from "../../ui/LinkButton.tsx";
 import { Progress } from "../../ui/Progress.tsx";
+import { Surface } from "../../ui/Surface.tsx";
 import { toast } from "../../ui/toast.ts";
 import { companionsLabel, isFinished, progressOf, relativeDay, stopLabel } from "../sessions/session-rules.ts";
 
@@ -45,7 +46,7 @@ export function SessionRow({ session, me, now, onRemove }: SessionRowProps) {
       animate={{ opacity: 1, y: 0, transition: spring.ui }}
       exit={{ opacity: 0, scale: 0.96, transition: exit.quick }}
     >
-      <Glass className="grid gap-3 rounded-panel p-4 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-5 sm:p-5">
+      <Surface className="grid gap-3 rounded-panel p-4 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-5 sm:p-5">
         <div className="grid min-w-0 gap-2">
           <strong className="truncate font-rounded-tight text-md font-extrabold text-fg">{session.title}</strong>
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-fg-muted">
@@ -86,7 +87,7 @@ export function SessionRow({ session, me, now, onRemove }: SessionRowProps) {
             ]}
           />
         </div>
-      </Glass>
+      </Surface>
     </motion.li>
   );
 }

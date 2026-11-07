@@ -1,5 +1,4 @@
-import "@fontsource-variable/inter";
-import "@fontsource-variable/nunito";
+import "./styles/fonts.css";
 import "glisse/styles.css";
 import "./styles/app.css";
 

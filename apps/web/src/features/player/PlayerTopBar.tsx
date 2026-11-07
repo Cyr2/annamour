@@ -1,7 +1,7 @@
 import { useRoom } from "../../sync/room.ts";
-import { Glass } from "../../ui/controls.tsx";
 import { cx } from "../../ui/cx.ts";
 import { BackLink } from "../../ui/ScreenTopBar.tsx";
+import { Surface } from "../../ui/Surface.tsx";
 import { CompactPresence } from "../session/Presence.tsx";
 
 /** Back, the title, and one glass pill: who is here on the red thread, and whether everyone is in step. */
@@ -21,7 +21,7 @@ export function PlayerTopBar({ code }: { code: string }) {
         <strong className="block truncate font-rounded-tight text-md font-extrabold text-fg">{title}</strong>
         <span className="text-xs font-semibold text-fg-muted">Séance {code}</span>
       </div>
-      <Glass className="flex min-h-11 items-center gap-2.5 rounded-pill py-1 pr-3.5 pl-1.5">
+      <Surface className="flex min-h-11 items-center gap-2.5 rounded-pill py-1 pr-3.5 pl-1.5">
         {members.length > 1 ? (
           <CompactPresence members={members} you={you} className="hidden min-w-[96px] sm:block" />
         ) : null}
@@ -29,7 +29,7 @@ export function PlayerTopBar({ code }: { code: string }) {
           <span aria-hidden className={cx("size-2 rounded-full", online && !waiting ? "bg-success" : "bg-waiting")} />
           {label}
         </span>
-      </Glass>
+      </Surface>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { errorMessage } from "../../api/http.ts";
 import { passkeysSupported } from "../../api/passkeys.ts";
-import { Glass } from "../../ui/controls.tsx";
+import { Surface } from "../../ui/Surface.tsx";
 import { toast } from "../../ui/toast.ts";
 import { logout, registerPasskey, useAccount } from "../account/account.ts";
 import { resetSessions } from "../sessions/sessions.ts";
@@ -28,7 +28,7 @@ export function AccountCard() {
   };
 
   return (
-    <Glass className="surface-panel grid gap-4 p-4 sm:p-6">
+    <Surface className="surface-panel grid gap-4 p-4 sm:p-6">
       <div className="grid gap-1">
         <h2 className="type-heading">Ton compte</h2>
         <p className="text-sm text-fg-muted">Ta clé, c'est ton compte : pas d'email, pas de mot de passe.</p>
@@ -53,7 +53,7 @@ export function AccountCard() {
         />
       </div>
       <AddDeviceSheet open={addingDevice} onClose={() => setAddingDevice(false)} />
-    </Glass>
+    </Surface>
   );
 }
 

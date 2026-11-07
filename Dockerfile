@@ -7,6 +7,8 @@ WORKDIR /app
 
 FROM base AS build
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
+# glisse is patched (patches/): bending only on mouse-driven screens.
+COPY patches patches/
 COPY apps/web/package.json apps/web/
 COPY apps/server/package.json apps/server/
 COPY packages/protocol/package.json packages/protocol/

@@ -21,17 +21,20 @@ export function usePlayerKeyboard(active: boolean, keys: PlayerKeys): void {
   }, [active]);
 }
 
-/** Full screen for the whole player; iPhone only knows full screen on the video itself. */
-export function toggleFullscreen(video: HTMLVideoElement | null): void {
-  if (document.fullscreenElement) {
-    void document.exitFullscreen().catch(() => {});
-    return;
-  }
-  const root = document.documentElement;
-  if (root.requestFullscreen) {
-    void root.requestFullscreen().catch(() => {});
-    return;
-  }
-  const webkitVideo = video as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
-  webkitVideo?.webkitEnterFullscreen?.();
+/**
+ * A tap or click on the film itself (not on a control) plays or pauses, for
+ * everyone. Only when the press also began on the film: a drag that starts on
+ * the scrubber and ends over the picture is not a tap.
+ */
+export function useSurfaceTap(onTap: () => void) {
+  const pressedOnSurface = useRef(false);
+  return {
+    onPointerDown: (event: { target: EventTarget; currentTarget: EventTarget }) => {
+      pressedOnSurface.current = event.target === event.currentTarget;
+    },
+    onClick: (event: { target: EventTarget; currentTarget: EventTarget }) => {
+      if (pressedOnSurface.current && event.target === event.currentTarget) onTap();
+      pressedOnSurface.current = false;
+    },
+  };
 }

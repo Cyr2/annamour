@@ -1,8 +1,8 @@
 import type { Reaction } from "@annamour/protocol";
 import { Maximize, Pause, Play, RotateCcw, RotateCw, Subtitles } from "lucide-react";
 import { formatClock } from "../../lib/format.ts";
-import { Glass } from "../../ui/controls.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
+import { Surface } from "../../ui/Surface.tsx";
 import { ReactionPicker } from "./ReactionPicker.tsx";
 import { Scrubber } from "./Scrubber.tsx";
 import { useVideoClock } from "./usePlayerEffects.ts";
@@ -35,7 +35,7 @@ export function ControlsBar(props: ControlsBarProps) {
     onSeek(Math.min(clock.duration || Number.POSITIVE_INFINITY, Math.max(0, clock.current + delta)));
 
   return (
-    <Glass className="surface-panel mx-auto grid w-full max-w-[880px] gap-0.5 px-2 pt-2.5 pb-1.5 sm:px-3">
+    <Surface className="surface-panel mx-auto grid w-full max-w-[880px] gap-0.5 px-2 pt-2.5 pb-1.5 sm:px-3">
       <div className="flex items-center gap-3 px-2 text-xs font-semibold text-fg-muted tabular-nums">
         <span>{formatClock(clock.current)}</span>
         <Scrubber clock={clock} onSeek={onSeek} className="flex-1" />
@@ -56,6 +56,6 @@ export function ControlsBar(props: ControlsBarProps) {
         <IconButton label="Audio et sous-titres" icon={<Subtitles />} onClick={props.onOpenTracks} />
         <IconButton label="Plein écran" icon={<Maximize />} onClick={props.onFullscreen} />
       </div>
-    </Glass>
+    </Surface>
   );
 }

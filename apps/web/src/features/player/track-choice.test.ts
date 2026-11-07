@@ -6,6 +6,7 @@ import {
   defaultChoice,
   defaultSubtitles,
   describeAudio,
+  subtitleLabel,
   useTrackChoices,
 } from "./track-choice.ts";
 
@@ -35,6 +36,13 @@ describe("track choice", () => {
     const { byRoom } = useTrackChoices.getState();
     expect(choiceFor(byRoom, "YWEK", media)).toEqual({ audio: "p1", subtitles: null });
     expect(choiceFor(byRoom, "QHMP", media)).toEqual(defaultChoice(media));
+  });
+
+  it("names a forced subtitle track once, never « (forcés) (forcés) »", () => {
+    expect(subtitleLabel({ label: "Français (forcés)", forced: true })).toBe("Français (forcés)");
+    expect(subtitleLabel({ label: "English (forced)", forced: true })).toBe("English (forced)");
+    expect(subtitleLabel({ label: "Français", forced: true })).toBe("Français (forcés)");
+    expect(subtitleLabel({ label: "Français", forced: false })).toBe("Français");
   });
 
   it("summarises the audio for the « C'est prêt » card", () => {

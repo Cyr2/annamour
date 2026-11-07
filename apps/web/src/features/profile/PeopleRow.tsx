@@ -1,10 +1,10 @@
 import { Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { plural } from "../../lib/format.ts";
-import { Glass } from "../../ui/controls.tsx";
 import { cx } from "../../ui/cx.ts";
 import { HeartBadge } from "../../ui/HeartBadge.tsx";
 import { PresenceBubble } from "../../ui/PresenceBubble.tsx";
+import { Surface } from "../../ui/Surface.tsx";
 import type { Person } from "../sessions/session-rules.ts";
 
 interface PeopleRowProps {
@@ -19,7 +19,7 @@ interface PeopleRowProps {
 /** « Avec qui je regarde »: one row of bubbles, everyone once, most shared first. Tapping one filters the list. */
 export function PeopleRow({ people, favoriteId, totalSessions, selected, onSelect }: PeopleRowProps) {
   return (
-    <Glass className="surface-panel grid gap-3 p-4 sm:p-5">
+    <Surface className="surface-panel grid gap-3 p-4 sm:p-5">
       <h2 className="type-heading">Avec qui je regarde</h2>
       <fieldset className="-mx-1 flex min-w-0 gap-1 overflow-x-auto border-0 p-0 pb-1">
         <legend className="sr-only">Filtrer mes séances par personne</legend>
@@ -48,7 +48,7 @@ export function PeopleRow({ people, favoriteId, totalSessions, selected, onSelec
           </PersonChip>
         ))}
       </fieldset>
-    </Glass>
+    </Surface>
   );
 }
 

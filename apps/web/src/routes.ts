@@ -1,0 +1,31 @@
+import { lazy } from "react";
+
+/*
+ * The screens loaded on demand: each is its own chunk, so the first launch
+ * and the home screen only download what they show. `preloadRoute` fetches
+ * a screen ahead of time (on hover, on focus, when the app is idle).
+ */
+
+const loaders = {
+  welcome: () => import("./features/welcome/WelcomeScreen.tsx"),
+  key: () => import("./features/welcome/KeyLoginScreen.tsx"),
+  link: () => import("./features/welcome/LinkDeviceScreen.tsx"),
+  join: () => import("./features/join/JoinScreen.tsx"),
+  profile: () => import("./features/profile/ProfileScreen.tsx"),
+  session: () => import("./features/session/SessionScreen.tsx"),
+};
+
+export type RouteName = keyof typeof loaders;
+
+export function preloadRoute(name: RouteName): void {
+  void loaders[name]().catch(() => {
+    // Offline or a new deploy: the route loads (or reports) when it is actually opened.
+  });
+}
+
+export const WelcomeScreen = lazy(() => loaders.welcome().then((m) => ({ default: m.WelcomeScreen })));
+export const KeyLoginScreen = lazy(() => loaders.key().then((m) => ({ default: m.KeyLoginScreen })));
+export const LinkDeviceScreen = lazy(() => loaders.link().then((m) => ({ default: m.LinkDeviceScreen })));
+export const JoinScreen = lazy(() => loaders.join().then((m) => ({ default: m.JoinScreen })));
+export const ProfileScreen = lazy(() => loaders.profile().then((m) => ({ default: m.ProfileScreen })));
+export const SessionScreen = lazy(() => loaders.session().then((m) => ({ default: m.SessionScreen })));

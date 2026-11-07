@@ -4,8 +4,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef } from "react";
 import { exit, spring } from "../../lib/motion.ts";
 import { createReactionThrottle } from "../../sync/reactions.ts";
-import { Glass } from "../../ui/controls.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
+import { Surface } from "../../ui/Surface.tsx";
 
 const LABELS: Record<Reaction, string> = {
   "❤️": "Cœur",
@@ -61,7 +61,7 @@ export function ReactionPicker({ open, onOpenChange, onReact }: ReactionPickerPr
             animate={{ opacity: 1, y: 0, scale: 1, transition: spring.ui }}
             exit={{ opacity: 0, y: 6, scale: 0.94, transition: exit.quick }}
           >
-            <Glass role="menu" aria-label="Réactions" className="flex gap-0.5 rounded-pill p-1.5 shadow-float">
+            <Surface role="menu" aria-label="Réactions" className="flex gap-0.5 rounded-pill p-1.5 shadow-float">
               {REACTIONS.map((emoji, index) => (
                 <motion.button
                   key={emoji}
@@ -78,7 +78,7 @@ export function ReactionPicker({ open, onOpenChange, onReact }: ReactionPickerPr
                   {emoji}
                 </motion.button>
               ))}
-            </Glass>
+            </Surface>
           </motion.div>
         ) : null}
       </AnimatePresence>

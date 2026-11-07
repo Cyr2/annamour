@@ -3,9 +3,10 @@ import { useState } from "react";
 import { formatClock, joinNames } from "../../lib/format.ts";
 import { useRoom } from "../../sync/room.ts";
 import { CodeLetters } from "../../ui/CodeLetters.tsx";
-import { Button, Glass } from "../../ui/controls.tsx";
+import { Button } from "../../ui/controls.tsx";
 import { QrCode } from "../../ui/QrCode.tsx";
 import { ScreenTopBar } from "../../ui/ScreenTopBar.tsx";
+import { Surface } from "../../ui/Surface.tsx";
 import { SalonPresence } from "./Presence.tsx";
 
 function headline(otherNames: string[]): string {
@@ -62,7 +63,7 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
             {resumeAt ? "Reprendre le film" : "Lancer le film"}
           </Button>
         </div>
-        <Glass className="surface-panel grid justify-items-center gap-5 p-6 text-center sm:p-8 md:order-1">
+        <Surface className="surface-panel grid justify-items-center gap-5 p-6 text-center sm:p-8 md:order-1">
           <p className="type-label">Le code de la séance</p>
           <CodeLetters code={code} />
           <div className="flex items-center gap-4 text-left">
@@ -78,7 +79,7 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
               </Button>
             </div>
           </div>
-        </Glass>
+        </Surface>
       </main>
     </div>
   );
