@@ -6,6 +6,7 @@ import { IconButton } from "../../ui/IconButton.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import { useTv } from "../tv/tv-context.ts";
 import { useCircleUi } from "../ui-version/ui-version.ts";
+import { EndClock } from "./EndClock.tsx";
 import { ReactionPicker } from "./ReactionPicker.tsx";
 import { Scrubber } from "./Scrubber.tsx";
 import { SEEK_STEP } from "./seek.ts";
@@ -55,7 +56,7 @@ export function ControlsBar(props: ControlsBarProps) {
       <div className="flex items-center gap-3 px-2 text-xs font-semibold text-fg-muted tabular-nums">
         <span>{formatClock(clock.current)}</span>
         <Scrubber clock={clock} onSeek={onSeek} className="flex-1" />
-        <span>{formatClock(clock.duration)}</span>
+        <EndClock clock={clock} />
       </div>
       {/* Upright, a phone fits 4 buttons of 44px a row: two rows, or one row of five with « ⋯ » in the circles interface. */}
       <div
