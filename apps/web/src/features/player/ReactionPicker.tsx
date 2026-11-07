@@ -10,11 +10,15 @@ import { useTv } from "../tv/tv-context.ts";
 
 const LABELS: Record<Reaction, string> = {
   "❤️": "Cœur",
-  "😂": "Rire",
-  "😮": "Surprise",
-  "😭": "Larmes",
-  "🔥": "Feu",
-  "🍿": "Popcorn",
+  "🥰": "Plein d'amour",
+  "😻": "Chat amoureux",
+  "🥺": "Attendri",
+  "🤭": "Oups",
+  "😏": "Malicieux",
+  "😱": "Terrifié",
+  "🫪": "Bouleversé",
+  "💀": "Mort de rire",
+  "🤡": "Clown",
 };
 
 interface ReactionPickerProps {
@@ -23,7 +27,7 @@ interface ReactionPickerProps {
   onReact: (emoji: Reaction) => void;
 }
 
-/** Six reactions in a glass pop; it stays open to send a few in a row. */
+/** Ten reactions in a glass pop (two rows of five on a phone); it stays open to send a few in a row. */
 export function ReactionPicker({ open, onOpenChange, onReact }: ReactionPickerProps) {
   const tv = useTv();
   const root = useRef<HTMLDivElement>(null);
@@ -75,7 +79,11 @@ export function ReactionPicker({ open, onOpenChange, onReact }: ReactionPickerPr
             animate={{ opacity: 1, y: 0, scale: 1, transition: spring.ui }}
             exit={{ opacity: 0, y: 6, scale: 0.94, transition: exit.quick }}
           >
-            <Surface role="menu" aria-label="Réactions" className="flex gap-0.5 rounded-pill p-1.5 shadow-float">
+            <Surface
+              role="menu"
+              aria-label="Réactions"
+              className="grid grid-cols-5 gap-0.5 rounded-panel p-1.5 shadow-float sm:flex sm:rounded-pill"
+            >
               {REACTIONS.map((emoji, index) => (
                 <m.button
                   key={emoji}

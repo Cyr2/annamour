@@ -216,10 +216,10 @@ describe("room store", () => {
     client.connect();
     socket().open();
     socket().receive({ type: "welcome", you: "m1", room, serverTime: 0 });
-    socket().receive({ type: "reaction", by: "m2", emoji: "🍿" });
+    socket().receive({ type: "reaction", by: "m2", emoji: "🤡" });
     socket().receive({ type: "reaction", by: "m1", emoji: "❤️" });
     const [theirs, mine] = useReactions.getState().reactions;
-    expect(theirs).toMatchObject({ emoji: "🍿", name: "Anna", color: "lilac", mine: false });
+    expect(theirs).toMatchObject({ emoji: "🤡", name: "Anna", color: "lilac", mine: false });
     expect(mine).toMatchObject({ emoji: "❤️", name: "Darius", mine: true });
 
     vi.advanceTimersByTime(3000);
