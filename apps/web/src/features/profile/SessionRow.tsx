@@ -66,6 +66,7 @@ export function SessionDetails({ session, me, now }: Omit<SessionRowProps, "onRe
           count={session.episode.count}
           current={session.episode.index}
           progress={progress}
+          finished={isFinished(session)}
           className="mt-1"
         />
       ) : progress === null ? null : (
