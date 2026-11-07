@@ -14,6 +14,7 @@ const loaders = {
   profile: () => import("./features/profile/ProfileScreen.tsx"),
   watchlist: () => import("./features/watchlist/WatchlistScreen.tsx"),
   session: () => import("./features/session/SessionScreen.tsx"),
+  report: () => import("./features/report/ReportScreen.tsx"),
   tvPairing: () => import("./features/tv/TvPairingScreen.tsx"),
   tvLink: () => import("./features/tv-link/TvLinkScreen.tsx"),
 };
@@ -33,5 +34,6 @@ export const JoinScreen = lazy(() => loaders.join().then((m) => ({ default: m.Jo
 export const ProfileScreen = lazy(() => loaders.profile().then((m) => ({ default: m.ProfileScreen })));
 export const WatchlistScreen = lazy(() => loaders.watchlist().then((m) => ({ default: m.WatchlistScreen })));
 export const SessionScreen = lazy(() => loaders.session().then((m) => ({ default: m.SessionScreen })));
+export const ReportScreen = lazy(() => loaders.report().then((m) => ({ default: m.ReportScreen })));
 export const TvPairingScreen = lazy(() => loaders.tvPairing().then((m) => ({ default: m.TvPairingScreen })));
 export const TvLinkScreen = lazy(() => loaders.tvLink().then((m) => ({ default: m.TvLinkScreen })));
