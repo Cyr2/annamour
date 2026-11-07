@@ -20,6 +20,8 @@ import type { RoomStore } from "../room-store.ts";
 
 /** A minute ready from the séance's position: enough to start, encoding then runs far ahead of playback. */
 export const PREP_TARGET_SECONDS = 60;
+/** The next episode's first minute (6 segments of 10 s), made ahead so it starts at once. */
+const NEXT_EPISODE_SEGMENTS = 6;
 /** Encoded files are kept this long after a séance was last watched, then deleted. */
 export const KEEP_AFTER_LAST_USE_MS = 6 * 60 * 60 * 1000;
 const SEGMENT_FILE = /^(\d{5})\.(ts|aac|m4s)$/;
@@ -63,9 +65,12 @@ interface FilmPlan {
   hevc: HevcPlan | undefined;
 }
 
-/** Who is asking: Apple's own player gets the HEVC rungs, nobody else does (see media/hevc.ts). */
+/** Who is asking (see media/hevc.ts). */
 export interface Asker {
+  /** Apple's own player (AVPlayer): the only one shown the HEVC rungs. */
   apple?: boolean;
+  /** A page on an iPhone, iPad or Mac: its native player may ask soon, so the HEVC rungs get checked. */
+  appleDevice?: boolean;
 }
 
 export interface LowQualityServiceOptions {
@@ -105,12 +110,12 @@ export class LowQualityService {
   }
 
   /** The master with our tracks, or one of our tracks' playlists; undefined to serve the stored playlist as is. */
-  playlist(code: string, episode: number, file: string, { apple = false }: Asker = {}): string | undefined {
+  playlist(code: string, episode: number, file: string, asker: Asker = {}): string | undefined {
     const plan = this.plan(code, episode);
     if (!plan) return undefined;
     if (file === "master.m3u8") {
-      this.prepareWhereWatched(plan, apple);
-      return this.master(plan, apple);
+      this.prepareWhereWatched(plan, asker);
+      return this.master(plan, asker.apple === true);
     }
     const name = file.replace(/\.m3u8$/, "");
     const planned = this.planned(plan, name);
@@ -138,12 +143,12 @@ export class LowQualityService {
    * starts preparing them: the salon asks before anyone presses play, so the
    * film starts at once instead of waiting on its first segments.
    */
-  async prep(code: string, { apple = false }: Asker = {}): Promise<PrepStatus | undefined> {
+  async prep(code: string, asker: Asker = {}): Promise<PrepStatus | undefined> {
     const room = this.store.get(code);
     if (!room) return undefined;
     const plan = this.plan(code, room.currentEpisode.id);
     if (!plan || !this.transcoder) return { available: false, readySeconds: 0, targetSeconds: PREP_TARGET_SECONDS };
-    this.prepareWhereWatched(plan, apple);
+    this.prepareWhereWatched(plan, asker);
     const audio = plan.lightAudio === "offered" && plan.defaultAudio ? [plan.defaultAudio] : [];
     const tracks = [plan.video, ...audio];
     const ready = await Promise.all(tracks.map((planned) => this.readiness(planned)));
@@ -196,28 +201,55 @@ export class LowQualityService {
     return { ready, target };
   }
 
-  /** Starts encoding where the séance is, before anyone asks; for an Apple player, the HEVC rungs too. */
-  private prepareWhereWatched(plan: FilmPlan, apple: boolean): void {
+  /**
+   * Starts encoding where the séance is, before anyone asks. An Apple device
+   * gets the HEVC rungs checked; Apple's own player gets them prepared too.
+   */
+  private prepareWhereWatched(plan: FilmPlan, asker: Asker): void {
     this.prepare(plan.video);
     if (plan.lightAudio === "unchecked") this.checkLightAudio(plan);
     if (plan.lightAudio === "offered" && plan.defaultAudio) this.prepare(plan.defaultAudio);
-    const hevc = apple ? plan.hevc : undefined;
-    if (hevc?.state === "unchecked") this.checkHevc(hevc);
-    if (hevc?.state === "offered") {
+    this.prepareHevc(plan.hevc, asker);
+    const { code, episode } = plan.video.track;
+    if (this.store.get(code)?.currentEpisode.id === episode) this.prepareNext(code);
+  }
+
+  private prepareHevc(hevc: HevcPlan | undefined, { apple = false, appleDevice = false }: Asker): void {
+    if (!hevc || !(apple || appleDevice)) return;
+    if (hevc.state === "unchecked") this.checkHevc(hevc);
+    if (hevc.state === "offered" && apple) {
       this.prepare(hevc.video);
       this.prepare(hevc.defaultAudio);
     }
   }
 
+  /**
+   * Gets the queued next episode ready to start, behind what is being watched:
+   * its first minute, and its lighter audio checked, so moving on to it (the
+   * end-of-episode countdown, or « Épisode suivant ») starts at once.
+   */
+  prepareNext(code: string): void {
+    const next = this.store.get(code)?.nextEpisode;
+    const plan = next ? this.plan(code, next.id) : undefined;
+    if (!plan || !this.transcoder) return;
+    this.lastUse.set(code, this.now());
+    this.transcoder.prepareLater(plan.video.track, NEXT_EPISODE_SEGMENTS);
+    if (plan.lightAudio === "unchecked") this.checkLightAudio(plan, { later: true });
+    if (plan.lightAudio === "offered" && plan.defaultAudio) {
+      this.transcoder.prepareLater(plan.defaultAudio.track, NEXT_EPISODE_SEGMENTS);
+    }
+  }
+
   /** Makes one real segment of the default language lighter; only then is the lighter audio announced. */
-  private checkLightAudio(plan: FilmPlan): void {
+  private checkLightAudio(plan: FilmPlan, { later = false } = {}): void {
     const planned = plan.defaultAudio;
     if (!planned || !this.transcoder) return;
     plan.lightAudio = "checking";
     const { track, playlist } = planned;
-    void this.transcoder.ensure(track, this.startIndex(track, playlist)).then((made) => {
+    void this.transcoder.ensure(track, this.startIndex(track, playlist), { later }).then((made) => {
       plan.lightAudio = made ? "offered" : "refused";
-      if (made) this.prepare(planned);
+      if (made && later) this.transcoder?.prepareLater(track, NEXT_EPISODE_SEGMENTS);
+      else if (made) this.prepare(planned);
       else
         this.log(
           `Lighter audio not offered for ${track.code}/${track.episode}: its source audio could not be made lighter`,

@@ -9,6 +9,7 @@ export * from "./messages.ts";
 export * from "./playback.ts";
 export * from "./playback-stats.ts";
 export * from "./room-code.ts";
+export * from "./seance-report.ts";
 export * from "./tv-pairing-code.ts";
 export * from "./watchlist.ts";
 export * from "./wordlist-fr.ts";

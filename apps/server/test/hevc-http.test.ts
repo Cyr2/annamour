@@ -27,6 +27,8 @@ const fetchText: TextFetcher = async (url) => {
 const IPAD =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15";
 const CHROME = "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36";
+/** Safari's own player, as it fetches playlists and segments. */
+const PLAYER = "AppleCoreMedia/1.0.0.22A3354 (iPad; U; CPU OS 18_0 like Mac OS X; fr_fr)";
 
 function setup({ hevc = true, check }: { hevc?: boolean; check?: HevcChecker } = {}) {
   const log = vi.fn();
@@ -74,7 +76,7 @@ describe("the HEVC rungs", () => {
     const { create, get } = setup();
     const code = await create();
     await get(`/api/rooms/${code}/prep`, IPAD);
-    const master = async () => (await get(`/api/rooms/${code}/e/0/hls/master.m3u8`, IPAD)).text();
+    const master = async () => (await get(`/api/rooms/${code}/e/0/hls/master.m3u8`, PLAYER)).text();
     await expect.poll(master, { timeout: 3000 }).toContain("h360.m3u8");
     const text = await master();
     expect(text).toContain('CODECS="hvc1.1.6.L90.B0,mp4a.40.2",FRAME-RATE=23.976,VIDEO-RANGE=SDR,AUDIO="a-hevc"');
@@ -82,13 +84,15 @@ describe("the HEVC rungs", () => {
     expect(text).toContain("RESOLUTION=416x234");
   });
 
-  it("are never shown to a browser playing through hls.js", async () => {
+  it("are never shown to a page playing through hls.js, even Safari's (the iPad's own-player choice)", async () => {
     const { create, get } = setup();
     const code = await create();
     await get(`/api/rooms/${code}/prep`, IPAD);
-    const ipadMaster = async () => (await get(`/api/rooms/${code}/e/0/hls/master.m3u8`, IPAD)).text();
-    await expect.poll(ipadMaster, { timeout: 3000 }).toContain("h360.m3u8");
-    expect(await (await get(`/api/rooms/${code}/e/0/hls/master.m3u8`, CHROME)).text()).not.toContain("hvc1");
+    const playerMaster = async () => (await get(`/api/rooms/${code}/e/0/hls/master.m3u8`, PLAYER)).text();
+    await expect.poll(playerMaster, { timeout: 3000 }).toContain("h360.m3u8");
+    for (const page of [CHROME, IPAD]) {
+      expect(await (await get(`/api/rooms/${code}/e/0/hls/master.m3u8`, page)).text(), page).not.toContain("hvc1");
+    }
   });
 
   it("serve their playlists, init and fMP4 segments", async () => {
@@ -96,18 +100,18 @@ describe("the HEVC rungs", () => {
     const code = await create();
     await get(`/api/rooms/${code}/prep`, IPAD);
     await expect
-      .poll(async () => (await get(`/api/rooms/${code}/e/0/hls/master.m3u8`, IPAD)).text(), { timeout: 3000 })
+      .poll(async () => (await get(`/api/rooms/${code}/e/0/hls/master.m3u8`, PLAYER)).text(), { timeout: 3000 })
       .toContain("h360.m3u8");
-    const playlist = await (await get(`/api/rooms/${code}/e/0/hls/h360.m3u8`, IPAD)).text();
+    const playlist = await (await get(`/api/rooms/${code}/e/0/hls/h360.m3u8`, PLAYER)).text();
     expect(playlist).toContain('#EXT-X-MAP:URI="h360/init.mp4"');
-    const init = await get(`/api/rooms/${code}/e/0/hls/h360/init.mp4`, IPAD);
+    const init = await get(`/api/rooms/${code}/e/0/hls/h360/init.mp4`, PLAYER);
     expect(init.status).toBe(200);
     expect(init.headers.get("content-type")).toBe("video/mp4");
-    const segment = await get(`/api/rooms/${code}/e/0/hls/h360/00000.m4s`, IPAD);
+    const segment = await get(`/api/rooms/${code}/e/0/hls/h360/00000.m4s`, PLAYER);
     expect(segment.headers.get("content-type")).toBe("video/mp4");
-    expect((await get(`/api/rooms/${code}/e/0/hls/h-a0.m3u8`, IPAD)).status).toBe(200);
-    expect((await get(`/api/rooms/${code}/e/0/hls/h360/00000.ts`, IPAD)).status).toBe(404);
-    expect((await get(`/api/rooms/${code}/e/0/hls/q360/init.mp4`, IPAD)).status).toBe(404);
+    expect((await get(`/api/rooms/${code}/e/0/hls/h-a0.m3u8`, PLAYER)).status).toBe(200);
+    expect((await get(`/api/rooms/${code}/e/0/hls/h360/00000.ts`, PLAYER)).status).toBe(404);
+    expect((await get(`/api/rooms/${code}/e/0/hls/q360/init.mp4`, PLAYER)).status).toBe(404);
   });
 
   it("are never offered when their segments fail Safari's checks, and the log says so", async () => {
@@ -119,8 +123,8 @@ describe("the HEVC rungs", () => {
     const code = await create();
     await get(`/api/rooms/${code}/prep`, IPAD);
     await expect.poll(() => log.mock.calls.flat().join("\n"), { timeout: 3000 }).toContain("HEVC not offered");
-    expect(await (await get(`/api/rooms/${code}/e/0/hls/master.m3u8`, IPAD)).text()).not.toContain("hvc1");
-    expect((await get(`/api/rooms/${code}/e/0/hls/h360.m3u8`, IPAD)).status).toBe(404);
+    expect(await (await get(`/api/rooms/${code}/e/0/hls/master.m3u8`, PLAYER)).text()).not.toContain("hvc1");
+    expect((await get(`/api/rooms/${code}/e/0/hls/h360.m3u8`, PLAYER)).status).toBe(404);
   });
 
   it("do not exist when HEVC is switched off", async () => {
@@ -128,6 +132,6 @@ describe("the HEVC rungs", () => {
     const code = await create();
     await get(`/api/rooms/${code}/prep`, IPAD);
     await new Promise((resolve) => setTimeout(resolve, 100));
-    expect(await (await get(`/api/rooms/${code}/e/0/hls/master.m3u8`, IPAD)).text()).not.toContain("hvc1");
+    expect(await (await get(`/api/rooms/${code}/e/0/hls/master.m3u8`, PLAYER)).text()).not.toContain("hvc1");
   });
 });

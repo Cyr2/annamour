@@ -71,7 +71,10 @@ export interface TranscoderOptions {
 
 const NOW = 0;
 const AHEAD = 1;
-/** Work that must never hold back what is watched now: HEVC preparation, checks made ahead. */
+/**
+ * What must never hold back what is watched now: the next episode's start,
+ * HEVC preparation, checks made ahead. Done once what is watched now is covered.
+ */
 const LATER = 2;
 const MAX_ATTEMPTS = 4;
 const REPORT_EVERY = 30;
@@ -179,6 +182,14 @@ export class Transcoder {
   }
 
   /** Prepares the next minutes from `index` (where the séance is), dropping what a seek left behind. */
+  /**
+   * Prepares a track's first `count` segments after everything else: the next
+   * episode, so moving on to it starts at once.
+   */
+  prepareLater(track: Track, count: number): void {
+    for (let i = 0; i < Math.min(count, track.segments.length); i++) this.enqueue(track, i, LATER);
+  }
+
   prepareFrom(track: Track, index: number): void {
     const end = Math.min(track.segments.length, index + this.options.ahead);
     const id = trackId(track);

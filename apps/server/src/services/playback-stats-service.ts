@@ -1,4 +1,10 @@
-import { type PlaybackReport, type PlaybackStatsEntry, rebufferRatio } from "@annamour/protocol";
+import {
+  type PlaybackReport,
+  type PlaybackStatsEntry,
+  rebufferRatio,
+  type SeanceReport,
+  seanceReport,
+} from "@annamour/protocol";
 import type { Repositories } from "../storage/repositories.ts";
 import { RateLimiter } from "./rate-limiter.ts";
 
@@ -42,6 +48,12 @@ export class PlaybackStatsService {
     return this.repositories.playbackReports
       .listForRoom(code)
       .map(({ report, updatedAt }) => ({ ...report, updatedAt, rebufferRatio: rebufferRatio(report) }));
+  }
+
+  /** The séance's evening per person and device, against the targets; undefined for an unknown séance. */
+  report(code: string): SeanceReport | undefined {
+    if (!this.repositories.rooms.exists(code)) return undefined;
+    return seanceReport(this.list(code));
   }
 
   sweep(): number {

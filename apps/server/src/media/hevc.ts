@@ -38,13 +38,23 @@ export function hevcRungNamed(name: string): HevcRung | undefined {
 /* ---------- which clients see HEVC ---------- */
 
 /**
- * Safari's own player (AVPlayer, "AppleCoreMedia") or Safari itself on an
- * iPhone, iPad or Mac. Not Chrome, Firefox or Edge on iOS (their own names),
- * not Android or its TV WebView: those play through hls.js.
+ * Safari's own player (AVPlayer), which fetches playlists as "AppleCoreMedia".
+ * The only client shown the HEVC rungs: a page in Safari may play through
+ * hls.js instead (the iPad's « Moins de coupures » player), which would lock
+ * onto HEVC and never climb to the 720p source.
  */
-export function isAppleHlsClient(userAgent: string | undefined): boolean {
+export function isAppleNativePlayer(userAgent: string | undefined): boolean {
+  return userAgent !== undefined && /AppleCoreMedia/.test(userAgent);
+}
+
+/**
+ * Safari (or its player) on an iPhone, iPad or Mac: its native player may ask
+ * soon, so the HEVC rungs are worth checking ahead. Not Chrome, Firefox or Edge
+ * on iOS (their own names), not Android or its TV WebView.
+ */
+export function isAppleDevice(userAgent: string | undefined): boolean {
   if (!userAgent) return false;
-  if (/AppleCoreMedia/.test(userAgent)) return true;
+  if (isAppleNativePlayer(userAgent)) return true;
   if (/Android|CriOS|FxiOS|EdgiOS|Chrome|Chromium|OPR\/|Edg\//.test(userAgent)) return false;
   return /Safari\//.test(userAgent) && /iPhone|iPad|iPod|Macintosh/.test(userAgent);
 }

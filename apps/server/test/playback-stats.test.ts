@@ -1,3 +1,4 @@
+import { SeanceReport } from "@annamour/protocol";
 import { describe, expect, it } from "vitest";
 import type { TextFetcher } from "../src/safe-fetch.ts";
 import { FetchError } from "../src/safe-fetch.ts";
@@ -44,8 +45,31 @@ function setup() {
   const list = async (code: string) =>
     ((await (await app.request(`/api/rooms/${code}/stats`)).json()) as { reports: Array<Record<string, unknown>> })
       .reports;
-  return { services, create, send, list, advance: (ms: number) => (clock += ms) };
+  return { app, services, create, send, list, advance: (ms: number) => (clock += ms) };
 }
+
+describe("a séance's evening report", () => {
+  it("sums up each person's devices against the targets", async () => {
+    const { app, create, send } = setup();
+    const code = await create();
+    await send(code, report());
+    await send(code, report({ viewingId: "viewing-0002", watchedSeconds: 30, stallCount: 0, stallSeconds: 0 }));
+    const response = await app.request(`/api/rooms/${code}/report`);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    const body = SeanceReport.parse(await response.json());
+    expect(body.devices).toHaveLength(1);
+    expect(body.devices[0]).toMatchObject({ name: "Anna", watchedSeconds: 120, stallCount: 1 });
+    expect(body.devices[0]?.targets.rebuffer.met).toBe(false);
+  });
+
+  it("is empty for a séance nobody watched yet, and missing for one that does not exist", async () => {
+    const { app, create } = setup();
+    const code = await create();
+    expect(await (await app.request(`/api/rooms/${code}/report`)).json()).toEqual({ devices: [] });
+    expect((await app.request("/api/rooms/ZZZZ/report")).status).toBe(404);
+    expect((await app.request("/api/rooms/nope/report")).status).toBe(404);
+  });
+});
 
 describe("playback reports", () => {
   it("are kept per séance, with the share of time spent frozen", async () => {

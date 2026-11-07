@@ -5,6 +5,7 @@ import {
   CreateRoomResponse,
   PrepStatus,
   RoomSnapshot,
+  SeanceReport,
 } from "@annamour/protocol";
 import { ApiRequestError, request } from "./http.ts";
 
@@ -37,6 +38,11 @@ export async function addEpisode(code: string, url: string, label: string): Prom
 /** How ready the séance's lighter qualities are; asking also gets the server making them. */
 export async function fetchPrep(code: string): Promise<PrepStatus> {
   return request(PrepStatus, `/api/rooms/${encodeURIComponent(code)}/prep`, { messages: { 404: ROOM_GONE } });
+}
+
+/** How the film played on each device of the séance, against the targets. */
+export async function fetchSeanceReport(code: string): Promise<SeanceReport> {
+  return request(SeanceReport, `/api/rooms/${encodeURIComponent(code)}/report`, { messages: { 404: ROOM_GONE } });
 }
 
 export async function fetchRoom(code: string): Promise<RoomSnapshot> {

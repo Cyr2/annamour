@@ -1,5 +1,6 @@
 import { Copy, Play } from "lucide-react";
 import { useState } from "react";
+import { Link } from "wouter";
 import { formatClock, joinNames } from "../../lib/format.ts";
 import { useRoom } from "../../sync/room.ts";
 import { CodeLetters } from "../../ui/CodeLetters.tsx";
@@ -96,6 +97,13 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
                 <Button icon={<Copy />} tone="accent" onClick={copy}>
                   {copied ? "Lien copié" : "Copier le lien"}
                 </Button>
+                {/* How the film played on each device: a side page, kept out of the way. */}
+                <Link
+                  href={`/s/${code}/qualite`}
+                  className="inline-flex min-h-11 items-center text-sm text-fg-muted underline underline-offset-4 hover:text-fg"
+                >
+                  Qualité de la séance
+                </Link>
               </div>
             )}
           </div>

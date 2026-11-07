@@ -11,12 +11,18 @@ import { Hono } from "hono";
 import { UserFacingError } from "../errors.ts";
 import { HlsError } from "../hls.ts";
 import { type AppEnv, clientIp, type RouteDeps, readBody, sessionToken } from "../http/context.ts";
-import { isAppleHlsClient } from "../media/hevc.ts";
+import { isAppleDevice, isAppleNativePlayer } from "../media/hevc.ts";
 import { FetchError } from "../safe-fetch.ts";
 import { RateLimiter } from "../services/rate-limiter.ts";
 
 const CREATE_LIMIT = { windowMs: 60_000, max: 10 };
 const IMPORT_HELP = "Colle un lien https vers une playlist .m3u8.";
+
+/** HEVC is shown to Apple's own player only; any page on an Apple device gets it checked ahead. */
+const askerOf = (userAgent: string | undefined) => ({
+  apple: isAppleNativePlayer(userAgent),
+  appleDevice: isAppleDevice(userAgent),
+});
 
 /** What one of our media files is: packed audio, fragmented MP4 (HEVC rungs, their audio, inits), or MPEG-TS. */
 function mediaType(path: string): string {
@@ -73,7 +79,7 @@ export function roomRoutes({ services }: RouteDeps) {
   routes.get("/api/rooms/:code/e/:episode/hls/:file", (c) => {
     const { code, episode, file } = c.req.param();
     // Apple's own player gets the HEVC rungs too (once offered); hls.js never does.
-    const asker = { apple: isAppleHlsClient(c.req.header("user-agent")) };
+    const asker = askerOf(c.req.header("user-agent"));
     const lighter = /^\d+$/.test(episode) ? lowQualities.playlist(code, Number(episode), file, asker) : undefined;
     const playlist = lighter ?? episodeOf(c.req.param())?.imported.playlists.get(file);
     if (!playlist) return c.notFound();
@@ -87,7 +93,7 @@ export function roomRoutes({ services }: RouteDeps) {
   routes.get("/api/rooms/:code/prep", async (c) => {
     const code = c.req.param("code");
     // An iPad in the salon starts checking the HEVC rungs, so they are offered by the time it plays.
-    const asker = { apple: isAppleHlsClient(c.req.header("user-agent")) };
+    const asker = askerOf(c.req.header("user-agent"));
     const status = isRoomCode(code) ? await lowQualities.prep(code, asker) : undefined;
     if (!status) return c.json({ error: "Cette séance n'existe plus." }, 404);
     return c.json(status satisfies PrepStatus, 200, { "cache-control": "no-store" });

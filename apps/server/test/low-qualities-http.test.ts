@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -65,6 +65,7 @@ function setup(withTranscoder = true, ahead = 0, lighterAudio = false) {
     create,
     slowDown: () => (slow = true),
     failAudio: () => (audioFails = true),
+    dir,
     encodes: () => encodes,
     probeLog,
   };
@@ -109,6 +110,19 @@ describe("a séance's lighter qualities", () => {
     expect((await app.request(`/api/rooms/${code}/e/0/hls/lo-a0.m3u8`)).status).toBe(404);
   });
 
+  it("get a queued episode ready to start, lighter audio included, before anyone moves on to it", async () => {
+    const { app, create, dir } = setup(true, 0, true);
+    const code = await create();
+    const added = await app.request(`/api/rooms/${code}/episodes`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url: MASTER, label: "É2" }),
+    });
+    expect(added.status).toBe(201);
+    const ready = (path: string) => existsSync(join(dir, code, "1", path));
+    await expect.poll(() => ready("q480/00001.ts") && ready("lo-a0/00000.aac"), { timeout: 3000 }).toBe(true);
+  });
+
   it("are only ready once the lighter audio is too", async () => {
     const { app, create } = setup(true, 60, true);
     const code = await create();
@@ -146,8 +160,10 @@ describe("a séance's lighter qualities", () => {
   it("serve an encoded segment as video", async () => {
     const { app, create } = setup();
     const code = await create();
-    const segment = await app.request(`/api/rooms/${code}/e/0/hls/q480/00001.ts`);
-    expect(segment.status).toBe(200);
+    // Like a player: ask again while it is being made (the test's wait is short, CI machines are slow).
+    const fetchSegment = () => app.request(`/api/rooms/${code}/e/0/hls/q480/00001.ts`);
+    await expect.poll(async () => (await fetchSegment()).status, { timeout: 3000 }).toBe(200);
+    const segment = await fetchSegment();
     expect(segment.headers.get("content-type")).toBe("video/mp2t");
     expect(await segment.text()).toBe("video");
   });

@@ -6,7 +6,8 @@ import {
   hevcAudio,
   hevcCodecs,
   hevcRungNamed,
-  isAppleHlsClient,
+  isAppleDevice,
+  isAppleNativePlayer,
   Mp4Error,
   splitMp4,
   withHevc,
@@ -27,12 +28,20 @@ const ANDROID_TV =
   "Mozilla/5.0 (Linux; Android 11; BRAVIA 4K; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/120.0 Mobile Safari/537.36";
 
 describe("who gets the HEVC rungs", () => {
-  it("is Safari's own player, on an iPad, iPhone or Mac", () => {
-    for (const ua of [IPAD_SAFARI, IPHONE_SAFARI, AVPLAYER]) expect(isAppleHlsClient(ua), ua).toBe(true);
+  it("is Safari's own player only, which fetches playlists as AppleCoreMedia", () => {
+    expect(isAppleNativePlayer(AVPLAYER)).toBe(true);
+    // A Safari page may play through hls.js (the iPad's « Moins de coupures »): no HEVC for it.
+    for (const ua of [IPAD_SAFARI, IPHONE_SAFARI, CHROME_IOS, ANDROID_TV, undefined]) {
+      expect(isAppleNativePlayer(ua)).toBe(false);
+    }
   });
 
-  it("is never a browser that plays through hls.js, nor the Android TV app", () => {
-    for (const ua of [CHROME_IOS, CHROME_MAC, ANDROID_TV, undefined, ""]) expect(isAppleHlsClient(ua)).toBe(false);
+  it("are checked ahead for any page on an iPad, iPhone or Mac in Safari", () => {
+    for (const ua of [IPAD_SAFARI, IPHONE_SAFARI, AVPLAYER]) expect(isAppleDevice(ua), ua).toBe(true);
+  });
+
+  it("are never checked for a browser that plays through hls.js, nor the Android TV app", () => {
+    for (const ua of [CHROME_IOS, CHROME_MAC, ANDROID_TV, undefined, ""]) expect(isAppleDevice(ua)).toBe(false);
   });
 });
 

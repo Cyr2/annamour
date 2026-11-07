@@ -9,6 +9,14 @@ import type { Services } from "./services/services.ts";
 const HELLO_TIMEOUT_MS = 5_000;
 const HEARTBEAT_MS = 25_000;
 const MAX_MESSAGE_BYTES = 4 * 1024;
+/** How long a dropped member stays in the room before being counted as gone. */
+export const RECONNECT_GRACE_MS = 30_000;
+/**
+ * Close codes that mean someone left: the app's own close (1000, "normal closure") and the
+ * browser's when the page is closed or left (1001, "going away"). A dropped link closes
+ * without either (1006), or with nothing at all.
+ */
+const LEFT_ON_PURPOSE = new Set([1000, 1001]);
 
 /**
  * Attaches the sync WebSocket endpoint (/ws?room=ABCD) to the HTTP server.
@@ -17,6 +25,7 @@ const MAX_MESSAGE_BYTES = 4 * 1024;
 export function attachRealtime(
   server: HttpServer | Http2Server | Http2SecureServer,
   { store, accounts, history }: Pick<Services, "store" | "accounts" | "history">,
+  { reconnectGraceMs = RECONNECT_GRACE_MS }: { reconnectGraceMs?: number } = {},
 ): WebSocketServer {
   const wss = new WebSocketServer({ noServer: true, maxPayload: MAX_MESSAGE_BYTES });
   const alive = new WeakMap<WebSocket, boolean>();
@@ -78,9 +87,19 @@ export function attachRealtime(
       }
     });
 
-    ws.on("close", () => {
+    ws.on("close", (code) => {
       clearTimeout(helloTimer);
-      if (memberId !== null) room.leave(memberId, connection, Date.now());
+      if (memberId === null) return;
+      const id = memberId;
+      // Leaving the séance closes cleanly (1000, 1001): gone at once. A dropped link (a phone's 4G
+      // blinking, a locked screen) gets a moment to come back before « X est parti(e) » is said;
+      // meanwhile the room never waits for them.
+      if (LEFT_ON_PURPOSE.has(code)) {
+        room.leave(id, connection, Date.now());
+        return;
+      }
+      room.disconnected(id, connection, Date.now());
+      setTimeout(() => room.leave(id, connection, Date.now()), reconnectGraceMs).unref();
     });
   }
 

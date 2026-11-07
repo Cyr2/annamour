@@ -126,6 +126,11 @@ export class Room {
   }
 
   /** The episode on screen. */
+  /** The episode after the one on screen, if one is queued: what everyone watches next. */
+  get nextEpisode(): Episode | undefined {
+    return this.episodes[this.progress.current + 1];
+  }
+
   get currentEpisode(): Episode {
     return this.episodeAtIndex(this.progress.current);
   }
@@ -197,6 +202,18 @@ export class Room {
     this.broadcastMembers();
     this.maybeResume(now);
     return member.id;
+  }
+
+  /**
+   * A member's link dropped; they may be back in a moment, so they stay listed.
+   * Whatever they were loading no longer holds the room: it would wait for nobody.
+   */
+  disconnected(memberId: string, connection: Connection, now: number): void {
+    const participant = this.participants.get(memberId);
+    if (!participant || participant.connection !== connection || !participant.buffering) return;
+    participant.buffering = false;
+    this.broadcastMembers();
+    this.maybeResume(now);
   }
 
   leave(memberId: string, connection: Connection, now: number): void {
