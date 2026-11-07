@@ -58,6 +58,40 @@ jobs:
           name: playwright-traces
           path: e2e/test-results
 
+  # A measurement, not a gate: never required, never blocks a merge.
+  reseau-faible:
+    name: reseau-faible
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install ffmpeg (the film and its lighter qualities are made for real)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Install Google Chrome (H.264 support)
+        run: pnpm --filter @annamour/e2e exec playwright install --with-deps chrome
+      - name: A weak 4G viewer and a fiber one watch together
+        run: pnpm e2e:reseau-faible 2>&1 | tee weak-network.log
+      - name: Measurement table
+        if: always()
+        run: |
+          {
+            echo '```'
+            sed -n '/=== Weak-network measurement ===/,/^$/p' weak-network.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: weak-network-traces
+          path: e2e/test-results
+
   docker:
     name: docker
     runs-on: ubuntu-latest
