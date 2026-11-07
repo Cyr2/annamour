@@ -38,6 +38,8 @@ const SLOW_PING_MS = 10_000;
 /** No message at all for this long means the socket is dead even if not closed (common on iOS). */
 const STALE_MS = 25_000;
 const BACKOFF_BASE_MS = 500;
+/** WebSocket "normal closure": the server lets this person go at once. */
+const LEFT_ON_PURPOSE = 1000;
 const BACKOFF_MAX_MS = 15_000;
 
 /** Monotonic, epoch-based local clock: immune to wall-clock jumps during a session. */
@@ -83,6 +85,8 @@ export class SyncClient {
     if (!this.stopped) return;
     this.stopped = false;
     window.addEventListener("online", this.handleWake);
+    // iOS restores a suspended page with pageshow, sometimes without any visibilitychange.
+    window.addEventListener("pageshow", this.handleWake);
     document.addEventListener("visibilitychange", this.handleWake);
     this.open();
   }
@@ -90,10 +94,12 @@ export class SyncClient {
   close(): void {
     this.stopped = true;
     window.removeEventListener("online", this.handleWake);
+    window.removeEventListener("pageshow", this.handleWake);
     document.removeEventListener("visibilitychange", this.handleWake);
     clearTimeout(this.retryTimer);
     clearTimeout(this.pingTimer);
-    this.dropSocket();
+    // A clean close tells the room this person left on purpose: no waiting for them to come back.
+    this.dropSocket(LEFT_ON_PURPOSE);
     this.setStatus("closed");
   }
 
@@ -187,13 +193,15 @@ export class SyncClient {
     ws.onerror = () => {};
   }
 
-  private dropSocket(): void {
+  /** Closes the socket; `code` 1000 only when this person leaves (a dead socket being replaced is not a leave). */
+  private dropSocket(code?: number): void {
     const ws = this.ws;
     if (!ws) return;
     this.ws = null;
     ws.onopen = ws.onmessage = ws.onclose = ws.onerror = null;
     try {
-      ws.close();
+      if (code === undefined) ws.close();
+      else ws.close(code, "left");
     } catch {
       // already closing
     }

@@ -28,7 +28,10 @@ class FakeSocket {
     this.sent.push(JSON.parse(data));
   }
 
-  close(): void {
+  closeCode: number | undefined;
+
+  close(code?: number): void {
+    this.closeCode = code;
     this.readyState = FakeSocket.CLOSED;
   }
 
@@ -91,6 +94,24 @@ afterEach(() => {
 });
 
 describe("SyncClient", () => {
+  it("closes cleanly when this person leaves, so the room lets them go at once", () => {
+    client.connect();
+    const ws = socket();
+    ws.open();
+    client.close();
+    expect(ws.closeCode).toBe(1000);
+  });
+
+  it("reconnects at once when iOS restores the page, even without a visibility change", () => {
+    client.connect();
+    socket().open();
+    socket().receive({ type: "welcome", you: "m1", room, serverTime: 0 });
+    // The phone was locked: the socket died silently.
+    socket().readyState = FakeSocket.CLOSED;
+    window.dispatchEvent(new Event("pageshow"));
+    expect(FakeSocket.instances).toHaveLength(2);
+  });
+
   it("says hello on connection and is open once welcomed", () => {
     client.connect();
     socket().open();
