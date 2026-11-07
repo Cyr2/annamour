@@ -10,6 +10,14 @@ describe("server configuration", () => {
     expect(config).toMatchObject({ production: true, pepper: "s3cret" });
   });
 
+  it("makes lighter qualities with 2 ffmpeg at once unless told otherwise, 0 turning them off", () => {
+    expect(loadConfig({}).transcodeWorkers).toBe(2);
+    expect(loadConfig({ TRANSCODE_WORKERS: "0" }).transcodeWorkers).toBe(0);
+    expect(loadConfig({ TRANSCODE_WORKERS: " " }).transcodeWorkers).toBe(2);
+    expect(() => loadConfig({ TRANSCODE_WORKERS: "lots" })).toThrow(/TRANSCODE_WORKERS/);
+    expect(() => loadConfig({ TRANSCODE_WORKERS: "64" })).toThrow(ConfigError);
+  });
+
   it("has development defaults", () => {
     const config = loadConfig({});
     expect(config).toMatchObject({

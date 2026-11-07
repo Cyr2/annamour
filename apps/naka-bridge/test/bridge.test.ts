@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { nakaApiPath } from "../src/allowlist.ts";
+import { mediaUrl, nakaApiPath } from "../src/allowlist.ts";
 import { type BridgeDeps, handleBridgeRequest, type NakaCaller } from "../src/bridge.ts";
 import { CallBudget } from "../src/budget.ts";
+import { MediaGate } from "../src/media-gate.ts";
 
 function fakeNaka(answer = { status: 200, body: "{}" }) {
   const calls: string[] = [];
@@ -10,13 +11,79 @@ function fakeNaka(answer = { status: 200, body: "{}" }) {
       calls.push(path);
       return answer;
     },
+    fetchMedia: async (url) => {
+      calls.push(url.href);
+      return { status: 200, body: new Uint8Array([1, 2, 3]), contentType: "video/mp2t" };
+    },
   };
   return { naka, calls };
 }
 
-function deps(naka: NakaCaller, max = 5): BridgeDeps {
-  return { secret: "s3cret", naka, budget: new CallBudget({ max, windowMs: 60_000 }), now: () => 1000 };
+function deps(naka: NakaCaller, max = 5, media = new MediaGate()): BridgeDeps {
+  return { secret: "s3cret", naka, budget: new CallBudget({ max, windowMs: 60_000 }), media, now: () => 1000 };
 }
+
+const SEGMENT = "https://media.dooms.fit/movies/157336-unr8i/720p/segment-050.ts";
+const media = (url: string) => `/media?url=${encodeURIComponent(url)}`;
+
+describe("which video files the bridge downloads", () => {
+  it("allows a segment from Naka's video host", () => {
+    expect(mediaUrl(media(SEGMENT))?.href).toBe(SEGMENT);
+    expect(mediaUrl(media("https://media.dooms.fit/movies/1/audio_fr/segment-000.aac"))).not.toBeNull();
+  });
+
+  it("refuses any other host, page or scheme", () => {
+    expect(mediaUrl(media("https://naka.cx/api/v1/profiles"))).toBeNull();
+    expect(mediaUrl(media("https://media.dooms.fit/index.html"))).toBeNull();
+    expect(mediaUrl(media("http://media.dooms.fit/a.ts"))).toBeNull();
+    expect(mediaUrl(media("https://evil.test/a.ts"))).toBeNull();
+    expect(mediaUrl("/media")).toBeNull();
+    expect(mediaUrl("/other?url=x")).toBeNull();
+  });
+
+  it("downloads an allowed segment and passes its bytes on", async () => {
+    const { naka, calls } = fakeNaka();
+    const answer = await handleBridgeRequest(get(media(SEGMENT)), deps(naka));
+    expect(answer).toEqual({ status: 200, body: new Uint8Array([1, 2, 3]), contentType: "video/mp2t" });
+    expect(calls).toEqual([SEGMENT]);
+  });
+
+  it("keeps to its per-minute budget so Naka's servers never suffer", async () => {
+    const { naka } = fakeNaka();
+    const gate = new MediaGate({ perMinute: 1 });
+    expect((await handleBridgeRequest(get(media(SEGMENT)), deps(naka, 5, gate))).status).toBe(200);
+    expect((await handleBridgeRequest(get(media(SEGMENT)), deps(naka, 5, gate))).status).toBe(429);
+  });
+
+  it("downloads only a few segments at a time", async () => {
+    let release = () => {};
+    const slow: NakaCaller = {
+      call: async () => ({ status: 200, body: "" }),
+      fetchMedia: () => new Promise((resolve) => (release = () => resolve({ status: 200, body: "" }))),
+    };
+    const gate = new MediaGate({ parallel: 1 });
+    const first = handleBridgeRequest(get(media(SEGMENT)), deps(slow, 5, gate));
+    expect((await handleBridgeRequest(get(media(SEGMENT)), deps(slow, 5, gate))).status).toBe(429);
+    release();
+    expect((await first).status).toBe(200);
+  });
+
+  it("refuses a file that is not Naka's video", async () => {
+    const { naka, calls } = fakeNaka();
+    expect((await handleBridgeRequest(get(media("https://evil.test/a.ts")), deps(naka))).status).toBe(404);
+    expect(calls).toEqual([]);
+  });
+
+  it("reports Naka's video host as unreachable when the page fails", async () => {
+    const broken: NakaCaller = {
+      call: async () => ({ status: 200, body: "" }),
+      fetchMedia: async () => {
+        throw new Error("page crashed");
+      },
+    };
+    expect((await handleBridgeRequest(get(media(SEGMENT)), deps(broken))).status).toBe(502);
+  });
+});
 
 const get = (target: string, secret: string | null = "s3cret") => ({
   method: "GET",
@@ -81,7 +148,10 @@ describe("a request to the bridge", () => {
   });
 
   it("answers 502 when the browser cannot reach Naka", async () => {
-    const naka: NakaCaller = { call: () => Promise.reject(new Error("browser closed")) };
+    const naka: NakaCaller = {
+      call: () => Promise.reject(new Error("browser closed")),
+      fetchMedia: () => Promise.reject(new Error("browser closed")),
+    };
     const answer = await handleBridgeRequest(get("/naka/browse/search?q=Dune"), deps(naka));
     expect(answer.status).toBe(502);
   });

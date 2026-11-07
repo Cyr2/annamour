@@ -29,6 +29,8 @@ jobs:
         run: pnpm lint
       - name: Typecheck
         run: pnpm typecheck
+      - name: Install ffmpeg (lighter qualities are encoded for real in a test)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - name: Tests with coverage thresholds
         run: pnpm test
       - name: Build
@@ -69,6 +71,8 @@ jobs:
       - name: Smoke test the container
         run: |
           docker run -d --name annamour -p 8787:8787 -e KEY_PEPPER=ci-only-pepper -e NODE_ENV=production annamour:ci
+          # Lighter qualities need ffmpeg inside the image.
+          docker exec annamour ffmpeg -version | head -1
           for i in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:8787/api/health; then exit 0; fi
             sleep 1

@@ -25,7 +25,9 @@ ENV NODE_ENV=production \
     WEB_DIST=/app/apps/web/dist \
     DATA_DIR=/app/data
 WORKDIR /app
-# Sessions and accounts live in SQLite on this volume (mount it in Coolify).
+# ffmpeg makes each film's lighter qualities, for viewers on a weak link (src/media/).
+RUN apk add --no-cache ffmpeg
+# Sessions and accounts live in SQLite on this volume (mount it in Coolify); encoded films go in data/media.
 RUN mkdir -p /app/data && chown node:node /app/data
 VOLUME /app/data
 COPY --from=build --chown=node:node /app/node_modules ./node_modules

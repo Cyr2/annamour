@@ -4,8 +4,12 @@ import { serve } from "@hono/node-server";
 import { createApp } from "./app.ts";
 import { bridgeFetcher, NakaCatalog } from "./catalog/naka-catalog.ts";
 import { loadConfig } from "./config.ts";
+import { ffmpegAvailable, ffmpegEncoder } from "./media/ffmpeg.ts";
+import { segmentSource } from "./media/segment-source.ts";
+import { Transcoder } from "./media/transcoder.ts";
 import { attachRealtime } from "./realtime.ts";
 import { CHECKPOINT_INTERVAL_MS } from "./room-store.ts";
+import { safeFetchBytes } from "./safe-fetch.ts";
 import { createServices } from "./services/services.ts";
 import { openDatabase } from "./storage/database.ts";
 
@@ -15,12 +19,30 @@ const config = loadConfig(process.env);
 mkdirSync(config.dataDir, { recursive: true });
 const db = openDatabase(join(config.dataDir, "annamour.db"));
 const { nakaBridge } = config;
+const transcoder = await lowQualityTranscoder();
 const services = createServices({
   db,
   pepper: config.pepper,
   relyingParty: config.relyingParty,
   ...(nakaBridge ? { catalog: new NakaCatalog(bridgeFetcher(nakaBridge.url, nakaBridge.secret)) } : {}),
+  ...(transcoder ? { transcoder } : {}),
 });
+
+/** Lighter qualities for weak links, made with ffmpeg when it is installed (it is in the Docker image). */
+async function lowQualityTranscoder(): Promise<Transcoder | undefined> {
+  if (config.transcodeWorkers === 0 || !(await ffmpegAvailable())) {
+    console.info("Lighter qualities off (no ffmpeg, or TRANSCODE_WORKERS=0)");
+    return undefined;
+  }
+  const dir = join(config.dataDir, "media");
+  mkdirSync(dir, { recursive: true });
+  return new Transcoder({
+    dir,
+    source: segmentSource(safeFetchBytes, nakaBridge),
+    encode: ffmpegEncoder,
+    workers: config.transcodeWorkers,
+  });
+}
 const servesWeb = existsSync(config.webDist);
 const app = createApp(services, { production: config.production, ...(servesWeb ? { webDist: config.webDist } : {}) });
 
@@ -34,7 +56,10 @@ const sweeper = setInterval(() => {
   services.store.sweep(Date.now());
   services.accounts.sweep();
   services.tvPairings.sweep();
+  void services.lowQualities.sweep().catch((error: unknown) => console.warn("Media sweep failed", error));
 }, SWEEP_INTERVAL_MS);
+// Encodes left from before a restart are not tracked any more: free their space.
+void services.lowQualities.sweep().catch((error: unknown) => console.warn("Media sweep failed", error));
 
 function shutdown(): void {
   clearInterval(checkpoint);
