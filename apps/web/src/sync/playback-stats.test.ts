@@ -215,6 +215,7 @@ describe("waiting for someone else", () => {
     lastEvent: { action: "wait", by: "leo", seq: 1 },
     episodeEvent: null,
     error: null,
+    readying: null,
     ...overrides,
   });
 

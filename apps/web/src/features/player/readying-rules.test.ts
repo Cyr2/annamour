@@ -1,6 +1,6 @@
 import type { Member } from "@annamour/protocol";
 import { describe, expect, it } from "vitest";
-import { readyingMessage, slowestLead } from "./readying-rules.ts";
+import { filmIsOn, readyingMessage, slowestLead } from "./readying-rules.ts";
 
 const member = (id: string, name: string, lead?: number): Member => ({
   id,
@@ -22,6 +22,14 @@ describe("who the film waits for before starting together", () => {
     expect(slowestLead([member("m2", "Annou", 3)], null, "m1")).toBeNull();
     expect(slowestLead([member("m2", "Annou", 31)], readying, "m1")).toBeNull();
     expect(slowestLead([member("m2", "Annou")], readying, "m1")).toBeNull();
+  });
+
+  it("keeps the film « on » for the controls while the room waits to start or to go on after a jump", () => {
+    const paused = { status: "paused", position: 60, at: 0 } as const;
+    expect(filmIsOn({ ...paused, status: "playing" }, null)).toBe(true);
+    expect(filmIsOn(paused, readying)).toBe(true);
+    expect(filmIsOn(paused, null)).toBe(false);
+    expect(filmIsOn(null, null)).toBe(false);
   });
 
   it("is said plainly, about someone else or about this device", () => {

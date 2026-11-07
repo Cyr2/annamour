@@ -1,4 +1,13 @@
-import type { Member, Readying } from "@annamour/protocol";
+import type { Member, PlaybackState, Readying } from "@annamour/protocol";
+
+/**
+ * The film is on, for the controls: playing, or about to (the room waits for
+ * everyone's lead, after a play or a jump). The button then offers « Pause »,
+ * which cancels the wait, and a short wait after a jump does not flicker it.
+ */
+export function filmIsOn(playback: PlaybackState | null, readying: Readying | null): boolean {
+  return playback?.status === "playing" || readying !== null;
+}
 
 /** Who the room is waiting for before starting together: the device with the least downloaded. */
 export interface SlowestLead {

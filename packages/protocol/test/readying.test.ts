@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { parseClientMessage, parseServerMessage } from "../src/messages.ts";
 import {
+  awaitedLeads,
+  forgottenLead,
   isReady,
   LEAD_REPORT_MS,
   LEAD_STUCK_MS,
   nextLead,
   READY_LEAD,
+  READY_MAX_WAIT_MS,
+  readyingFrom,
   readyTarget,
   readyToStart,
   shouldReportLead,
@@ -53,6 +57,49 @@ describe("starting together", () => {
     expect(first).toEqual({ seconds: 4, grewAt: 1000 });
     expect(nextLead(first, 4.2, 3000)).toEqual({ seconds: 4.2, grewAt: 1000 });
     expect(nextLead(first, 9, 3000)).toEqual({ seconds: 9, grewAt: 3000 });
+  });
+});
+
+describe("who the room waits for", () => {
+  const slow = { seconds: 5, grewAt: 1000 };
+
+  it("never a device whose link is down: it may never come back, and its last word is stale", () => {
+    expect(awaitedLeads([{ lead: slow, linkDown: true }])).toEqual([undefined]);
+    expect(readyToStart(awaitedLeads([{ lead: slow, linkDown: true }]), { target: 30, until: 25_000 }, 1500)).toBe(
+      true,
+    );
+  });
+
+  it("a connected device, with what it last said", () => {
+    expect(
+      awaitedLeads([
+        { lead: slow, linkDown: false },
+        { lead: undefined, linkDown: false },
+      ]),
+    ).toEqual([slow, undefined]);
+  });
+});
+
+describe("whether to wait before playing", () => {
+  it("waits from where the film starts, for at most the deadline, when someone is still downloading", () => {
+    expect(readyingFrom([{ seconds: 0, grewAt: 1000 }], 600, 3600, 1000)).toEqual({
+      target: READY_LEAD,
+      until: 1000 + READY_MAX_WAIT_MS,
+    });
+  });
+
+  it("does not wait at all when everyone already has the lead, or when nobody reports one", () => {
+    expect(readyingFrom([{ seconds: 40, grewAt: 0 }, undefined], 600, 3600, 1000)).toBeNull();
+    expect(readyingFrom([undefined, undefined], 600, 3600, 1000)).toBeNull();
+  });
+
+  it("does not wait at the very end of the film: there is nothing left to download", () => {
+    expect(readyingFrom([{ seconds: 0, grewAt: 1000 }], 3600, 3600, 1000)).toBeNull();
+  });
+
+  it("after a jump, waits again for every device that reports its lead, and only those", () => {
+    expect(forgottenLead({ seconds: 300, grewAt: 0 }, 5000)).toEqual({ seconds: 0, grewAt: 5000 });
+    expect(forgottenLead(undefined, 5000)).toBeUndefined();
   });
 });
 
