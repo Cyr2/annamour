@@ -156,7 +156,10 @@ async function asTransportStream(frames: Uint8Array[], start: number | undefined
   await writeFile(adts, joinBytes(frames));
   await ffmpeg([
     ...[...QUIET, "-f", "aac", "-i", adts, "-c:a", "copy"],
-    ...["-output_ts_offset", start.toFixed(6), "-muxdelay", "0", "-muxpreload", "0", "-f", "mpegts", ts],
+    // Several AAC frames per PES packet (ffmpeg groups audio up to its mux delay): one frame per PES
+    // would wrap each ~170-byte frame in two 188-byte TS packets and double the size. mpegts_copyts
+    // keeps that delay from shifting the timestamps, which must stay the source's.
+    ...["-output_ts_offset", start.toFixed(6), "-mpegts_copyts", "1", "-muxpreload", "0", "-f", "mpegts", ts],
   ]);
   return new Uint8Array(await readFile(ts));
 }

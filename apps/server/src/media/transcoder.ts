@@ -154,7 +154,12 @@ export class Transcoder {
   async sweep(keep: (code: string) => boolean): Promise<void> {
     const codes = await readdir(this.options.dir).catch(() => []);
     await Promise.all(
-      codes.filter((code) => !keep(code)).map((code) => rm(join(this.options.dir, code), { recursive: true })),
+      codes
+        .filter((code) => !keep(code))
+        // A segment being written meanwhile can make a folder non-empty again: retry, and never fail the sweep.
+        .map((code) =>
+          rm(join(this.options.dir, code), { recursive: true, force: true, maxRetries: 3 }).catch(() => {}),
+        ),
     );
   }
 
