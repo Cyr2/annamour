@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -65,6 +65,7 @@ function setup(withTranscoder = true, ahead = 0, lighterAudio = false) {
     create,
     slowDown: () => (slow = true),
     failAudio: () => (audioFails = true),
+    dir,
     encodes: () => encodes,
     probeLog,
   };
@@ -107,6 +108,19 @@ describe("a séance's lighter qualities", () => {
     expect(await master()).not.toContain("a-lo");
     expect(await master()).toMatch(/RESOLUTION=416x234[^\n]*AUDIO="a"/);
     expect((await app.request(`/api/rooms/${code}/e/0/hls/lo-a0.m3u8`)).status).toBe(404);
+  });
+
+  it("get a queued episode ready to start, lighter audio included, before anyone moves on to it", async () => {
+    const { app, create, dir } = setup(true, 0, true);
+    const code = await create();
+    const added = await app.request(`/api/rooms/${code}/episodes`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url: MASTER, label: "É2" }),
+    });
+    expect(added.status).toBe(201);
+    const ready = (path: string) => existsSync(join(dir, code, "1", path));
+    await expect.poll(() => ready("q480/00001.ts") && ready("lo-a0/00000.aac"), { timeout: 3000 }).toBe(true);
   });
 
   it("are only ready once the lighter audio is too", async () => {

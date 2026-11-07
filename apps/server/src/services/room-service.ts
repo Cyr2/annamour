@@ -15,6 +15,8 @@ export interface RoomServiceOptions {
   now: () => number;
   /** Told of each new séance (to start preparing its lighter qualities before anyone opens it). */
   onCreated?: (code: string) => void;
+  /** Told when an episode is queued (to get it ready before everyone moves on to it). */
+  onEpisodeAdded?: (code: string) => void;
 }
 
 export class RoomService {
@@ -47,7 +49,9 @@ export class RoomService {
     const room = this.roomAcceptingEpisode(code);
     const imported = await importHls(url, this.options.fetchText);
     const name = label ?? nextEpisodeLabel(room.lastEpisodeLabel, room.episodeCount);
-    return this.options.store.addEpisode(room, name, imported, catalog);
+    const index = this.options.store.addEpisode(room, name, imported, catalog);
+    this.options.onEpisodeAdded?.(code);
+    return index;
   }
 
   /**

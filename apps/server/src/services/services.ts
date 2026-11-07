@@ -73,6 +73,8 @@ export function createServices(options: ServiceOptions): Services {
     onCreated: (code) => {
       lowQualities.prep(code).catch((error: unknown) => console.warn("Could not start preparing", code, error));
     },
+    // A queued episode is made ready behind the current one, so moving on to it starts at once.
+    onEpisodeAdded: (code) => lowQualities.prepareNext(code),
   });
   return {
     store,
