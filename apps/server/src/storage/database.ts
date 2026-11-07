@@ -58,6 +58,16 @@ const MIGRATIONS: readonly string[] = [
   );
   CREATE INDEX passkeys_account_id ON passkeys (account_id);
   `,
+  `
+  CREATE TABLE tv_pairings (
+    poll_token_hash TEXT PRIMARY KEY,
+    code_hash TEXT NOT NULL,
+    state TEXT NOT NULL DEFAULT 'pending' CHECK (state IN ('pending', 'approved', 'consumed')),
+    account_id TEXT REFERENCES accounts (id) ON DELETE CASCADE,
+    expires_at INTEGER NOT NULL
+  );
+  CREATE INDEX tv_pairings_code_hash ON tv_pairings (code_hash);
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;
