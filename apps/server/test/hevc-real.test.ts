@@ -127,12 +127,14 @@ function payloadSizes(file: string, header: number): number[] {
   const out = execFileSync("ffprobe", [
     ...["-v", "error", "-select_streams", "a:0", "-show_entries", "packet=size", "-of", "csv=p=0", file],
   ]);
-  return out
-    .toString()
-    .trim()
-    .split(/\s+/)
-    // A packet with side data (MPEG-TS) prints it after its size on the same line: the size comes first.
-    .map((size) => Number.parseInt(size, 10) - header);
+  return (
+    out
+      .toString()
+      .trim()
+      .split(/\s+/)
+      // A packet with side data (MPEG-TS) prints it after its size on the same line: the size comes first.
+      .map((size) => Number.parseInt(size, 10) - header)
+  );
 }
 
 describe.skipIf(!installed)("the HEVC rungs' audio, in fMP4", () => {
