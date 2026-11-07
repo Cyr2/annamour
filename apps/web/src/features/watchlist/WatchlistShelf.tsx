@@ -51,12 +51,7 @@ export function WatchlistShelf() {
         )}
       </div>
       {/* Room around the cards for the TV's focus ring: a scroller clips what overflows it. */}
-      <ul
-        className={cx(
-          "-mx-4 flex gap-3 overflow-x-auto px-4 py-3 [scrollbar-width:none]",
-          tv && "-mx-6 gap-5 px-6 py-5",
-        )}
-      >
+      <ul className={cx("flex gap-3 overflow-x-auto py-3 [scrollbar-width:none]", tv && "-mx-6 gap-5 px-6 py-5")}>
         {toWatch.slice(0, SHELF_SIZE).map((item) => (
           <li key={item.id} className="w-[7.5rem] shrink-0">
             <ShelfCard item={item} tv={tv} onPick={pick} />

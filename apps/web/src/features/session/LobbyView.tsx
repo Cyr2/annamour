@@ -45,7 +45,7 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
   return (
     <div className="safe-area mx-auto flex min-h-dvh max-w-[1100px] flex-col">
       <ScreenTopBar back="/" title={room?.media.title ?? "Séance"} />
-      <main className="grid flex-1 content-center items-center gap-8 py-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:gap-12">
+      <main className="grid flex-1 grid-cols-[minmax(0,1fr)] content-center items-center gap-8 py-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:gap-12">
         <div className="grid justify-items-center gap-6 text-center md:order-2">
           <SalonPresence members={members} you={you} className="w-[min(22.5rem,100%)]" />
           <div className="grid justify-items-center gap-3">
@@ -71,7 +71,7 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
         <Surface className="surface-panel grid justify-items-center gap-5 p-6 text-center sm:p-8 md:order-1">
           <p className="type-label">Le code de la séance</p>
           <CodeLetters code={code} />
-          <div className="flex items-center gap-4 text-left">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-left">
             <QrCode
               value={joinUrl}
               label={`QR code pour rejoindre la séance ${code}`}

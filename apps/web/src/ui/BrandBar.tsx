@@ -17,7 +17,10 @@ interface BrandBarProps {
 export function BrandBar({ start, end }: BrandBarProps) {
   return (
     <header
-      className={cx("flex min-h-12 items-center justify-between gap-3", !start && !end && "max-sm:justify-center")}
+      className={cx(
+        "flex min-h-12 flex-wrap items-center justify-between gap-x-3 gap-y-2",
+        !start && !end && "max-sm:justify-center",
+      )}
     >
       <div className="flex items-center gap-3">
         {start}

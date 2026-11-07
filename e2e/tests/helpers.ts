@@ -21,7 +21,8 @@ export async function onboard(page: Page, name: string, path = "/") {
   // The Face ID step is optional (only where passkeys exist) and slides in: give it a moment to appear.
   const later = page.getByRole("button", { name: "Plus tard" });
   await later.waitFor({ timeout: 3000 }).catch(() => {});
-  if (await later.isVisible()) await later.click();
+  // The step slides in over the last one: an optional step, so no waiting for the slide to settle.
+  if (await later.isVisible()) await later.click({ force: true });
 }
 
 /** From home, creates a séance from the HLS link and opens its salon; returns the salon's path. */

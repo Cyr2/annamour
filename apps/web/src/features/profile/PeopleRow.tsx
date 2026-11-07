@@ -25,7 +25,7 @@ export function PeopleRow({ people, favoriteId, totalSessions, selected, onSelec
       <h2 className="type-heading">Avec qui je regarde</h2>
       <fieldset
         className={cx(
-          "flex min-w-0 overflow-x-auto border-0 [scrollbar-width:none]",
+          "flex min-w-0 flex-wrap border-0",
           // The row scrolls, so it clips what overflows it: a TV's focus ring and lift need room all around.
           tv ? "-m-3 scroll-p-3 gap-3 p-3" : "-mx-1 gap-1 p-0 pb-1",
         )}

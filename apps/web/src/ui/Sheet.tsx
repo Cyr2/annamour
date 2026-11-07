@@ -85,7 +85,7 @@ function SheetPanel({ onClose, title, children }: Omit<SheetProps, "open">) {
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cx(
-          "absolute bottom-0 left-1/2 flex max-h-[92%] w-[min(560px,100%)] -translate-x-1/2 flex-col gap-4 overflow-y-auto overscroll-contain",
+          "absolute bottom-0 left-1/2 flex max-h-[92%] w-[min(560px,100%)] -translate-x-1/2 flex-col gap-4 overflow-x-hidden overflow-y-auto overscroll-contain",
           "am-sheet rounded-t-sheet px-6 pt-2.5 pb-[max(28px,var(--am-safe-bottom))] outline-none sm:px-8",
         )}
         initial={{ y: "105%" }}
