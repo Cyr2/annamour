@@ -1,11 +1,13 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { Catalog } from "../catalog/naka-catalog.ts";
+import type { Transcoder } from "../media/transcoder.ts";
 import { RoomStore } from "../room-store.ts";
 import { safeFetchText, type TextFetcher } from "../safe-fetch.ts";
 import { createRepositories } from "../storage/repositories.ts";
 import { AccountService } from "./account-service.ts";
 import { CatalogService } from "./catalog-service.ts";
 import { HistoryService } from "./history-service.ts";
+import { LowQualityService } from "./low-quality-service.ts";
 import { PasskeyService, type RelyingParty, type WebAuthn } from "./passkey-service.ts";
 import { RoomService } from "./room-service.ts";
 import type { RandomInt } from "./secrets.ts";
@@ -27,6 +29,8 @@ export interface ServiceOptions {
   webAuthn?: WebAuthn;
   /** Films and series to search by name (Naka through naka-bridge); absent, séances start from a link. */
   catalog?: Catalog;
+  /** Makes lighter qualities of each film (needs ffmpeg); absent, séances keep their source's only quality. */
+  transcoder?: Transcoder;
 }
 
 export interface Services {
@@ -38,6 +42,7 @@ export interface Services {
   tvPairings: TvPairingService;
   catalog: CatalogService;
   watchlist: WatchlistService;
+  lowQualities: LowQualityService;
   now: () => number;
 }
 
@@ -58,6 +63,7 @@ export function createServices(options: ServiceOptions): Services {
     tvPairings: new TvPairingService({ repositories, accounts, now, randomInt: options.tvCodeRandomInt }),
     passkeys: new PasskeyService({ repositories, relyingParty, now, webAuthn: options.webAuthn }),
     watchlist: new WatchlistService({ repositories, now }),
+    lowQualities: new LowQualityService({ store, transcoder: options.transcoder, now }),
     now,
   };
 }

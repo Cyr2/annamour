@@ -12,6 +12,25 @@ const ALLOWED_PARAMS: Record<string, RegExp> = {
   episode: /^\d{1,4}$/,
 };
 
+/** Where Naka keeps its videos; only these hosts are fetched for media. */
+export const DEFAULT_MEDIA_HOSTS = ["media.dooms.fit"];
+const MEDIA_FILE = /\.(?:ts|aac|m4s|mp4)$/;
+
+/**
+ * Turns `/media?url=<video segment>` into the segment URL to fetch, or null
+ * when it is not one of Naka's video files: the bridge only ever downloads
+ * film segments, never pages or the API through this door.
+ */
+export function mediaUrl(target: string, hosts: readonly string[] = DEFAULT_MEDIA_HOSTS): URL | null {
+  const request = new URL(target, "http://bridge");
+  if (request.pathname !== "/media") return null;
+  const raw = request.searchParams.get("url");
+  if (!raw || !URL.canParse(raw)) return null;
+  const url = new URL(raw);
+  if (url.protocol !== "https:" || !hosts.includes(url.hostname) || !MEDIA_FILE.test(url.pathname)) return null;
+  return url;
+}
+
 /**
  * Turns the bridge's request target (`/naka/<path>?<query>`) into the Naka API
  * path to call, or null when it is not one of the allowed calls.

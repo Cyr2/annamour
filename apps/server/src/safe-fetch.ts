@@ -49,14 +49,15 @@ async function assertPublicHost(url: URL): Promise<void> {
   }
 }
 
-export const safeFetchText: TextFetcher = async (input) => {
+/** Follows redirects by hand, checking every hop's host, and returns the final successful response. */
+async function safeResponse(input: URL, maxBytes: number, timeoutMs: number): Promise<Response> {
   let url = input;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     await assertPublicHost(url);
     const response = await fetch(url, {
       redirect: "manual",
       headers: { "user-agent": USER_AGENT, accept: "*/*" },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("location");
@@ -65,11 +66,26 @@ export const safeFetchText: TextFetcher = async (input) => {
       continue;
     }
     if (!response.ok) throw new FetchError(`Upstream answered ${response.status}`, response.status);
-    const declared = Number(response.headers.get("content-length") ?? 0);
-    if (declared > MAX_BYTES) throw new FetchError("Response too large");
-    const body = await response.text();
-    if (body.length > MAX_BYTES) throw new FetchError("Response too large");
-    return body;
+    if (Number(response.headers.get("content-length") ?? 0) > maxBytes) throw new FetchError("Response too large");
+    return response;
   }
   throw new FetchError("Too many redirects");
+}
+
+export const safeFetchText: TextFetcher = async (url) => {
+  const body = await (await safeResponse(url, MAX_BYTES, TIMEOUT_MS)).text();
+  if (body.length > MAX_BYTES) throw new FetchError("Response too large");
+  return body;
+};
+
+export type BytesFetcher = (url: URL) => Promise<Uint8Array>;
+
+/** A video segment is a few MB; a slow source gets more time than a playlist. */
+const MAX_SEGMENT_BYTES = 64 * 1024 * 1024;
+const SEGMENT_TIMEOUT_MS = 60_000;
+
+export const safeFetchBytes: BytesFetcher = async (url) => {
+  const body = new Uint8Array(await (await safeResponse(url, MAX_SEGMENT_BYTES, SEGMENT_TIMEOUT_MS)).arrayBuffer());
+  if (body.byteLength > MAX_SEGMENT_BYTES) throw new FetchError("Response too large");
+  return body;
 };

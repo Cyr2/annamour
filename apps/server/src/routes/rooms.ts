@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import {
   AddEpisodeRequest,
   type AddEpisodeResponse,
@@ -27,7 +28,7 @@ function importErrorMessage(error: unknown): string | null {
 }
 
 export function roomRoutes({ services }: RouteDeps) {
-  const { store, rooms, accounts, now } = services;
+  const { store, rooms, accounts, lowQualities, now } = services;
   // Creating a séance and adding an episode both import a stream: one budget for both.
   const imports = new RateLimiter(CREATE_LIMIT);
   const tooMany = { error: "Trop de liens importés, réessaie dans une minute." };
@@ -61,11 +62,26 @@ export function roomRoutes({ services }: RouteDeps) {
   });
 
   routes.get("/api/rooms/:code/e/:episode/hls/:file", (c) => {
-    const playlist = episodeOf(c.req.param())?.imported.playlists.get(c.req.param("file"));
+    const { code, episode, file } = c.req.param();
+    const lighter = /^\d+$/.test(episode) ? lowQualities.playlist(code, Number(episode), file) : undefined;
+    const playlist = lighter ?? episodeOf(c.req.param())?.imported.playlists.get(file);
     if (!playlist) return c.notFound();
     return c.body(playlist, 200, {
       "content-type": "application/vnd.apple.mpegurl",
       "cache-control": "no-store",
+    });
+  });
+
+  // A lighter quality's segment, encoded on demand: the player retries while it is being made.
+  routes.get("/api/rooms/:code/e/:episode/hls/:rung/:file", async (c) => {
+    const { code, episode, rung, file } = c.req.param();
+    if (!/^\d+$/.test(episode)) return c.notFound();
+    const path = await lowQualities.segment(code, Number(episode), rung, file);
+    if (path === undefined) return c.notFound();
+    if (path === null) return c.body(null, 503, { "retry-after": "2", "cache-control": "no-store" });
+    return c.body(await readFile(path), 200, {
+      "content-type": "video/mp2t",
+      "cache-control": "private, max-age=86400",
     });
   });
 

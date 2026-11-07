@@ -48,6 +48,28 @@ export class NakaPage implements NakaCaller {
     }
   }
 
+  /**
+   * One video segment, fetched by the page like its own player does (Naka's
+   * video host sends CORS headers), handed back as bytes.
+   */
+  async fetchMedia(url: URL): Promise<NakaAnswer> {
+    const page = await this.openPage();
+    const answer = await page.evaluate(async (href) => {
+      const response = await fetch(href, { credentials: "omit" });
+      const blob = await response.blob();
+      // A data URL is the cheapest way to carry binary out of the page.
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+      });
+      return { status: response.status, base64: dataUrl.slice(dataUrl.indexOf(",") + 1) };
+    }, url.href);
+    if (answer.status !== 200) return { status: answer.status, body: "" };
+    return { status: 200, body: Buffer.from(answer.base64, "base64"), contentType: "video/mp2t" };
+  }
+
   async close(): Promise<void> {
     const context = this.context;
     this.context = null;

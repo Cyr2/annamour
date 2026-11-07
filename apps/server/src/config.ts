@@ -19,6 +19,18 @@ export interface ServerConfig {
   relyingParty: RelyingParty;
   /** naka-bridge, for searching films by name; absent, séances start from a pasted link. */
   nakaBridge: { url: string; secret: string } | undefined;
+  /** ffmpeg processes making lighter qualities at once (0 turns them off). */
+  transcodeWorkers: number;
+}
+
+const DEFAULT_TRANSCODE_WORKERS = 2;
+
+function transcodeWorkers(value: string | undefined): number {
+  if (value === undefined || value.trim() === "") return DEFAULT_TRANSCODE_WORKERS;
+  const workers = Number(value);
+  if (!Number.isInteger(workers) || workers < 0 || workers > 16)
+    throw new ConfigError("TRANSCODE_WORKERS is a whole number from 0 (off) to 16.");
+  return workers;
 }
 
 function nakaBridge(env: NodeJS.ProcessEnv): ServerConfig["nakaBridge"] {
@@ -51,5 +63,6 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     pepper: pepper || DEV_PEPPER,
     relyingParty: { id: env.RP_ID?.trim() || "localhost", name: "Annamour", origins: origins(env.ORIGIN) },
     nakaBridge: nakaBridge(env),
+    transcodeWorkers: transcodeWorkers(env.TRANSCODE_WORKERS),
   };
 }

@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { handleBridgeRequest } from "./bridge.ts";
 import { CallBudget } from "./budget.ts";
+import { MediaGate } from "./media-gate.ts";
 import { NakaPage } from "./naka-page.ts";
 
 /*
@@ -20,6 +21,7 @@ const deps = {
   naka,
   // Far below Naka's own limit (30 a minute): a search and a play are two calls.
   budget: new CallBudget({ max: 20, windowMs: 60_000 }),
+  media: new MediaGate(),
   now: Date.now,
 };
 
@@ -29,7 +31,7 @@ const server = createServer(async (req, res) => {
     { method: req.method ?? "GET", target: req.url ?? "/", secret: Array.isArray(header) ? header[0] : header },
     deps,
   );
-  res.writeHead(answer.status, { "content-type": "application/json; charset=utf-8" });
+  res.writeHead(answer.status, { "content-type": answer.contentType ?? "application/json; charset=utf-8" });
   res.end(answer.body);
 });
 
