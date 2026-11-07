@@ -26,6 +26,12 @@ export interface ServerConfig {
    * needs packed ADTS audio, and Naka's turned out not to be (see the timeline probe).
    */
   lightAudio: boolean;
+  /**
+   * HEVC rungs for Apple players (HEVC=on). Off by default: Safari's HEVC rules
+   * cannot be checked without a real Apple device, so it is switched on by hand
+   * and tried on an iPad first.
+   */
+  hevc: boolean;
 }
 
 const DEFAULT_TRANSCODE_WORKERS = 2;
@@ -46,6 +52,9 @@ function nakaBridge(env: NodeJS.ProcessEnv): ServerConfig["nakaBridge"] {
     throw new ConfigError("NAKA_BRIDGE_URL and NAKA_BRIDGE_SECRET go together: set both or neither.");
   return { url, secret };
 }
+
+/** A feature switch: on only when set to "on". */
+const switchedOn = (value: string | undefined) => value?.trim().toLowerCase() === "on";
 
 /** Only for local development and tests: production refuses to start without its own. */
 export const DEV_PEPPER = "annamour-dev-pepper-not-secret";
@@ -69,6 +78,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     relyingParty: { id: env.RP_ID?.trim() || "localhost", name: "Annamour", origins: origins(env.ORIGIN) },
     nakaBridge: nakaBridge(env),
     transcodeWorkers: transcodeWorkers(env.TRANSCODE_WORKERS),
-    lightAudio: env.LIGHT_AUDIO?.trim().toLowerCase() === "on",
+    lightAudio: switchedOn(env.LIGHT_AUDIO),
+    hevc: switchedOn(env.HEVC),
   };
 }

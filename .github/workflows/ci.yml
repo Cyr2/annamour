@@ -73,6 +73,8 @@ jobs:
           docker run -d --name annamour -p 8787:8787 -e KEY_PEPPER=ci-only-pepper -e NODE_ENV=production annamour:ci
           # Lighter qualities need ffmpeg inside the image.
           docker exec annamour ffmpeg -version | head -1
+          # HEVC rungs need libx265; without it the server simply keeps HEVC off.
+          docker exec annamour sh -c "ffmpeg -hide_banner -encoders | grep -q libx265 && echo 'libx265 present' || echo 'libx265 missing: HEVC stays off'"
           for i in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:8787/api/health; then exit 0; fi
             sleep 1

@@ -18,6 +18,12 @@ describe("server configuration", () => {
     expect(() => loadConfig({ TRANSCODE_WORKERS: "64" })).toThrow(ConfigError);
   });
 
+  it("keeps HEVC off unless asked for", () => {
+    expect(loadConfig({}).hevc).toBe(false);
+    expect(loadConfig({ HEVC: " ON " }).hevc).toBe(true);
+    expect(loadConfig({ HEVC: "1" }).hevc).toBe(false);
+  });
+
   it("keeps the lighter audio off unless asked for", () => {
     expect(loadConfig({}).lightAudio).toBe(false);
     expect(loadConfig({ LIGHT_AUDIO: "on" }).lightAudio).toBe(true);

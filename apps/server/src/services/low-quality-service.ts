@@ -1,10 +1,13 @@
 import type { PrepStatus } from "@annamour/protocol";
+import { fmp4Playlist, HEVC_RUNGS, type HevcOffer, hevcAudio, hevcCodecs, withHevc } from "../media/hevc.ts";
 import {
   audioRenditions,
+  evenWidth,
   type LightAudio,
   lightAudioFor,
   rungPlaylist,
   rungsFor,
+  type SourceVariant,
   segmentAt,
   segmentDurations,
   segmentSources,
@@ -12,14 +15,15 @@ import {
   withLowQualities,
 } from "../media/ladder.ts";
 import { probeTimeline, type TimelineProbe } from "../media/timeline-probe.ts";
-import type { AudioTrack, Track, Transcoder, VideoTrack } from "../media/transcoder.ts";
+import type { AudioTrack, HevcTrack, Track, Transcoder, VideoTrack } from "../media/transcoder.ts";
 import type { RoomStore } from "../room-store.ts";
 
 /** A minute ready from the séance's position: enough to start, encoding then runs far ahead of playback. */
 export const PREP_TARGET_SECONDS = 60;
 /** Encoded files are kept this long after a séance was last watched, then deleted. */
 export const KEEP_AFTER_LAST_USE_MS = 6 * 60 * 60 * 1000;
-const SEGMENT_FILE = /^(\d{5})\.(ts|aac)$/;
+const SEGMENT_FILE = /^(\d{5})\.(ts|aac|m4s)$/;
+const INIT_FILE = "init.mp4";
 
 /** A lighter track and the source playlist it follows (same segments, same durations). */
 interface Planned<T extends Track> {
@@ -28,11 +32,24 @@ interface Planned<T extends Track> {
 }
 
 /**
- * Whether the lighter audio is offered. It is only announced once a real
- * segment of the film was made lighter: a source format we cannot handle must
- * never leave the lightest rungs without sound.
+ * Whether something extra is offered (the lighter audio, the HEVC rungs). It
+ * is only announced once a real segment of the film was made and passed its
+ * checks: a source we cannot handle must never leave a player without sound
+ * or picture.
  */
-type LightAudioState = "none" | "unchecked" | "checking" | "offered" | "refused";
+type OfferState = "none" | "unchecked" | "checking" | "offered" | "refused";
+
+/** The HEVC rungs (Apple only) and their fMP4 audio. */
+interface HevcPlan {
+  video: Planned<HevcTrack>;
+  audio: Map<string, Planned<AudioTrack>>;
+  defaultAudio: Planned<AudioTrack>;
+  source: SourceVariant;
+  audioGroup: string;
+  audioLines: string[];
+  state: Exclude<OfferState, "none">;
+  offer?: HevcOffer;
+}
 
 interface FilmPlan {
   /** The master without, then with, the lighter audio group. */
@@ -42,7 +59,13 @@ interface FilmPlan {
   audio: Map<string, Planned<AudioTrack>>;
   /** Prepared from the start: the language players pick when nobody chose. */
   defaultAudio: Planned<AudioTrack> | undefined;
-  lightAudio: LightAudioState;
+  lightAudio: OfferState;
+  hevc: HevcPlan | undefined;
+}
+
+/** Who is asking: Apple's own player gets the HEVC rungs, nobody else does (see media/hevc.ts). */
+export interface Asker {
+  apple?: boolean;
 }
 
 export interface LowQualityServiceOptions {
@@ -54,11 +77,15 @@ export interface LowQualityServiceOptions {
   log?: (message: string) => void;
 }
 
+const isFragmented = (track: Track) => track.kind === "hevc" || (track.kind === "audio" && track.container === "fmp4");
+const extensionOf = (track: Track) => (isFragmented(track) ? "m4s" : track.kind === "video" ? "ts" : "aac");
+
 /**
  * Offers each séance's film in lighter qualities too (see media/), for
- * whoever watches on a weak link: lighter video rungs, and for the lightest
- * ones a lighter audio in every language. Without a transcoder (no ffmpeg),
- * séances keep their single source quality and nothing here changes anything.
+ * whoever watches on a weak link: lighter video rungs, a lighter audio in
+ * every language for the lightest ones, and for Apple devices HEVC rungs.
+ * Without a transcoder (no ffmpeg), séances keep their single source quality
+ * and nothing here changes anything.
  */
 export class LowQualityService {
   private readonly store: RoomStore;
@@ -78,26 +105,30 @@ export class LowQualityService {
   }
 
   /** The master with our tracks, or one of our tracks' playlists; undefined to serve the stored playlist as is. */
-  playlist(code: string, episode: number, file: string): string | undefined {
+  playlist(code: string, episode: number, file: string, { apple = false }: Asker = {}): string | undefined {
     const plan = this.plan(code, episode);
     if (!plan) return undefined;
     if (file === "master.m3u8") {
-      this.prepareWhereWatched(plan);
-      return plan.lightAudio === "offered" ? plan.masters.withLightAudio : plan.masters.plain;
+      this.prepareWhereWatched(plan, apple);
+      return this.master(plan, apple);
     }
     const name = file.replace(/\.m3u8$/, "");
     const planned = this.planned(plan, name);
     if (!planned) return undefined;
     this.prepare(planned);
-    return rungPlaylist(planned.playlist, name, planned.track.kind === "video" ? "ts" : "aac");
+    if (isFragmented(planned.track)) return fmp4Playlist(planned.playlist, name);
+    return rungPlaylist(planned.playlist, name, extensionOf(planned.track) === "ts" ? "ts" : "aac");
   }
 
-  /** One of our segments: its path once encoded, null if not ready yet, undefined if it does not exist. */
+  /** One of our segments (or a fMP4 init): its path once made, null if not ready yet, undefined if it does not exist. */
   async segment(code: string, episode: number, name: string, file: string): Promise<string | null | undefined> {
     const plan = this.plan(code, episode);
     const planned = plan ? this.planned(plan, name) : undefined;
+    if (!planned) return undefined;
+    if (file === INIT_FILE)
+      return isFragmented(planned.track) ? (await this.transcoder?.init(planned.track, name))?.path : undefined;
     const match = SEGMENT_FILE.exec(file);
-    if (!planned || !match || match[2] !== (planned.track.kind === "video" ? "ts" : "aac")) return undefined;
+    if (!match || match[2] !== extensionOf(planned.track)) return undefined;
     this.lastUse.set(code, this.now());
     return this.transcoder?.segment(planned.track, name, Number(match[1]));
   }
@@ -107,12 +138,12 @@ export class LowQualityService {
    * starts preparing them: the salon asks before anyone presses play, so the
    * film starts at once instead of waiting on its first segments.
    */
-  async prep(code: string): Promise<PrepStatus | undefined> {
+  async prep(code: string, { apple = false }: Asker = {}): Promise<PrepStatus | undefined> {
     const room = this.store.get(code);
     if (!room) return undefined;
     const plan = this.plan(code, room.currentEpisode.id);
     if (!plan || !this.transcoder) return { available: false, readySeconds: 0, targetSeconds: PREP_TARGET_SECONDS };
-    this.prepareWhereWatched(plan);
+    this.prepareWhereWatched(plan, apple);
     const audio = plan.lightAudio === "offered" && plan.defaultAudio ? [plan.defaultAudio] : [];
     const tracks = [plan.video, ...audio];
     const ready = await Promise.all(tracks.map((planned) => this.readiness(planned)));
@@ -134,10 +165,19 @@ export class LowQualityService {
     for (const key of this.plans.keys()) if (key.startsWith(`${code}/`)) this.plans.delete(key);
   }
 
-  /** Our video rung or lighter audio track of that name. */
+  /** The master this player gets: with the lighter audio once it proved to work, with HEVC for Apple once it did. */
+  private master(plan: FilmPlan, apple: boolean): string {
+    const base = plan.lightAudio === "offered" ? plan.masters.withLightAudio : plan.masters.plain;
+    const offer = apple && plan.hevc?.state === "offered" ? plan.hevc.offer : undefined;
+    return offer && plan.hevc ? withHevc(base, plan.hevc.source.info, offer) : base;
+  }
+
+  /** Our track of that name: a video rung, a lighter audio, or (once offered) a HEVC rung or its audio. */
   private planned(plan: FilmPlan, name: string): Planned<Track> | undefined {
     if (plan.video.track.rungs.some((rung) => rung.name === name)) return plan.video;
-    return plan.lightAudio === "offered" ? plan.audio.get(name) : undefined;
+    const hevc = plan.hevc?.state === "offered" ? plan.hevc : undefined;
+    if (hevc?.video.track.rungs.some((rung) => rung.name === name)) return hevc.video;
+    return hevc?.audio.get(name) ?? (plan.lightAudio === "offered" ? plan.audio.get(name) : undefined);
   }
 
   /** Seconds encoded in a row from where the séance is, up to a minute (or what is left). */
@@ -156,11 +196,17 @@ export class LowQualityService {
     return { ready, target };
   }
 
-  /** Starts encoding the video and the default lighter audio where the séance is, before anyone asks. */
-  private prepareWhereWatched(plan: FilmPlan): void {
+  /** Starts encoding where the séance is, before anyone asks; for an Apple player, the HEVC rungs too. */
+  private prepareWhereWatched(plan: FilmPlan, apple: boolean): void {
     this.prepare(plan.video);
     if (plan.lightAudio === "unchecked") this.checkLightAudio(plan);
     if (plan.lightAudio === "offered" && plan.defaultAudio) this.prepare(plan.defaultAudio);
+    const hevc = apple ? plan.hevc : undefined;
+    if (hevc?.state === "unchecked") this.checkHevc(hevc);
+    if (hevc?.state === "offered") {
+      this.prepare(hevc.video);
+      this.prepare(hevc.defaultAudio);
+    }
   }
 
   /** Makes one real segment of the default language lighter; only then is the lighter audio announced. */
@@ -177,6 +223,55 @@ export class LowQualityService {
           `Lighter audio not offered for ${track.code}/${track.episode}: its source audio could not be made lighter`,
         );
     });
+  }
+
+  /**
+   * Makes two real consecutive HEVC segments (their inits must match) and the
+   * default language's fMP4 audio, behind every H.264 job, each checked as it
+   * is made (hvc1, key frame first, the source's clock). Only then is HEVC
+   * offered to Apple players.
+   */
+  private checkHevc(hevc: HevcPlan): void {
+    const transcoder = this.transcoder;
+    if (!transcoder) return;
+    hevc.state = "checking";
+    const { video, defaultAudio } = hevc;
+    const start = this.startIndex(video.track, video.playlist);
+    const made = [start, start + 1]
+      .filter((index) => index < video.track.segments.length)
+      .map((index) => transcoder.ensure(video.track, index, { later: true }));
+    const audioStart = this.startIndex(defaultAudio.track, defaultAudio.playlist);
+    made.push(transcoder.ensure(defaultAudio.track, audioStart, { later: true }));
+    void Promise.all(made)
+      .then((all) => (all.every(Boolean) ? this.hevcOffer(hevc) : undefined))
+      .catch(() => undefined)
+      .then((offer) => {
+        const where = `${video.track.code}/${video.track.episode}`;
+        hevc.state = offer ? "offered" : "refused";
+        if (offer) {
+          hevc.offer = offer;
+          this.log(`HEVC offered to Apple players for ${where}: ${offer.rungs.map((r) => r.codecs).join(", ")}`);
+        } else this.log(`HEVC not offered for ${where}: its segments could not be made or failed their checks`);
+      });
+  }
+
+  /** The CODECS of each HEVC rung, read from its init, with its frame rate. */
+  private async hevcOffer(hevc: HevcPlan): Promise<HevcOffer | undefined> {
+    const transcoder = this.transcoder;
+    if (!transcoder) return undefined;
+    const rungs: Array<HevcOffer["rungs"][number]> = [];
+    for (const rung of hevc.video.track.rungs) {
+      const init = await transcoder.init(hevc.video.track, rung.name);
+      if (!init?.frameRate) return undefined;
+      rungs.push({
+        rung,
+        codecs: hevcCodecs(init.bytes),
+        width: evenWidth(hevc.source, rung.height),
+        frameRate: init.frameRate,
+      });
+    }
+    if (!(await transcoder.init(hevc.defaultAudio.track, hevc.defaultAudio.track.name))) return undefined;
+    return { rungs, audioGroup: hevc.audioGroup, audioLines: hevc.audioLines };
   }
 
   private prepare({ track, playlist }: Planned<Track>): void {
@@ -208,21 +303,24 @@ export class LowQualityService {
     const rungs = rungsFor(source, sourcePlaylist);
     if (rungs.length === 0) return null;
     this.probeOnce(master, sourcePlaylist, playlistOf);
-    const lightAudio = this.transcoder?.makesAudio ? lightAudioFor(master, source, playlistOf) : undefined;
+    const packedAudio = lightAudioFor(master, source, playlistOf);
+    const lightAudio = this.transcoder?.makesAudio ? packedAudio : undefined;
     const audio = lightAudio ? audioTracks(code, episode, lightAudio, playlistOf) : new Map();
     const defaultName = lightAudio?.renditions.find((r) => r.isDefault)?.name ?? lightAudio?.renditions[0]?.name;
+    const video: Planned<VideoTrack> = {
+      track: { kind: "video", code, episode, segments: segmentSources(sourcePlaylist), rungs },
+      playlist: sourcePlaylist,
+    };
     return {
       masters: {
         plain: withLowQualities(master, source, rungs),
         withLightAudio: withLowQualities(master, source, rungs, lightAudio),
       },
       lightAudio: lightAudio && defaultName ? "unchecked" : "none",
-      video: {
-        track: { kind: "video", code, episode, segments: segmentSources(sourcePlaylist), rungs },
-        playlist: sourcePlaylist,
-      },
+      video,
       audio,
       defaultAudio: defaultName ? audio.get(defaultName) : undefined,
+      hevc: this.transcoder?.makesHevc ? hevcPlan(video, source, packedAudio, playlistOf) : undefined,
     };
   }
 
@@ -260,4 +358,44 @@ function audioTracks(
       return [[name, { track, playlist: source }] as const];
     }),
   );
+}
+
+/**
+ * The HEVC rungs below the source, with the lighter audio in fMP4 for each
+ * language. None without separate packed audio: HEVC rungs carry no sound of
+ * their own, and a muxed-audio source is not worth the extra path here.
+ */
+function hevcPlan(
+  video: Planned<VideoTrack>,
+  source: SourceVariant,
+  packedAudio: LightAudio | undefined,
+  playlist: (uri: string) => string | undefined,
+): HevcPlan | undefined {
+  const rungs = HEVC_RUNGS.filter((rung) => rung.height < source.height);
+  if (!packedAudio || rungs.length === 0) return undefined;
+  const { code, episode, segments } = video.track;
+  const twin = hevcAudio(packedAudio);
+  const audio = new Map(
+    twin.renditions.flatMap(({ name, sourceUri, sourceOf }) => {
+      const sourcePlaylist = playlist(sourceUri);
+      if (!sourcePlaylist) return [];
+      const track: AudioTrack = {
+        ...{ kind: "audio", code, episode, name, container: "fmp4", sourceOf },
+        segments: segmentSources(sourcePlaylist),
+      };
+      return [[name, { track, playlist: sourcePlaylist }] as const];
+    }),
+  );
+  const defaultName = twin.renditions.find((r) => r.isDefault)?.name ?? twin.renditions[0]?.name;
+  const defaultAudio = defaultName ? audio.get(defaultName) : undefined;
+  if (!defaultAudio) return undefined;
+  return {
+    video: { track: { kind: "hevc", code, episode, segments, rungs }, playlist: video.playlist },
+    audio,
+    defaultAudio,
+    source,
+    audioGroup: twin.group,
+    audioLines: twin.renditions.map((rendition) => rendition.line),
+    state: "unchecked",
+  };
 }
