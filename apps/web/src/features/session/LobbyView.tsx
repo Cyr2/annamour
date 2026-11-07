@@ -7,6 +7,7 @@ import { Button } from "../../ui/controls.tsx";
 import { QrCode } from "../../ui/QrCode.tsx";
 import { ScreenTopBar } from "../../ui/ScreenTopBar.tsx";
 import { Surface } from "../../ui/Surface.tsx";
+import { useTv } from "../tv/tv-context.ts";
 import { SalonPresence } from "./Presence.tsx";
 
 function headline(otherNames: string[]): string {
@@ -21,6 +22,7 @@ function statusLine(resumeAt: number | null, othersCount: number): string {
 
 /** The salon: the code and its QR to share, who is here, and the button that starts the film for everyone. */
 export function LobbyView({ code, onStart }: { code: string; onStart: () => void }) {
+  const tv = useTv();
   const room = useRoom((s) => s.room);
   const members = useRoom((s) => s.members);
   const you = useRoom((s) => s.you);
@@ -45,7 +47,7 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
       <ScreenTopBar back="/" title={room?.media.title ?? "Séance"} />
       <main className="grid flex-1 content-center items-center gap-8 py-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:gap-12">
         <div className="grid justify-items-center gap-6 text-center md:order-2">
-          <SalonPresence members={members} you={you} className="w-[min(360px,100%)]" />
+          <SalonPresence members={members} you={you} className="w-[min(22.5rem,100%)]" />
           <div className="grid justify-items-center gap-3">
             <h1 className="type-title" aria-live="polite">
               {headline(others)}
@@ -59,9 +61,12 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
               {statusLine(resumeAt, others.length)}
             </p>
           </div>
-          <Button variant="filled" size="large" icon={<Play />} onClick={onStart} disabled={!room}>
-            {resumeAt ? "Reprendre le film" : "Lancer le film"}
-          </Button>
+          {/* The salon starts here on a TV: OK launches the film for everyone. */}
+          <div data-tv-primary>
+            <Button variant="filled" size="large" icon={<Play />} onClick={onStart} disabled={!room}>
+              {resumeAt ? "Reprendre le film" : "Lancer le film"}
+            </Button>
+          </div>
         </div>
         <Surface className="surface-panel grid justify-items-center gap-5 p-6 text-center sm:p-8 md:order-1">
           <p className="type-label">Le code de la séance</p>
@@ -70,14 +75,19 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
             <QrCode
               value={joinUrl}
               label={`QR code pour rejoindre la séance ${code}`}
-              className="size-[104px] shrink-0"
+              className="size-[6.5rem] shrink-0"
             />
-            <div className="grid justify-items-start gap-2.5">
-              <p className="max-w-[18ch] text-sm text-fg-muted">Ou scanne ce code, ou envoie le lien.</p>
-              <Button icon={<Copy />} tone="accent" onClick={copy}>
-                {copied ? "Lien copié" : "Copier le lien"}
-              </Button>
-            </div>
+            {/* A TV has no clipboard to share from: phones scan the code instead. */}
+            {tv ? (
+              <p className="max-w-[18ch] text-sm text-fg-muted">Ou scanne ce code avec ton téléphone.</p>
+            ) : (
+              <div className="grid justify-items-start gap-2.5">
+                <p className="max-w-[18ch] text-sm text-fg-muted">Ou scanne ce code, ou envoie le lien.</p>
+                <Button icon={<Copy />} tone="accent" onClick={copy}>
+                  {copied ? "Lien copié" : "Copier le lien"}
+                </Button>
+              </div>
+            )}
           </div>
         </Surface>
       </main>

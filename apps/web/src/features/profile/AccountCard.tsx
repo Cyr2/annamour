@@ -1,4 +1,4 @@
-import { LogOut, ScanFace, Smartphone } from "lucide-react";
+import { LogOut, ScanFace, Smartphone, Tv } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { errorMessage } from "../../api/http.ts";
@@ -7,14 +7,18 @@ import { Surface } from "../../ui/Surface.tsx";
 import { toast } from "../../ui/toast.ts";
 import { logout, registerPasskey, useAccount } from "../account/account.ts";
 import { resetSessions } from "../sessions/sessions.ts";
+import { useTv } from "../tv/tv-context.ts";
 import { AccountKeyBox } from "./AccountKeyBox.tsx";
 import { AccountRow } from "./AccountRow.tsx";
 import { AddDeviceSheet } from "./AddDeviceSheet.tsx";
+import { LinkTvSheet } from "./LinkTvSheet.tsx";
 
 /** « Ton compte »: the key, another device, Face ID, and leaving. */
 export function AccountCard() {
   const keyWords = useAccount((s) => s.key);
   const [addingDevice, setAddingDevice] = useState(false);
+  const [linkingTv, setLinkingTv] = useState(false);
+  const tv = useTv();
   const [, navigate] = useLocation();
 
   const signOut = async () => {
@@ -41,6 +45,15 @@ export function AccountCard() {
           detail="Scanne un QR code, c'est relié"
           onClick={() => setAddingDevice(true)}
         />
+        {/* Linked from a phone: the TV itself never types a code. */}
+        {tv ? null : (
+          <AccountRow
+            icon={<Tv />}
+            title="Lier une TV"
+            detail="Tape le code affiché sur la TV"
+            onClick={() => setLinkingTv(true)}
+          />
+        )}
         {passkeysSupported() ? <PasskeyRow /> : null}
         {/* Leaving sits apart from the rest, so it is never tapped by mistake. */}
         <hr className="mx-2 my-1 border-line" />
@@ -53,6 +66,7 @@ export function AccountCard() {
         />
       </div>
       <AddDeviceSheet open={addingDevice} onClose={() => setAddingDevice(false)} />
+      {tv ? null : <LinkTvSheet open={linkingTv} onClose={() => setLinkingTv(false)} />}
     </Surface>
   );
 }

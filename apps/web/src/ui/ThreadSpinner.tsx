@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from "motion/react";
 export function ThreadSpinner({ className }: { className?: string }) {
   const reduceMotion = useReducedMotion() ?? false;
   return (
-    <svg viewBox="0 0 34 34" className={className ?? "size-[34px] shrink-0"} aria-hidden="true">
+    <svg viewBox="0 0 34 34" className={className ?? "size-[2.125rem] shrink-0"} aria-hidden="true">
       <motion.circle
         cx="17"
         cy="17"

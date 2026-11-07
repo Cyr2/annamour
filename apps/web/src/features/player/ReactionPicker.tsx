@@ -6,6 +6,7 @@ import { exit, spring } from "../../lib/motion.ts";
 import { createReactionThrottle } from "../../sync/reactions.ts";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { Surface } from "../../ui/Surface.tsx";
+import { useTv } from "../tv/tv-context.ts";
 
 const LABELS: Record<Reaction, string> = {
   "❤️": "Cœur",
@@ -24,8 +25,16 @@ interface ReactionPickerProps {
 
 /** Six reactions in a glass pop; it stays open to send a few in a row. */
 export function ReactionPicker({ open, onOpenChange, onReact }: ReactionPickerProps) {
+  const tv = useTv();
   const root = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const first = useRef<HTMLButtonElement>(null);
   const allowed = useMemo(() => createReactionThrottle(), []);
+
+  // With a remote, the row of reactions takes the focus as it opens.
+  useEffect(() => {
+    if (open && tv) first.current?.focus();
+  }, [open, tv]);
 
   useEffect(() => {
     if (!open) return;
@@ -33,7 +42,11 @@ export function ReactionPicker({ open, onOpenChange, onReact }: ReactionPickerPr
       if (!root.current?.contains(event.target as Node)) onOpenChange(false);
     };
     const onEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onOpenChange(false);
+      if (event.key !== "Escape") return;
+      // Handled here: the remote's Retour closes the reactions only, not the film.
+      event.preventDefault();
+      onOpenChange(false);
+      if (root.current?.contains(document.activeElement)) trigger.current?.focus();
     };
     window.addEventListener("pointerdown", outside);
     window.addEventListener("keydown", onEscape);
@@ -47,6 +60,7 @@ export function ReactionPicker({ open, onOpenChange, onReact }: ReactionPickerPr
     // Not positioned itself: the pop is placed against the controls capsule, just above it.
     <div ref={root}>
       <IconButton
+        ref={trigger}
         label="Envoyer une réaction"
         icon={<Smile />}
         aria-expanded={open}
@@ -65,10 +79,11 @@ export function ReactionPicker({ open, onOpenChange, onReact }: ReactionPickerPr
               {REACTIONS.map((emoji, index) => (
                 <motion.button
                   key={emoji}
+                  ref={index === 0 ? first : undefined}
                   type="button"
                   role="menuitem"
                   aria-label={LABELS[emoji]}
-                  className="grid size-[46px] place-items-center rounded-full text-[26px] leading-none transition-colors hover:bg-fill-hover focus-visible:bg-fill-hover"
+                  className="grid size-[2.875rem] place-items-center rounded-full text-[1.625rem] leading-none transition-colors hover:bg-fill-hover focus-visible:bg-fill-hover"
                   initial={{ opacity: 0, y: 8, scale: 0.5 }}
                   animate={{ opacity: 1, y: 0, scale: 1, transition: { ...spring.snappy, delay: index * 0.03 } }}
                   whileHover={{ scale: 1.2, y: -3 }}

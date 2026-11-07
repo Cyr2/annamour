@@ -24,8 +24,8 @@ export const BUBBLE_SIZE_CLASSES: Record<BubbleSize, string> = {
   xs: "size-8 text-[0.875rem]",
   sm: "size-9 text-[0.9375rem]",
   md: "size-14 text-[1.5rem]",
-  lg: "size-[84px] text-[2.125rem]",
-  xl: "size-[88px] text-[2.25rem]",
+  lg: "size-[5.25rem] text-[2.125rem]",
+  xl: "size-[5.5rem] text-[2.25rem]",
 };
 
 interface PresenceBubbleProps {

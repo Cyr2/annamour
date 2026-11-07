@@ -1,32 +1,7 @@
-import { type Browser, expect, type Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
+import { createSession, onboard, person, videoPaused, videoTime } from "./helpers.ts";
 
-/** A real, public HLS stream by default; set E2E_HLS_URL to try another one (e.g. a Naka link). */
-const HLS_URL = process.env.E2E_HLS_URL ?? "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
 const MAX_DRIFT_SECONDS = 1;
-
-/** Each person has their own browser profile: separate cookies, separate account. */
-async function person(browser: Browser): Promise<Page> {
-  const context = await browser.newContext();
-  return context.newPage();
-}
-
-/** First launch: name, then the key, then « Plus tard » for the passkey. */
-async function onboard(page: Page, name: string, path = "/") {
-  await page.goto(path);
-  await expect(page).toHaveURL(/\/bienvenue/);
-  await page.getByLabel("Ton prénom").fill(name);
-  await page.getByRole("button", { name: "Continuer" }).click();
-  await expect(page.getByRole("heading", { name: "Voici ta clé" })).toBeVisible();
-  await expect(page.getByRole("list", { name: "Ta clé de 4 mots" }).getByRole("listitem")).toHaveCount(4);
-  await page.getByRole("button", { name: "Je l'ai notée" }).click();
-  // The Face ID step is optional (only where passkeys exist) and slides in: give it a moment to appear.
-  const later = page.getByRole("button", { name: "Plus tard" });
-  await later.waitFor({ timeout: 3000 }).catch(() => {});
-  if (await later.isVisible()) await later.click();
-}
-
-const videoTime = (page: Page) => page.locator("video").evaluate((v: HTMLVideoElement) => v.currentTime);
-const videoPaused = (page: Page) => page.locator("video").evaluate((v: HTMLVideoElement) => v.paused);
 
 async function expectInStep(a: Page, b: Page) {
   const [ta, tb] = await Promise.all([videoTime(a), videoTime(b)]);
@@ -39,13 +14,7 @@ test("deux personnes regardent le même film, synchronisées", async ({ browser 
 
   // Darius arrives, creates a séance from a real HLS link.
   await onboard(darius, "Darius");
-  await darius.getByRole("button", { name: "Créer une séance" }).click();
-  await darius.getByLabel("Lien de la vidéo (.m3u8)").fill(HLS_URL);
-  await darius.getByLabel("Nom de la séance").fill("Test de bout en bout");
-  await darius.getByRole("button", { name: "Préparer la séance" }).click();
-  await darius.getByRole("button", { name: "Ouvrir la séance" }).click();
-  await expect(darius).toHaveURL(/\/s\/[A-Z]{4}$/);
-  const roomUrl = new URL(darius.url()).pathname;
+  const roomUrl = await createSession(darius, "Test de bout en bout");
 
   // Anna opens the shared link, does her first launch, and lands back in the salon.
   await onboard(anna, "Anna", roomUrl);

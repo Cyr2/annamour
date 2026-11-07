@@ -14,6 +14,11 @@ interface CodeInputProps {
   label: string;
   /** Focus the field when it mounts (e.g. on the join screen, where typing the code is the only task). */
   focusOnMount?: boolean;
+  /**
+   * Letters come from elsewhere (the TV's on-screen keyboard): the field is
+   * not typed in nor reached with the remote, and the next cell stays lit.
+   */
+  readOnly?: boolean;
   className?: string;
 }
 
@@ -31,6 +36,7 @@ export function CodeInput({
   error = null,
   label,
   focusOnMount = false,
+  readOnly = false,
   className,
 }: CodeInputProps) {
   const id = useId();
@@ -57,10 +63,12 @@ export function CodeInput({
   };
 
   const active = Math.min(value.length, ROOM_CODE_LENGTH - 1);
+  /** The next cell is lit while typing, and always when the letters come from an on-screen keyboard. */
+  const lit = focused || readOnly;
   const errorId = `${id}-error`;
 
   return (
-    <div className={cx("flex flex-col gap-3", className)}>
+    <div className={cx("flex flex-col items-center gap-3", className)}>
       <label htmlFor={id} className="text-sm font-semibold text-fg-muted">
         {label}
       </label>
@@ -68,7 +76,7 @@ export function CodeInput({
         <div className="flex gap-2.5" aria-hidden>
           {SLOTS.map((slot, i) => {
             const char = value[i];
-            const isActive = focused && i === active;
+            const isActive = lit && i === active;
             return (
               <div
                 key={slot}
@@ -113,6 +121,8 @@ export function CodeInput({
             e.target.setSelectionRange(end, end);
           }}
           onBlur={() => setFocused(false)}
+          readOnly={readOnly}
+          tabIndex={readOnly ? -1 : undefined}
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="characters"

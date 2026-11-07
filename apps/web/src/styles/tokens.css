@@ -173,6 +173,33 @@
 }
 
 /*
+ * TV, seen from 3 m (html[data-tv], see features/tv/tv-mode.ts). The same
+ * screens, scaled: the root size follows the screen (24px on a 1920x1080
+ * screen, whatever its pixel ratio), so every rem-based size grows with it;
+ * the px-based touch sizes are restated in rem; margins keep 5 % clear of the
+ * edges a TV may crop; the focus is a thick milk ring and a slight lift.
+ */
+html[data-tv] {
+  font-size: min(1.25vw, 2.2222vh);
+  --am-text-title: 2.75rem;
+  --am-text-display: 3.25rem;
+  --am-measure: 46ch;
+  --am-touch-target: 2.75rem;
+  --am-tv-target-large: 3.5rem;
+  --am-tv-safe-x: 5vw;
+  --am-tv-safe-y: 5vh;
+  --am-tab-bar-room: 0px;
+  --am-tv-focus: var(--am-milk);
+  --am-tv-ring: 0.25rem;
+  --am-tv-ring-offset: 0.25rem;
+  --am-tv-lift: 1.06;
+  --am-tv-glow: 0 0 2rem rgb(246 242 250 / 0.28);
+  --am-radius-control: 1rem;
+  --am-radius-panel: 1.75rem;
+  --am-radius-sheet: 2.25rem;
+}
+
+/*
  * glisse (Liquid Glass) adopts our palette. Its defaults sit in :where(),
  * so this attribute selector wins without !important.
  */

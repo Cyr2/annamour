@@ -1,17 +1,19 @@
 import { Volume2, VolumeX } from "lucide-react";
 import { Slider } from "../../ui/controls.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
+import { useTv } from "../tv/tv-context.ts";
 import { audibleLevel, supportsVolumeControl, useVolume } from "./volume.ts";
 
 // Probed once: iPhone/iPad Safari ignore a scripted volume, so only mute is offered there.
 const canSetVolume = typeof document !== "undefined" && supportsVolumeControl();
 
-/** Personal volume: mute button, plus a slider where the browser allows it. */
+/** Personal volume: mute button, plus a slider where the browser allows it (not on a TV: its remote has volume keys). */
 export function VolumeControl() {
   const level = useVolume((s) => audibleLevel(s));
   const setLevel = useVolume((s) => s.setLevel);
   const toggleMute = useVolume((s) => s.toggleMute);
   const silent = level === 0;
+  const tv = useTv();
 
   return (
     <div className="flex items-center gap-0.5">
@@ -20,7 +22,7 @@ export function VolumeControl() {
         icon={silent ? <VolumeX /> : <Volume2 />}
         onClick={toggleMute}
       />
-      {canSetVolume ? (
+      {canSetVolume && !tv ? (
         <Slider
           aria-label="Volume"
           aria-valuetext={silent ? "Son coupé" : `${Math.round(level * 100)} %`}
