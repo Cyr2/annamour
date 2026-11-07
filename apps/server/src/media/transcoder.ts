@@ -64,6 +64,8 @@ export class Transcoder {
   private running = 0;
   private encoded = 0;
   private encodeMs = 0;
+  /** Requests answered « retry » because their segment was not ready: should stay near 0. */
+  private late = 0;
 
   constructor(options: TranscoderOptions) {
     this.options = { workers: 2, ahead: 60, waitMs: 9000, retryDelayMs: 3000, log: console.info, ...options };
@@ -88,7 +90,14 @@ export class Transcoder {
     const job = this.enqueue(film, index, NOW);
     this.prepareFrom(film, index + 1);
     const ready = await Promise.race([job.done, delay(this.options.waitMs).then(() => false)]);
+    if (!ready) this.late++;
     return ready ? path : null;
+  }
+
+  /** Every rung of this segment is encoded. */
+  async isReady(film: Film, index: number): Promise<boolean> {
+    const ready = await Promise.all(film.rungs.map((rung) => exists(this.path(film, rung, index))));
+    return ready.every(Boolean);
   }
 
   /** Prepares the next minutes from `index` (where the séance is), dropping what a seek left behind. */
@@ -193,7 +202,9 @@ export class Transcoder {
     this.encodeMs += ms;
     if (this.encoded % REPORT_EVERY !== 0) return;
     const average = Math.round(this.encodeMs / this.encoded);
-    this.options.log(`Lighter qualities: ${this.encoded} segments encoded, ${average} ms each on average`);
+    this.options.log(
+      `Lighter qualities: ${this.encoded} segments encoded, ${average} ms each on average, ${this.late} not ready in time for a player`,
+    );
   }
 
   private forget(job: Job, ok: boolean): void {

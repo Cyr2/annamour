@@ -107,6 +107,13 @@ export function segmentSources(sourcePlaylist: string): string[] {
     .map((line) => line.trim());
 }
 
+/** Each segment's duration (seconds), in order. */
+export function segmentDurations(sourcePlaylist: string): number[] {
+  return lines(sourcePlaylist)
+    .filter((line) => line.startsWith("#EXTINF:"))
+    .map((line) => Number.parseFloat(line.slice(8)) || 0);
+}
+
 /** The segment playing at `seconds` into the source. */
 export function segmentAt(sourcePlaylist: string, seconds: number): number {
   let elapsed = 0;

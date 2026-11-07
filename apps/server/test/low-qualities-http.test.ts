@@ -15,7 +15,7 @@ const fetchText: TextFetcher = async (url) => {
   throw new FetchError("not found", 404);
 };
 
-function setup(withTranscoder = true) {
+function setup(withTranscoder = true, ahead = 0) {
   const dir = mkdtempSync(join(tmpdir(), "annamour-http-"));
   let slow = false;
   const transcoder = new Transcoder({
@@ -26,7 +26,7 @@ function setup(withTranscoder = true) {
       for (const output of outputs) writeFileSync(output.path, "video");
     },
     workers: 1,
-    ahead: 0,
+    ahead,
     waitMs: 50,
     log: () => {},
   });
@@ -85,6 +85,23 @@ describe("a séance's lighter qualities", () => {
     }
     expect((await app.request(`/api/rooms/${code}/e/x/hls/q480/00000.ts`)).status).toBe(404);
     expect((await app.request(`/api/rooms/${code}/e/0/hls/q720/00000.ts`)).status).toBe(404);
+  });
+
+  it("tell the salon how ready they are, and start being made as soon as it asks", async () => {
+    const { app, create } = setup(true, 60);
+    const code = await create();
+    const prep = async () => (await (await app.request(`/api/rooms/${code}/prep`)).json()) as Record<string, unknown>;
+    // The whole film is 20 s here: that is all there is to prepare.
+    expect(await prep()).toMatchObject({ available: true, targetSeconds: 20 });
+    await expect.poll(async () => (await prep()).readySeconds, { timeout: 2000 }).toBe(20);
+  });
+
+  it("say there is nothing to prepare without ffmpeg, and that an unknown séance does not exist", async () => {
+    const { app, create } = setup(false);
+    const code = await create();
+    const status = await (await app.request(`/api/rooms/${code}/prep`)).json();
+    expect(status).toEqual({ available: false, readySeconds: 0, targetSeconds: 60 });
+    expect((await app.request("/api/rooms/ZZZZ/prep")).status).toBe(404);
   });
 
   it("are not offered without ffmpeg: the master stays the source's", async () => {

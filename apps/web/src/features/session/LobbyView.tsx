@@ -9,7 +9,9 @@ import { ScreenTopBar } from "../../ui/ScreenTopBar.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import { DownloadCard } from "../download/DownloadCard.tsx";
 import { useTv } from "../tv/tv-context.ts";
+import { PrepLine } from "./PrepLine.tsx";
 import { SalonPresence } from "./Presence.tsx";
+import { usePrep } from "./prep.ts";
 
 function headline(otherNames: string[]): string {
   if (otherNames.length === 0) return "En attente des autres…";
@@ -29,6 +31,7 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
   const you = useRoom((s) => s.you);
   const playback = useRoom((s) => s.playback);
   const [copied, setCopied] = useState(false);
+  const prep = usePrep(code);
   const joinUrl = `${window.location.origin}/s/${code}`;
   const others = members.filter((m) => m.id !== you).map((m) => m.name);
   const resumeAt = playback && playback.position > 1 ? playback.position : null;
@@ -68,8 +71,10 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
               {resumeAt ? "Reprendre le film" : "Lancer le film"}
             </Button>
           </div>
-          {/* A TV is on a home connection, and has no room to store a film. */}
-          {room && !tv && "caches" in window ? (
+          <PrepLine status={prep} />
+          {/* Downloading the whole film is only worth it when the server cannot make lighter qualities;
+              a TV is on a home connection, with no room to store a film. */}
+          {room && !tv && prep?.available === false && "caches" in window ? (
             <DownloadCard src={room.media.src} duration={room.media.duration} />
           ) : null}
         </div>

@@ -3,6 +3,7 @@ import {
   AddEpisodeResponse,
   CreateRoomRequest,
   CreateRoomResponse,
+  PrepStatus,
   RoomSnapshot,
 } from "@annamour/protocol";
 import { ApiRequestError, request } from "./http.ts";
@@ -31,6 +32,11 @@ export async function addEpisode(code: string, url: string, label: string): Prom
     messages: { 400: "Colle un lien https vers une playlist .m3u8.", 404: ROOM_GONE },
   });
   return episode;
+}
+
+/** How ready the séance's lighter qualities are; asking also gets the server making them. */
+export async function fetchPrep(code: string): Promise<PrepStatus> {
+  return request(PrepStatus, `/api/rooms/${encodeURIComponent(code)}/prep`, { messages: { 404: ROOM_GONE } });
 }
 
 export async function fetchRoom(code: string): Promise<RoomSnapshot> {
