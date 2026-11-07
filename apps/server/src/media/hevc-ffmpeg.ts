@@ -58,7 +58,8 @@ export async function fmp4AudioEncoder(segments: AudioSegments, workDir: string)
   const [adts, mp4] = [join(workDir, "light.aac"), join(workDir, "light.mp4")];
   await writeFile(adts, joinBytes(frames));
   await ffmpeg([
-    ...[...QUIET, "-f", "aac", "-i", adts, "-c:a", "copy"],
+    // MP4 stores AAC without ADTS headers: the bitstream filter strips them (frames unchanged).
+    ...[...QUIET, "-f", "aac", "-i", adts, "-c:a", "copy", "-bsf:a", "aac_adtstoasc"],
     ...["-output_ts_offset", start.toFixed(6), ...FRAGMENTED_MP4, mp4],
   ]);
   return new Uint8Array(await readFile(mp4));

@@ -51,6 +51,8 @@ describe.skipIf(!installed)("real HEVC segments, the way Safari needs them", () 
     const first = sourceSegment(dir, "first", 10);
     const second = sourceSegment(dir, "second", 10 + SECONDS);
     const [a, b] = [await encodeAll(dir, first, "a"), await encodeAll(dir, second, "b")];
+    // Where the source really starts: ffmpeg's MPEG-TS muxer adds its own 1.4 s to the offset.
+    const sourceStart = (await firstVideoFrame(first)).pts;
 
     for (const [i, output] of a.entries()) {
       const next = b[i];
@@ -58,7 +60,7 @@ describe.skipIf(!installed)("real HEVC segments, the way Safari needs them", () 
       const frame = await firstVideoFrame(output.path);
       expect(frame.tag, output.rung.name).toBe("hvc1");
       expect(frame.keyFrame, output.rung.name).toBe(true);
-      expect(Math.abs(frame.pts - 10), output.rung.name).toBeLessThan(1 / FPS);
+      expect(Math.abs(frame.pts - sourceStart), output.rung.name).toBeLessThan(1 / FPS);
       expect((await checkHevcSegment(first, output.path)).frameRate).toBeCloseTo(FPS, 1);
       await checkHevcSegment(second, next.path);
 
