@@ -6,42 +6,69 @@
  * the init segment, never in-band). Each source segment is encoded on its own
  * into one MP4 whose `ftyp`+`moov` is the init segment (identical for every
  * segment of a rung, checked) and whose `moof`+`mdat` pairs are the media
- * segment, its `tfdt` on the source's clock. hls.js would lock a browser onto
- * one codec family, so only Apple clients are ever shown these rungs.
+ * segment, its `tfdt` on the source's clock.
+ *
+ * hls.js starts on the most efficient codec family it decodes and never leaves
+ * it. So Safari's own player gets the lowest HEVC rungs beside its H.264
+ * ladder, while hls.js only gets HEVC when it asks for the complete HEVC
+ * ladder (234p to 720p, see HEVC_LADDER_PARAM): then it gets nothing else.
  */
 
-/** A HEVC rung: the same picture sizes as the lowest H.264 rungs, for fewer bits. */
+/** A HEVC rung: the same picture sizes as the H.264 rungs, for fewer bits. */
 export interface HevcRung {
   name: HevcRungName;
   height: number;
   crf: number;
   maxrateKbps: number;
   bufsizeKbps: number;
+  /** x265's level-idc: 720p is past level 3.0's picture size. */
+  level: 30 | 31;
 }
 
-export type HevcRungName = "h360" | "h288" | "h234";
+export type HevcRungName = "h720" | "h540" | "h480" | "h360" | "h288" | "h234";
 
-/** About 30 % under their H.264 twins (q360 550, q288 300, q234 120 kb/s). */
+/** The lowest rungs, with the lighter audio: about 30 % under their H.264 twins (q360 550, q288 300, q234 120 kb/s). */
 export const HEVC_RUNGS: readonly HevcRung[] = [
-  { name: "h360", height: 360, crf: 26, maxrateKbps: 380, bufsizeKbps: 760 },
-  { name: "h288", height: 288, crf: 27, maxrateKbps: 210, bufsizeKbps: 420 },
-  { name: "h234", height: 234, crf: 29, maxrateKbps: 85, bufsizeKbps: 170 },
+  { name: "h360", height: 360, crf: 26, maxrateKbps: 380, bufsizeKbps: 760, level: 30 },
+  { name: "h288", height: 288, crf: 27, maxrateKbps: 210, bufsizeKbps: 420, level: 30 },
+  { name: "h234", height: 234, crf: 29, maxrateKbps: 85, bufsizeKbps: 170, level: 30 },
 ];
 
-/** What a HEVC rung adds for its audio: the lighter AAC (64 kb/s) in fMP4. */
-const HEVC_AUDIO_KBPS = 70;
+/**
+ * The rest of the complete ladder (HEVC_FULL=on), with the source's audio:
+ * about 30 % under q480 (1000) and q540 (1600 kb/s), and half the ~3 Mb/s
+ * 720p source, re-encoded so hls.js can climb to it without leaving HEVC.
+ */
+export const HEVC_HIGH_RUNGS: readonly HevcRung[] = [
+  { name: "h480", height: 480, crf: 25, maxrateKbps: 700, bufsizeKbps: 1400, level: 30 },
+  { name: "h540", height: 540, crf: 24, maxrateKbps: 1100, bufsizeKbps: 2200, level: 30 },
+  { name: "h720", height: 720, crf: 24, maxrateKbps: 1500, bufsizeKbps: 3000, level: 31 },
+];
+
+/** The complete ladder tops out at the source's own picture: only made for a 720p source (Naka's). */
+export const FULL_LADDER_HEIGHT = 720;
+
+/** What a HEVC rung's audio adds to its declared bitrate, by which audio it plays with. */
+export const HEVC_SOUND_KBPS = {
+  /** The lighter AAC (64 kb/s) in fMP4. */
+  light: 70,
+  /** The source's own AAC, repackaged in fMP4 (Naka's is ~141 kb/s), as for the H.264 rungs. */
+  source: 160,
+} as const;
+
+export type HevcSound = keyof typeof HEVC_SOUND_KBPS;
 
 export function hevcRungNamed(name: string): HevcRung | undefined {
-  return HEVC_RUNGS.find((rung) => rung.name === name);
+  return [...HEVC_RUNGS, ...HEVC_HIGH_RUNGS].find((rung) => rung.name === name);
 }
 
 /* ---------- which clients see HEVC ---------- */
 
 /**
  * Safari's own player (AVPlayer), which fetches playlists as "AppleCoreMedia".
- * The only client shown the HEVC rungs: a page in Safari may play through
- * hls.js instead (the iPad's « Moins de coupures » player), which would lock
- * onto HEVC and never climb to the 720p source.
+ * The only client shown the lowest HEVC rungs beside the H.264 ones: a page in
+ * Safari may play through hls.js instead (the iPad's « Moins de coupures »
+ * player), which would lock onto HEVC and never climb to the 720p source.
  */
 export function isAppleNativePlayer(userAgent: string | undefined): boolean {
   return userAgent !== undefined && /AppleCoreMedia/.test(userAgent);
@@ -180,21 +207,32 @@ export function fmp4Playlist(sourcePlaylist: string, name: string): string {
   return out.join("\n");
 }
 
-/** The HEVC rungs' audio group: the lighter audio's languages and names, in fMP4, under their own names. */
+/** A HEVC audio group: the lighter audio's languages and names, in fMP4, under their own names. */
 export interface HevcAudio {
   group: string;
   renditions: ReadonlyArray<{ name: string; sourceUri: string; line: string; isDefault: boolean; sourceOf: string }>;
 }
 
-export function hevcAudio(light: {
-  group: string;
-  renditions: ReadonlyArray<{ name: string; sourceUri: string; line: string; isDefault: boolean }>;
-}): HevcAudio {
-  const group = light.group.replace(/-lo$/, "-hevc");
+/** Group suffix and track prefix of each HEVC audio (the lighter one keeps phase 1's names). */
+const SOUND_NAMES: Record<HevcSound, { group: string; track: string }> = {
+  light: { group: "-hevc", track: "h-" },
+  source: { group: "-hevc-src", track: "hs-" },
+};
+
+/** The fMP4 twin of the lighter audio group: re-encoded lighter, or the source's sound repackaged. */
+export function hevcAudio(
+  light: {
+    group: string;
+    renditions: ReadonlyArray<{ name: string; sourceUri: string; line: string; isDefault: boolean }>;
+  },
+  sound: HevcSound = "light",
+): HevcAudio {
+  const names = SOUND_NAMES[sound];
+  const group = light.group.replace(/-lo$/, names.group);
   return {
     group,
     renditions: light.renditions.map((rendition) => {
-      const name = rendition.name.replace(/^lo-/, "h-");
+      const name = rendition.name.replace(/^lo-/, names.track);
       const line = rendition.line
         .replace(`GROUP-ID="${light.group}"`, `GROUP-ID="${group}"`)
         .replace(`URI="${rendition.name}.m3u8"`, `URI="${name}.m3u8"`);
@@ -203,28 +241,59 @@ export function hevcAudio(light: {
   };
 }
 
-/** What the Apple master needs to list the HEVC rungs. */
+/** What a master needs to list a set of HEVC rungs. */
 export interface HevcOffer {
   /** Each HEVC rung, with the CODECS string read from its init and its frame rate. */
   rungs: ReadonlyArray<{ rung: HevcRung; codecs: string; width: number; frameRate: number }>;
   /** The fMP4 audio group they play with: same languages and names as the source's. */
-  audioGroup: string;
-  audioLines: readonly string[];
+  audio: {
+    group: string;
+    lines: readonly string[];
+    /** Its CODECS entry (the lighter audio is AAC-LC; the source's is whatever the source declares). */
+    codec: string;
+    kbps: number;
+  };
+}
+
+function variants({ rungs, audio }: HevcOffer): string[] {
+  return rungs.map(({ rung, codecs, width, frameRate }) => {
+    const parts = [
+      `BANDWIDTH=${(rung.maxrateKbps + audio.kbps) * 1000}`,
+      `AVERAGE-BANDWIDTH=${Math.round(rung.maxrateKbps * 0.8 + audio.kbps) * 1000}`,
+      `RESOLUTION=${width}x${rung.height}`,
+      `CODECS="${codecs},${audio.codec}"`,
+      `FRAME-RATE=${frameRate.toFixed(3)}`,
+      "VIDEO-RANGE=SDR",
+      `AUDIO="${audio.group}"`,
+    ];
+    return `#EXT-X-STREAM-INF:${parts.join(",")}\n${rung.name}.m3u8`;
+  });
 }
 
 /** The master with the HEVC rungs (and their fMP4 audio group) added before the source's own variant. */
 export function withHevc(master: string, sourceInfo: string, offer: HevcOffer): string {
-  const variants = offer.rungs.map(({ rung, codecs, width, frameRate }) => {
-    const parts = [
-      `BANDWIDTH=${(rung.maxrateKbps + HEVC_AUDIO_KBPS) * 1000}`,
-      `AVERAGE-BANDWIDTH=${Math.round(rung.maxrateKbps * 0.8 + HEVC_AUDIO_KBPS) * 1000}`,
-      `RESOLUTION=${width}x${rung.height}`,
-      `CODECS="${codecs},mp4a.40.2"`,
-      `FRAME-RATE=${frameRate.toFixed(3)}`,
-      "VIDEO-RANGE=SDR",
-      `AUDIO="${offer.audioGroup}"`,
-    ];
-    return `#EXT-X-STREAM-INF:${parts.join(",")}\n${rung.name}.m3u8`;
-  });
-  return master.replace(sourceInfo, [...offer.audioLines, ...variants, sourceInfo].join("\n"));
+  return master.replace(sourceInfo, [...offer.audio.lines, ...variants(offer), sourceInfo].join("\n"));
+}
+
+const isPlaylistUri = (line: string) => line.trim().length > 0 && !line.startsWith("#");
+/** Besides video variants, what would give hls.js something else than our HEVC to play: I-frame lists, audio groups. */
+const isOtherMedia = (line: string) =>
+  line.startsWith("#EXT-X-I-FRAME-STREAM-INF") || (line.startsWith("#EXT-X-MEDIA") && line.includes("TYPE=AUDIO"));
+
+/**
+ * The master for our hls.js player when it asked for the complete HEVC
+ * ladder: only HEVC variants and their fMP4 audio groups, the source's other
+ * lines (header, subtitles) kept. With a single codec family listed, hls.js
+ * starts on HEVC and has nothing to mix it with, whatever its heuristics.
+ */
+export function hevcLadderMaster(master: string, offers: readonly HevcOffer[]): string {
+  const kept: string[] = [];
+  let variantUri = false;
+  for (const line of master.split(/\r?\n/)) {
+    if (variantUri && isPlaylistUri(line)) variantUri = false;
+    else if (line.startsWith("#EXT-X-STREAM-INF")) variantUri = true;
+    else if (!isOtherMedia(line) && line.trim().length > 0) kept.push(line);
+  }
+  const audio = offers.flatMap((offer) => offer.audio.lines);
+  return [...kept, ...audio, ...offers.flatMap(variants)].join("\n");
 }

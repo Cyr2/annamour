@@ -32,6 +32,12 @@ export interface ServerConfig {
    * and tried on an iPad first.
    */
   hevc: boolean;
+  /**
+   * The complete HEVC ladder, 234p to 720p, for our iPad player (HEVC_FULL=on,
+   * only with HEVC=on). Off by default: it costs the most CPU and is untried
+   * on a real iPad.
+   */
+  hevcFull: boolean;
 }
 
 const DEFAULT_TRANSCODE_WORKERS = 2;
@@ -80,5 +86,6 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     transcodeWorkers: transcodeWorkers(env.TRANSCODE_WORKERS),
     lightAudio: switchedOn(env.LIGHT_AUDIO),
     hevc: switchedOn(env.HEVC),
+    hevcFull: switchedOn(env.HEVC) && switchedOn(env.HEVC_FULL),
   };
 }

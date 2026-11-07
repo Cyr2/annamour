@@ -1,6 +1,7 @@
 import type { AudioTrack } from "@annamour/protocol";
 import { useEffect, useMemo, useState } from "react";
 import { isFilmDownloaded, onFilmsChanged } from "./film-cache.ts";
+import { wantsHevcLadder } from "./hevc-ladder.ts";
 import { initialPlayerSyncState, PlayerSync, type PlayerSyncState } from "./PlayerSync.ts";
 import { playerChoice } from "./player-choice.ts";
 import { type RoomState, useRoom } from "./room.ts";
@@ -48,6 +49,7 @@ export function usePlayerSync(video: HTMLVideoElement | null, client: SyncClient
     const sync = new PlayerSync(video, client, setState, {
       fromDevice: isFilmDownloaded,
       ownPlayer: () => playerChoice() === "annamour",
+      hevcLadder: () => wantsHevcLadder(),
     });
     // Store changes reach the engine directly, without re-rendering React.
     const feed = (room: RoomState) => {

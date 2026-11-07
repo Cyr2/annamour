@@ -24,6 +24,12 @@ describe("server configuration", () => {
     expect(loadConfig({ HEVC: "1" }).hevc).toBe(false);
   });
 
+  it("keeps the complete HEVC ladder off unless asked for, and never without HEVC itself", () => {
+    expect(loadConfig({ HEVC: "on" }).hevcFull).toBe(false);
+    expect(loadConfig({ HEVC: "on", HEVC_FULL: "on" }).hevcFull).toBe(true);
+    expect(loadConfig({ HEVC_FULL: "on" }).hevcFull).toBe(false);
+  });
+
   it("keeps the lighter audio off unless asked for", () => {
     expect(loadConfig({}).lightAudio).toBe(false);
     expect(loadConfig({ LIGHT_AUDIO: "on" }).lightAudio).toBe(true);

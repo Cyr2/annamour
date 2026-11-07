@@ -16,9 +16,10 @@ import type { SegmentSource } from "./segment-source.ts";
  *
  * A video track makes every lighter rung from one source segment; an audio
  * track makes the lighter audio of one language, from a source segment and
- * its neighbours (kept on disk, they are small). HEVC tracks (Apple only)
- * make fragmented MP4: an init per rung, then one media segment per source
- * segment; they are prepared after the H.264 ones, which never wait for them.
+ * its neighbours (kept on disk, they are small). HEVC tracks make fragmented
+ * MP4: an init per rung, then one media segment per source segment; they are
+ * prepared after the H.264 ones, one x265 at a time at a lower OS priority,
+ * so the H.264 rungs never wait for them.
  */
 
 interface TrackBase {
@@ -35,6 +36,8 @@ export interface VideoTrack extends TrackBase {
 
 export interface HevcTrack extends TrackBase {
   kind: "hevc";
+  /** The lowest rungs (Apple's player, and the bottom of the complete ladder), or the higher ones. */
+  part: "low" | "high";
   rungs: readonly HevcRung[];
 }
 
@@ -44,6 +47,8 @@ export interface AudioTrack extends TrackBase {
   name: string;
   /** "fmp4" for the HEVC rungs' audio; packed like the source otherwise. */
   container?: "fmp4";
+  /** "source": the source's own sound repackaged in fMP4, not made lighter (the higher HEVC rungs'). */
+  sound?: "source";
   /** Whose downloaded source segments to reuse (the same language's other lighter track). */
   sourceOf?: string;
 }
@@ -56,8 +61,17 @@ export interface TranscoderOptions {
   source: SegmentSource;
   encode: SegmentEncoder;
   encodeAudio?: AudioSegmentEncoder;
-  /** HEVC (Apple only): the rungs' encoder, its check, and the fMP4 audio. All three, or no HEVC. */
-  hevc?: { encode: HevcEncoder; check: HevcChecker; encodeAudio: AudioSegmentEncoder };
+  /**
+   * HEVC: the rungs' encoder, its check, and the fMP4 audio. All three, or no
+   * HEVC. With `sourceAudio` (the source's sound in fMP4, HEVC_FULL=on), the
+   * complete ladder for our iPad player too.
+   */
+  hevc?: {
+    encode: HevcEncoder;
+    check: HevcChecker;
+    encodeAudio: AudioSegmentEncoder;
+    sourceAudio?: AudioSegmentEncoder;
+  };
   /** ffmpeg processes at once. */
   workers?: number;
   /** Segments prepared ahead of the one being watched (60 × 10 s = 10 min). */
@@ -76,6 +90,11 @@ const AHEAD = 1;
  * HEVC preparation, checks made ahead. Done once what is watched now is covered.
  */
 const LATER = 2;
+/**
+ * x265 runs this many at once at most: with two workers or more, one is always
+ * left for the H.264 rungs, and its memory (~0.3 GB for the higher rungs) stays bounded.
+ */
+const HEVC_AT_ONCE = 1;
 const MAX_ATTEMPTS = 4;
 const REPORT_EVERY = 30;
 /** The init segment of a fragmented-MP4 rung or audio track, and what was learnt when it was made. */
@@ -104,9 +123,14 @@ function outputNames(track: Track): string[] {
 
 const isFragmented = (track: Track) => track.kind === "hevc" || (track.kind === "audio" && track.container === "fmp4");
 const extension = (track: Track) => (isFragmented(track) ? "m4s" : track.kind === "video" ? "ts" : "aac");
-const trackId = (track: Track) => `${track.code}/${track.episode}/${track.kind === "audio" ? track.name : track.kind}`;
+const trackName = (track: Track) =>
+  track.kind === "audio" ? track.name : track.kind === "hevc" ? `hevc-${track.part}` : track.kind;
+const trackId = (track: Track) => `${track.code}/${track.episode}/${trackName(track)}`;
 /** Preparing ahead: HEVC work only once the H.264 tracks are served. */
 const aheadPriority = (track: Track) => (isFragmented(track) ? LATER : AHEAD);
+/** Equally urgent, H.264 goes before HEVC; then the earliest segment first. */
+const byUrgency = (a: Job, b: Job) =>
+  a.priority - b.priority || Number(a.track.kind === "hevc") - Number(b.track.kind === "hevc") || a.index - b.index;
 
 const sameBytes = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((byte, i) => byte === b[i]);
 
@@ -116,6 +140,7 @@ export class Transcoder {
   private readonly jobs = new Map<string, Job>();
   private readonly pending: Job[] = [];
   private running = 0;
+  private runningHevc = 0;
   private encoded = 0;
   private encodeMs = 0;
   private hevcEncoded = 0;
@@ -135,6 +160,11 @@ export class Transcoder {
   /** HEVC rungs can be made (Apple only). */
   get makesHevc(): boolean {
     return this.options.hevc !== undefined;
+  }
+
+  /** The complete HEVC ladder can be made too (the source's sound in fMP4). */
+  get makesFullHevc(): boolean {
+    return this.options.hevc?.sourceAudio !== undefined;
   }
 
   /** Where one of a track's outputs is kept for a segment. */
@@ -240,16 +270,26 @@ export class Transcoder {
   }
 
   private pump(): void {
-    while (this.running < this.options.workers && this.pending.length > 0) {
-      this.pending.sort((a, b) => a.priority - b.priority || a.index - b.index);
-      const job = this.pending.shift();
+    while (this.running < this.options.workers) {
+      const job = this.next();
       if (!job) return;
+      const hevc = job.track.kind === "hevc";
       this.running++;
+      if (hevc) this.runningHevc++;
       void this.run(job).finally(() => {
         this.running--;
+        if (hevc) this.runningHevc--;
         this.pump();
       });
     }
+  }
+
+  /** The most urgent job that may start now: a HEVC one only while fewer than HEVC_AT_ONCE run. */
+  private next(): Job | undefined {
+    this.pending.sort(byUrgency);
+    const hevcFree = this.runningHevc < HEVC_AT_ONCE;
+    const at = this.pending.findIndex((job) => hevcFree || job.track.kind !== "hevc");
+    return at < 0 ? undefined : this.pending.splice(at, 1)[0];
   }
 
   private async run(job: Job): Promise<void> {
@@ -294,7 +334,7 @@ export class Transcoder {
       this.options.dir,
       track.code,
       String(track.episode),
-      `source-${track.kind}-${segmentFile(index)}`,
+      `source-${trackName(track)}-${segmentFile(index)}`,
     );
     await writeFile(input, await this.options.source(new URL(source)));
     try {
@@ -352,14 +392,21 @@ export class Transcoder {
     await writeFile(`${path}.part`, segment);
   }
 
+  private audioEncoder(track: AudioTrack): AudioSegmentEncoder | undefined {
+    if (track.container !== "fmp4") return this.options.encodeAudio;
+    return track.sound === "source" ? this.options.hevc?.sourceAudio : this.options.hevc?.encodeAudio;
+  }
+
   private async makeAudio(track: AudioTrack, index: number, path: string) {
     const fragmented = track.container === "fmp4";
-    const encodeAudio = fragmented ? this.options.hevc?.encodeAudio : this.options.encodeAudio;
+    const encodeAudio = this.audioEncoder(track);
     if (!encodeAudio) throw new Error("No audio encoder");
+    // Only a re-encode needs the neighbours (to cut on the source's frames); repackaging does not.
+    const neighbours = track.sound !== "source";
     const [previous, current, next] = await Promise.all([
-      this.sourceAudio(track, index - 1),
+      neighbours ? this.sourceAudio(track, index - 1) : undefined,
       this.sourceAudio(track, index),
-      this.sourceAudio(track, index + 1),
+      neighbours ? this.sourceAudio(track, index + 1) : undefined,
     ]);
     if (!current) throw new Error(`No source segment ${index}`);
     const work = await mkdtemp(join(tmpdir(), "annamour-audio-"));

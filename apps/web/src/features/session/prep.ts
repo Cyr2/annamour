@@ -1,6 +1,7 @@
 import type { PrepStatus } from "@annamour/protocol";
 import { useEffect, useState } from "react";
 import { fetchPrep } from "../../api/rooms.ts";
+import { wantsHevcLadder } from "../../sync/hevc-ladder.ts";
 
 /*
  * The salon watches the server prepare the film's lighter qualities, so
@@ -27,7 +28,8 @@ export function usePrep(code: string): PrepStatus | null {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let stopped = false;
     const poll = async () => {
-      const next = await fetchPrep(code).catch(() => null);
+      // This iPad's player will ask for the complete HEVC ladder: the server checks it meanwhile.
+      const next = await fetchPrep(code, { hevcLadder: wantsHevcLadder() }).catch(() => null);
       if (stopped) return;
       if (next) setStatus(next);
       if (!next || !prepReady(next)) timer = setTimeout(poll, POLL_MS);
