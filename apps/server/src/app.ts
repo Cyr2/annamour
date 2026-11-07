@@ -6,6 +6,7 @@ import { compress } from "hono/compress";
 import { UserFacingError } from "./errors.ts";
 import type { AppEnv, HttpOptions } from "./http/context.ts";
 import { accountRoutes } from "./routes/account.ts";
+import { catalogRoutes } from "./routes/catalog.ts";
 import { passkeyRoutes } from "./routes/passkey.ts";
 import { roomRoutes } from "./routes/rooms.ts";
 import { sessionRoutes } from "./routes/sessions.ts";
@@ -51,6 +52,7 @@ export function createApp(services: Services, { webDist, production = false }: A
   });
 
   app.route("/", roomRoutes(deps));
+  app.route("/", catalogRoutes(deps));
   app.route("/", accountRoutes(deps));
   app.route("/", passkeyRoutes(deps));
   app.route("/", sessionRoutes(deps));

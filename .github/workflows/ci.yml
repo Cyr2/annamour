@@ -64,6 +64,8 @@ jobs:
       - uses: actions/checkout@v7
       - name: Build the production image
         run: docker build -t annamour:ci .
+      - name: Build the naka-bridge image
+        run: docker build -f apps/naka-bridge/Dockerfile -t naka-bridge:ci .
       - name: Smoke test the container
         run: |
           docker run -d --name annamour -p 8787:8787 -e KEY_PEPPER=ci-only-pepper -e NODE_ENV=production annamour:ci
