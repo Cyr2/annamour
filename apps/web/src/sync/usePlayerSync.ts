@@ -1,5 +1,6 @@
 import type { AudioTrack } from "@annamour/protocol";
 import { useEffect, useMemo, useState } from "react";
+import { isFilmDownloaded, onFilmsChanged } from "./film-cache.ts";
 import { initialPlayerSyncState, PlayerSync, type PlayerSyncState } from "./PlayerSync.ts";
 import { type RoomState, useRoom } from "./room.ts";
 import type { SyncClient } from "./SyncClient.ts";
@@ -41,7 +42,7 @@ export function usePlayerSync(video: HTMLVideoElement | null, client: SyncClient
 
   useEffect(() => {
     if (!video || !client) return;
-    const sync = new PlayerSync(video, client, setState);
+    const sync = new PlayerSync(video, client, setState, { fromDevice: isFilmDownloaded });
     // Store changes reach the engine directly, without re-rendering React.
     const feed = (room: RoomState) => {
       sync.setSource(room.room?.media.src ?? null);
@@ -49,9 +50,11 @@ export function usePlayerSync(video: HTMLVideoElement | null, client: SyncClient
     };
     feed(useRoom.getState());
     const unsubscribe = useRoom.subscribe(feed);
+    const offFilms = onFilmsChanged(() => sync.refreshEngine());
     setEngine(sync);
     return () => {
       unsubscribe();
+      offFilms();
       sync.destroy();
       setEngine(null);
       setState(initialPlayerSyncState);

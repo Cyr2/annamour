@@ -36,6 +36,20 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
         // The API, the socket and the video stream must always hit the network.
         navigateFallbackDenylist: [/^\/api/, /^\/ws/, /^\/media/],
+        runtimeCaching: [
+          {
+            // A film downloaded ahead of the séance (src/sync/film-cache.ts) plays from the device.
+            // Only the download stores segments: streaming never fills the cache (the header never exists).
+            // Anchored at the start: Workbox only applies a RegExp to another origin (the CDN) when it matches from there.
+            urlPattern: /^https:\/\/[^?#]+\.(?:ts|aac|m4s|m4a|mp4)(?:\?.*)?$/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "annamour-films-v1",
+              matchOptions: { ignoreVary: true },
+              cacheableResponse: { headers: { "x-annamour-never-cache": "1" } },
+            },
+          },
+        ],
       },
     }),
   ],

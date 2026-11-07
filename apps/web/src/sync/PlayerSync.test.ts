@@ -38,6 +38,7 @@ function start(): PlayerSync {
 const lastState = () => states.at(-1);
 
 beforeEach(() => {
+  hlsCalls.loaded.length = 0;
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "performance", "Date"] });
   // Safari plays HLS natively: no hls.js to load in tests.
   Object.defineProperty(navigator, "vendor", { value: "Apple Computer, Inc.", configurable: true });
@@ -56,6 +57,25 @@ describe("PlayerSync", () => {
     start();
     expect(video.src).toBe("/api/rooms/YWEK/hls/master.m3u8");
     expect(lastState()?.engine).toBe("native");
+  });
+
+  it("plays a film downloaded on the device through hls.js on Safari, which can read it from there", async () => {
+    sync = new PlayerSync(video.asElement(), client.asClient(), (s) => states.push(s), { fromDevice: () => true });
+    sync.setSource("/api/rooms/YWEK/hls/master.m3u8");
+    await vi.waitFor(() => expect(lastState()?.engine).toBe("hls.js"));
+    expect(video.src).toBe("");
+  });
+
+  it("switches to the device's copy as soon as the download completes", async () => {
+    let downloaded = false;
+    sync = new PlayerSync(video.asElement(), client.asClient(), (s) => states.push(s), {
+      fromDevice: () => downloaded,
+    });
+    sync.setSource("/api/rooms/YWEK/hls/master.m3u8");
+    expect(lastState()?.engine).toBe("native");
+    downloaded = true;
+    sync.refreshEngine();
+    await vi.waitFor(() => expect(lastState()?.engine).toBe("hls.js"));
   });
 
   it("falls back to hls.js when Safari's own player refuses the stream, instead of a black screen", async () => {
