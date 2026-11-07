@@ -12,6 +12,9 @@ import { Button, SegmentedControl } from "../../ui/controls.tsx";
 import { ThreadSpinner } from "../../ui/ThreadSpinner.tsx";
 import { toast } from "../../ui/toast.ts";
 import { useAccount } from "../account/account.ts";
+import { rankPeople } from "../sessions/session-rules.ts";
+import { useSessions } from "../sessions/sessions.ts";
+import { useLoadSessions } from "../sessions/useLoadSessions.ts";
 import { AddToWatchlistSheet } from "./AddToWatchlistSheet.tsx";
 import { PersonFilter } from "./PersonFilter.tsx";
 import { useLoadWatchlist } from "./useLoadWatchlist.ts";
@@ -34,7 +37,10 @@ export function WatchlistScreen() {
   const [sort, setSort] = useState<WatchlistSort>("wants");
   const [adding, setAdding] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
-  const people = useMemo(() => peopleOf(items, me), [items, me]);
+  useLoadSessions();
+  const sessions = useSessions((s) => s.sessions);
+  const known = useMemo(() => new Set(rankPeople(sessions).map((p) => p.accountId)), [sessions]);
+  const people = useMemo(() => peopleOf(items, me, known), [items, me, known]);
   const { toWatch, watched } = useMemo(
     () => splitWatchlist(sortWatchlist(watchlistWith(items, person), sort)),
     [items, person, sort],

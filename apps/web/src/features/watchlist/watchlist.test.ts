@@ -68,7 +68,15 @@ describe("the watchlist store", () => {
 describe("what the watchlist says", () => {
   it("lists the people of my list once, the most shared with first, never me", () => {
     const other = { ...film, id: "w2", sharedWith: [darius, ines] };
-    expect(rules.peopleOf([film, other], "darius").map((p) => p.name)).toEqual(["Inès", "Léa"]);
+    expect(rules.peopleOf([film, other], "darius", new Set(["lea", "ines"])).map((p) => p.name)).toEqual([
+      "Inès",
+      "Léa",
+    ]);
+  });
+
+  it("forgets in its bubbles the people whose séances I removed from my history", () => {
+    expect(rules.peopleOf([film], "darius", new Set(["ines"])).map((p) => p.name)).toEqual(["Inès"]);
+    expect(rules.peopleOf([film], "darius", new Set())).toEqual([]);
   });
 
   it("says who added it, who sees it and who wants it", () => {
