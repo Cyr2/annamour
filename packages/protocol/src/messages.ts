@@ -4,6 +4,7 @@
  * zod alone was ~28 kB gzip of the first visit). The server reads them too.
  */
 import { z } from "zod/mini";
+import { CatalogRef } from "./catalog.ts";
 import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "./room-code.ts";
 
 /** The colours a person can pick for their bubble. Values live in the web tokens. */
@@ -56,7 +57,12 @@ export type Media = z.infer<typeof Media>;
 
 /** One video of a séance (see episodes.ts). The first one usually has no label: it is the séance itself. */
 export const EpisodeLabel = z.string().check(z.trim(), z.minLength(1), z.maxLength(40));
-export const EpisodeInfo = z.object({ label: z.optional(z.string()), duration: z.optional(z.number()) });
+export const EpisodeInfo = z.object({
+  label: z.optional(z.string()),
+  duration: z.optional(z.number()),
+  /** The catalog title it was made from, when it was not a pasted link: lets the PWA offer what follows. */
+  catalog: z.optional(CatalogRef),
+});
 export type EpisodeInfo = z.infer<typeof EpisodeInfo>;
 export const EpisodeIndex = z.number().check(z.int(), z.gte(0));
 

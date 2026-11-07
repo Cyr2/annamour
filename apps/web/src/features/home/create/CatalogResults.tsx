@@ -37,7 +37,10 @@ export function CatalogResults({ titles, onPick }: CatalogResultsProps) {
     return <p className="px-1 py-3 text-sm text-fg-muted">Aucun titre trouvé. Essaie un autre mot du titre.</p>;
   }
   return (
-    <ul className="-mx-1 grid max-h-[46dvh] gap-1 overflow-y-auto px-1" aria-label="Résultats">
+    <ul
+      className="-mx-1 grid max-h-[46dvh] grid-cols-[minmax(0,1fr)] gap-1 overflow-y-auto px-1"
+      aria-label="Résultats"
+    >
       {titles.map((title) => (
         <li key={`${title.type}-${title.id}`}>
           <button

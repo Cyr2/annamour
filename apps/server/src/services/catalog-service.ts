@@ -1,7 +1,8 @@
 import {
+  type AddCatalogEpisodeRequest,
   type CatalogEpisode,
   type CatalogTitle,
-  catalogSessionTitle,
+  catalogLabel,
   type PlayCatalogRequest,
 } from "@annamour/protocol";
 import type { Catalog } from "../catalog/naka-catalog.ts";
@@ -45,10 +46,23 @@ export class CatalogService {
     return this.catalog().season(id, season);
   }
 
-  /** Gets the title's video link, then imports it like a pasted link. */
+  /**
+   * Gets the title's video link, then imports it like a pasted link. A series
+   * episode makes a séance named after the series, its episode labelled « S1 · É1 »,
+   * so the episodes queued after it read « Euphoria · S1 · É2 ».
+   */
   async play(request: PlayCatalogRequest, accountId: string | undefined): Promise<Room> {
     const url = await this.catalog().videoUrl(request);
-    return this.options.rooms.create(url, catalogSessionTitle(request), accountId);
+    const label = request.type === "tv" ? catalogLabel(request) : undefined;
+    return this.options.rooms.create(url, request.title, accountId, { label, catalog: request });
+  }
+
+  /** Queues a catalog title after a séance's episodes: the next one of its series, or another film. */
+  async addEpisode(code: string, request: AddCatalogEpisodeRequest): Promise<number> {
+    const { rooms } = this.options;
+    rooms.roomAcceptingEpisode(code);
+    const url = await this.catalog().videoUrl(request);
+    return rooms.addEpisode(code, url, catalogLabel(request), request);
   }
 
   private catalog(): Catalog {

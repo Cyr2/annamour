@@ -54,19 +54,48 @@ export const PlayCatalogRequest = z
   );
 export type PlayCatalogRequest = z.infer<typeof PlayCatalogRequest>;
 
+/** A film, or one episode of a series, from the catalog: what an episode of a séance was made from. */
+export const CatalogRef = PlayCatalogRequest;
+export type CatalogRef = PlayCatalogRequest;
+
+/** Adds a catalog title to a séance's queue: the next episode of its series, or another film. */
+export const AddCatalogEpisodeRequest = PlayCatalogRequest;
+export type AddCatalogEpisodeRequest = PlayCatalogRequest;
+
+/** Episode labels are at most this long (see EpisodeLabel). */
+const EPISODE_LABEL_MAX = 40;
+
 /** « S2 · É5 »: how an episode is named on its séance. */
 export function catalogEpisodeLabel(season: number, episode: number): string {
   return `S${season} · É${episode}`;
 }
 
-/** The séance's name: the film's title, or the series' title followed by its episode. */
-export function catalogSessionTitle(request: PlayCatalogRequest): string {
-  const { title, season, episode } = request;
-  return season !== undefined && episode !== undefined ? `${title} · ${catalogEpisodeLabel(season, episode)}` : title;
+/**
+ * How a catalog title is named in a séance, whose episodes read « séance · episode »:
+ * a series episode by « S2 · É5 » (the séance carries the series' name), a film by its own title.
+ */
+export function catalogLabel(ref: CatalogRef): string {
+  const { season, episode, title } = ref;
+  if (season !== undefined && episode !== undefined) return catalogEpisodeLabel(season, episode);
+  return title.length > EPISODE_LABEL_MAX ? `${title.slice(0, EPISODE_LABEL_MAX - 1)}…` : title;
+}
+
+/**
+ * The episode that follows `last` in its series: the next one of its season when
+ * the season has it (`seasonEpisodes`), else the first of the next season.
+ * Null for a film: nothing follows it.
+ */
+export function nextCatalogEpisode(last: CatalogRef, seasonEpisodes: readonly number[]): CatalogRef | null {
+  if (last.type !== "tv" || last.season === undefined || last.episode === undefined) return null;
+  const following = last.episode + 1;
+  return seasonEpisodes.includes(following)
+    ? { ...last, episode: following }
+    : { ...last, season: last.season + 1, episode: 1 };
 }
 
 export const CATALOG_API = {
   search: "/api/catalog/search",
   season: "/api/catalog/:id/seasons/:season",
   play: "/api/catalog/play",
+  addEpisode: "/api/catalog/rooms/:code/episodes",
 } as const;

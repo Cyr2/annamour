@@ -82,6 +82,10 @@ const MIGRATIONS: readonly string[] = [
   ALTER TABLE rooms ADD COLUMN current_episode INTEGER NOT NULL DEFAULT 0;
   ALTER TABLE rooms ADD COLUMN next_episode_id INTEGER NOT NULL DEFAULT 1;
   `,
+  // The catalog title (JSON) an episode was made from, so the PWA can offer the one that follows.
+  `
+  ALTER TABLE room_episodes ADD COLUMN catalog TEXT;
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

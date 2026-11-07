@@ -1,5 +1,6 @@
 import {
   type BubbleColor,
+  type CatalogRef,
   type ClientMessage,
   canGoToEpisode,
   canRemoveEpisode,
@@ -35,6 +36,8 @@ export interface Episode {
   id: number;
   label: string | undefined;
   imported: ImportedMedia;
+  /** The catalog title it was made from; absent for a pasted link. */
+  catalog?: CatalogRef | undefined;
 }
 
 /** What the room keeps on disk as it changes. */
@@ -161,9 +164,10 @@ export class Room {
       media: this.media,
       playback: this.playback,
       members: this.members(),
-      episodes: this.episodes.map(({ label, imported }) => ({
+      episodes: this.episodes.map(({ label, imported, catalog }) => ({
         ...(label ? { label } : {}),
         ...(imported.duration ? { duration: imported.duration } : {}),
+        ...(catalog ? { catalog } : {}),
       })),
       current: this.progress.current,
       finished: this.progress.finished,

@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import { AudioTrack, SubtitleTrack } from "@annamour/protocol";
+import { AudioTrack, CatalogRef, SubtitleTrack } from "@annamour/protocol";
 import { z } from "zod";
 import type { ImportedMedia } from "../hls.ts";
 import { parseOptionalRow, parseRows } from "./rows.ts";
@@ -9,6 +9,8 @@ export interface StoredEpisode {
   id: number;
   label: string | undefined;
   media: ImportedMedia;
+  /** The catalog title it was made from; absent for a pasted link. */
+  catalog?: CatalogRef | undefined;
 }
 
 export interface StoredRoom {
@@ -47,7 +49,23 @@ const RoomRow = z.object({
   last_used_at: z.number(),
 });
 
-const EpisodeRow = z.object({ id: z.number(), label: z.string().nullable(), media: z.string() });
+const EpisodeRow = z.object({
+  id: z.number(),
+  label: z.string().nullable(),
+  media: z.string(),
+  catalog: z.string().nullable(),
+});
+
+/** A saved catalog reference, or undefined when absent or no longer readable (the episode still plays). */
+function parseCatalog(json: string | null): CatalogRef | undefined {
+  if (json === null) return undefined;
+  try {
+    const parsed = CatalogRef.safeParse(JSON.parse(json));
+    return parsed.success ? parsed.data : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 function serializeMedia(media: ImportedMedia): string {
   return JSON.stringify({
@@ -146,18 +164,25 @@ export class RoomRepository {
 
   private insertEpisode(code: string, episode: StoredEpisode): void {
     this.db
-      .prepare("INSERT INTO room_episodes (room_code, id, label, media) VALUES (?, ?, ?, ?)")
-      .run(code, episode.id, episode.label ?? null, serializeMedia(episode.media));
+      .prepare("INSERT INTO room_episodes (room_code, id, label, media, catalog) VALUES (?, ?, ?, ?, ?)")
+      .run(
+        code,
+        episode.id,
+        episode.label ?? null,
+        serializeMedia(episode.media),
+        episode.catalog ? JSON.stringify(episode.catalog) : null,
+      );
   }
 
   private episodes(code: string): StoredEpisode[] {
     const rows = this.db
-      .prepare("SELECT id, label, media FROM room_episodes WHERE room_code = ? ORDER BY id")
+      .prepare("SELECT id, label, media, catalog FROM room_episodes WHERE room_code = ? ORDER BY id")
       .all(code);
     return parseRows(EpisodeRow, rows).map((row) => ({
       id: row.id,
       label: row.label ?? undefined,
       media: deserializeMedia(row.media),
+      catalog: parseCatalog(row.catalog),
     }));
   }
 }

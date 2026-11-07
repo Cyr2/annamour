@@ -15,6 +15,8 @@ test("à la fin d'un épisode, le suivant démarre chez tout le monde", async ({
   // Anna queues the next episode from « Épisodes »; the label is guessed for her.
   await anna.mouse.move(10, 10);
   await anna.getByRole("button", { name: "Épisodes", exact: true }).click();
+  // Adding opens on the title search; a link stays one tap away.
+  await anna.getByRole("button", { name: "Coller un lien" }).click();
   await anna.getByLabel("Lien de l'épisode d'après (.m3u8)").fill(HLS_URL);
   await expect(anna.getByLabel("Titre", { exact: true })).toHaveValue("Épisode 2");
   await anna.getByRole("button", { name: "Ajouter à la suite" }).click();
