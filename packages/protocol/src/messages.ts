@@ -1,4 +1,9 @@
-import { z } from "zod";
+/*
+ * Schemas use zod's tree-shakeable "mini" API: the same checks as classic
+ * zod, but the PWA only downloads the validators it actually uses (classic
+ * zod alone was ~28 kB gzip of the first visit). The server reads them too.
+ */
+import { z } from "zod/mini";
 import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "./room-code.ts";
 
 /** The colours a person can pick for their bubble. Values live in the web tokens. */
@@ -6,15 +11,12 @@ export const BUBBLE_COLORS = ["peach", "lilac", "mint", "sky", "butter", "rose"]
 export const BubbleColor = z.enum(BUBBLE_COLORS);
 export type BubbleColor = z.infer<typeof BubbleColor>;
 
-export const RoomCode = z
-  .string()
-  .length(ROOM_CODE_LENGTH)
-  .refine((s) => [...s].every((c) => ROOM_CODE_ALPHABET.includes(c)), "invalid room code");
+export const RoomCode = z.string().check(
+  z.length(ROOM_CODE_LENGTH),
+  z.refine((s) => [...s].every((c) => ROOM_CODE_ALPHABET.includes(c)), "invalid room code"),
+);
 
-export const Position = z
-  .number()
-  .min(0)
-  .max(60 * 60 * 24);
+export const Position = z.number().check(z.gte(0), z.lte(60 * 60 * 24));
 
 export const PlaybackStateSchema = z.object({
   status: z.enum(["playing", "paused"]),
@@ -30,13 +32,13 @@ export const Member = z.object({
 });
 export type Member = z.infer<typeof Member>;
 
-export const AudioTrack = z.object({ id: z.string(), label: z.string(), language: z.string().optional() });
+export const AudioTrack = z.object({ id: z.string(), label: z.string(), language: z.optional(z.string()) });
 export type AudioTrack = z.infer<typeof AudioTrack>;
 
 export const SubtitleTrack = z.object({
   id: z.string(),
   label: z.string(),
-  language: z.string().optional(),
+  language: z.optional(z.string()),
   url: z.string(),
   forced: z.boolean(),
 });
@@ -48,7 +50,7 @@ export const Media = z.object({
   src: z.string(),
   audio: z.array(AudioTrack),
   subtitles: z.array(SubtitleTrack),
-  duration: z.number().optional(),
+  duration: z.optional(z.number()),
 });
 export type Media = z.infer<typeof Media>;
 
@@ -60,7 +62,7 @@ export const RoomSnapshot = z.object({
 });
 export type RoomSnapshot = z.infer<typeof RoomSnapshot>;
 
-export const Name = z.string().trim().min(1).max(24);
+export const Name = z.string().check(z.trim(), z.minLength(1), z.maxLength(24));
 
 /** A deliberately short set: reactions should stay light on top of a film. */
 export const REACTIONS = ["❤️", "😂", "😮", "😭", "🔥", "🍿"] as const;
@@ -72,10 +74,15 @@ export const REACTION_COOLDOWN_MS = 300;
 /* ---------- client → server ---------- */
 
 export const ClientMessage = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("hello"), clientId: z.string().min(8).max(64), name: Name, color: BubbleColor }),
+  z.object({
+    type: z.literal("hello"),
+    clientId: z.string().check(z.minLength(8), z.maxLength(64)),
+    name: Name,
+    color: BubbleColor,
+  }),
   z.object({ type: z.literal("ping"), t0: z.number() }),
-  z.object({ type: z.literal("play"), position: Position.optional() }),
-  z.object({ type: z.literal("pause"), position: Position.optional() }),
+  z.object({ type: z.literal("play"), position: z.optional(Position) }),
+  z.object({ type: z.literal("pause"), position: z.optional(Position) }),
   z.object({ type: z.literal("seek"), position: Position }),
   z.object({ type: z.literal("buffering"), buffering: z.boolean() }),
   z.object({ type: z.literal("react"), emoji: Reaction }),
@@ -98,7 +105,7 @@ export const ServerMessage = z.discriminatedUnion("type", [
     playback: PlaybackStateSchema,
     action: PlaybackAction,
     /** Who caused it; absent when the server did (e.g. resume after buffering). */
-    by: z.string().optional(),
+    by: z.optional(z.string()),
   }),
   z.object({ type: z.literal("members"), members: z.array(Member) }),
   /** Shown to everyone in the room, the sender included. */
@@ -111,7 +118,7 @@ export type ServerMessage = z.infer<typeof ServerMessage>;
 
 export const CreateRoomRequest = z.object({
   url: z.url({ protocol: /^https$/ }),
-  title: z.string().trim().min(1).max(120).optional(),
+  title: z.optional(z.string().check(z.trim(), z.minLength(1), z.maxLength(120))),
 });
 export type CreateRoomRequest = z.infer<typeof CreateRoomRequest>;
 

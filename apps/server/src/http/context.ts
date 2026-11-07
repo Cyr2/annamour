@@ -1,7 +1,7 @@
 import { type Account, SESSION_COOKIE } from "@annamour/protocol";
 import type { Context, MiddlewareHandler } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import type { z } from "zod";
+import { z } from "zod";
 import { BadRequestError, NotSignedInError } from "../errors.ts";
 import type { AccountService } from "../services/account-service.ts";
 import type { Services } from "../services/services.ts";
@@ -55,8 +55,8 @@ export function requireAccount(accounts: AccountService): MiddlewareHandler<AppE
 }
 
 /** Parses a JSON body with a protocol schema; `message` tells the person what to fix. */
-export async function readBody<T>(c: Context, schema: z.ZodType<T>, message: string): Promise<T> {
-  const parsed = schema.safeParse(await c.req.json().catch(() => null));
+export async function readBody<T>(c: Context, schema: z.core.$ZodType<T>, message: string): Promise<T> {
+  const parsed = z.safeParse(schema, await c.req.json().catch(() => null));
   if (!parsed.success) throw new BadRequestError(message);
   return parsed.data;
 }

@@ -1,4 +1,4 @@
-import { motion } from "motion/react";
+import { m } from "motion/react";
 import { spring } from "../lib/motion.ts";
 import { cx } from "./cx.ts";
 
@@ -31,7 +31,7 @@ export function CodeLetters({ code, size = "large" }: { code: string; size?: key
           // biome-ignore lint/suspicious/noArrayIndexKey: a code can repeat a letter; the position is the identity.
           <span key={`${i}-gap`} aria-hidden className="h-1 w-3 shrink-0 rounded-full bg-fg-subtle" />
         ) : (
-          <motion.span
+          <m.span
             // biome-ignore lint/suspicious/noArrayIndexKey: a code can repeat a letter; the position is the identity.
             key={`${i}-${letter}`}
             aria-hidden
@@ -44,7 +44,7 @@ export function CodeLetters({ code, size = "large" }: { code: string; size?: key
             transition={{ ...spring.bubble, delay: i * 0.06 }}
           >
             {letter}
-          </motion.span>
+          </m.span>
         ),
       )}
     </div>

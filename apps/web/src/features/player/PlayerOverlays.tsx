@@ -1,6 +1,6 @@
 import type { Member } from "@annamour/protocol";
 import { CircleAlert, Play } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import { joinNames } from "../../lib/format.ts";
 import { exit, spring } from "../../lib/motion.ts";
 import { Button } from "../../ui/controls.tsx";
@@ -15,14 +15,14 @@ export function CenterPlay({ visible, onPlay }: { visible: boolean; onPlay: () =
   return (
     <AnimatePresence>
       {visible ? (
-        <motion.div
+        <m.div
           className={CENTRED}
           initial={{ opacity: 0, scale: 0.6 }}
           animate={{ opacity: 1, scale: 1, transition: spring.bubble }}
           exit={{ opacity: 0, scale: 0.8, transition: exit.quick }}
         >
           <Button variant="glass" size="hero" icon={<Play />} aria-label="Reprendre la lecture" onClick={onPlay} />
-        </motion.div>
+        </m.div>
       ) : null}
     </AnimatePresence>
   );
@@ -34,7 +34,7 @@ export function WaitBanner({ members }: { members: Member[] }) {
   return (
     <AnimatePresence>
       {first ? (
-        <motion.div
+        <m.div
           role="status"
           className={`${CENTRED} w-max max-w-[calc(100vw-32px)]`}
           initial={{ opacity: 0, scale: 0.9 }}
@@ -45,7 +45,7 @@ export function WaitBanner({ members }: { members: Member[] }) {
             <PresenceBubble name={first.name} color={first.color} size="sm" status="waiting" />
             <span className="text-pretty">On attend {joinNames(members.map((m) => m.name))}, la vidéo charge…</span>
           </Surface>
-        </motion.div>
+        </m.div>
       ) : null}
     </AnimatePresence>
   );

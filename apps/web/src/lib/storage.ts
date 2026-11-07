@@ -1,11 +1,11 @@
-import type { z } from "zod";
+import type { z } from "zod/mini";
 
 /*
  * localStorage that never throws (Safari private mode, quota, disabled
  * storage) and never trusts what it reads: every value goes through zod.
  */
 
-export function readStored<Schema extends z.ZodType>(key: string, schema: Schema): z.infer<Schema> | null {
+export function readStored<Schema extends z.ZodMiniType>(key: string, schema: Schema): z.infer<Schema> | null {
   try {
     const raw = localStorage.getItem(key);
     if (raw === null) return null;

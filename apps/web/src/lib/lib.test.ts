@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { z } from "zod";
+import { z } from "zod/mini";
 import { formatClock, formatDuration, joinNames, plural } from "./format.ts";
 import { readStored, removeStored, writeStored } from "./storage.ts";
 

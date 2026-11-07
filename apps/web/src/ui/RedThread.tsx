@@ -1,4 +1,4 @@
-import { motion, useAnimationFrame, useMotionValue, useReducedMotion, useSpring } from "motion/react";
+import { m, useAnimationFrame, useMotionValue, useReducedMotion, useSpring } from "motion/react";
 import { createContext, type ReactNode, use, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { spring } from "../lib/motion.ts";
 import { cx } from "./cx.ts";
@@ -169,7 +169,7 @@ function Line({ className }: { className?: string }) {
       style={{ filter: "drop-shadow(0 0 6px var(--am-thread-glow))" }}
     >
       <svg className="h-full w-full overflow-visible" aria-hidden="true">
-        <motion.path
+        <m.path
           d={d}
           fill="none"
           strokeWidth={2.5}

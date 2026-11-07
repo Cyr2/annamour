@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import { exit, spring } from "../../lib/motion.ts";
 import { Surface } from "../../ui/Surface.tsx";
 import { seekBadgeLabel } from "./tv-player-keys.ts";
@@ -9,7 +9,7 @@ export function SeekBadge({ flash }: { flash: SeekFlash | null }) {
   return (
     <AnimatePresence>
       {flash ? (
-        <motion.div
+        <m.div
           key={flash.id}
           aria-hidden
           className={`absolute top-1/2 z-20 -translate-y-1/2 ${flash.delta < 0 ? "left-[8vw]" : "right-[8vw]"}`}
@@ -20,7 +20,7 @@ export function SeekBadge({ flash }: { flash: SeekFlash | null }) {
           <Surface className="rounded-pill px-6 py-3 font-rounded-tight text-xl font-black text-fg tabular-nums shadow-float">
             {seekBadgeLabel(flash.delta)}
           </Surface>
-        </motion.div>
+        </m.div>
       ) : null}
     </AnimatePresence>
   );

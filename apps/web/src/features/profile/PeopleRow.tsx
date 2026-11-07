@@ -68,7 +68,7 @@ function PersonChip({ label, detail, pressed, onPress, children }: PersonChipPro
       aria-label={`${label}, ${detail}`}
       onClick={onPress}
       className={cx(
-        "grid max-w-[136px] min-w-[84px] shrink-0 cursor-pointer justify-items-center gap-1.5 rounded-control px-2.5 py-2 transition-colors duration-200",
+        "grid max-w-[8.5rem] min-w-[5.25rem] shrink-0 cursor-pointer justify-items-center gap-1.5 rounded-control px-2.5 py-2 transition-colors duration-200",
         pressed ? "bg-fill-strong" : "hover:bg-fill-soft",
       )}
     >

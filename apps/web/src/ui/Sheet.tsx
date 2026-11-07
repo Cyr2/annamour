@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import { type ReactNode, useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { exit, spring } from "../lib/motion.ts";
@@ -63,7 +63,7 @@ function SheetPanel({ onClose, title, children }: Omit<SheetProps, "open">) {
 
   return (
     <div className="fixed inset-0 z-[var(--am-z-overlay)]">
-      <motion.div
+      <m.div
         aria-hidden
         className="absolute inset-0 bg-scrim"
         initial={{ opacity: 0 }}
@@ -71,7 +71,7 @@ function SheetPanel({ onClose, title, children }: Omit<SheetProps, "open">) {
         exit={{ opacity: 0, transition: exit.quick }}
         onClick={onClose}
       />
-      <motion.div
+      <m.div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
@@ -90,7 +90,7 @@ function SheetPanel({ onClose, title, children }: Omit<SheetProps, "open">) {
           {title}
         </h2>
         {children}
-      </motion.div>
+      </m.div>
     </div>
   );
 }

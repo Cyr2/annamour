@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/mini";
 import { BubbleColor, Name, RoomCode } from "./messages.ts";
 import { isTvPairingCode, normalizeTvPairingCode } from "./tv-pairing-code.ts";
 
@@ -12,10 +12,8 @@ export const KEY_WORD_COUNT = 4;
 /** Every key word is lowercase French letters (accents allowed), 2 to 20 characters. */
 export const KeyWord = z
   .string()
-  .trim()
-  .toLowerCase()
-  .regex(/^[a-zàâäçéèêëîïôöùûüÿœæ]{2,20}$/u, "invalid key word");
-export const AccountKey = z.array(KeyWord).length(KEY_WORD_COUNT);
+  .check(z.trim(), z.toLowerCase(), z.regex(/^[a-zàâäçéèêëîïôöùûüÿœæ]{2,20}$/u, "invalid key word"));
+export const AccountKey = z.array(KeyWord).check(z.length(KEY_WORD_COUNT));
 export type AccountKey = z.infer<typeof AccountKey>;
 
 export const Account = z.object({
@@ -39,14 +37,14 @@ export const AccountResponse = z.object({ account: Account });
 export type AccountResponse = z.infer<typeof AccountResponse>;
 
 export const UpdateAccountRequest = z
-  .object({ name: Name.optional(), color: BubbleColor.optional() })
-  .refine((u) => u.name !== undefined || u.color !== undefined, "nothing to update");
+  .object({ name: z.optional(Name), color: z.optional(BubbleColor) })
+  .check(z.refine((u) => u.name !== undefined || u.color !== undefined, "nothing to update"));
 export type UpdateAccountRequest = z.infer<typeof UpdateAccountRequest>;
 
 /** One-time token shown as a QR code to sign another device in. */
-export const LinkToken = z.object({ token: z.string().min(16), expiresAt: z.number() });
+export const LinkToken = z.object({ token: z.string().check(z.minLength(16)), expiresAt: z.number() });
 export type LinkToken = z.infer<typeof LinkToken>;
-export const LinkWithTokenRequest = z.object({ token: z.string().min(16) });
+export const LinkWithTokenRequest = z.object({ token: z.string().check(z.minLength(16)) });
 export type LinkWithTokenRequest = z.infer<typeof LinkWithTokenRequest>;
 
 /** Someone who was in a session with you. */
@@ -56,9 +54,9 @@ export type Participant = z.infer<typeof Participant>;
 export const SessionSummary = z.object({
   code: RoomCode,
   title: z.string(),
-  duration: z.number().optional(),
+  duration: z.optional(z.number()),
   /** Last saved position, in seconds: where the session resumes. */
-  position: z.number().min(0),
+  position: z.number().check(z.gte(0)),
   lastUsedAt: z.number(),
   /** The other people of the session; never includes the requester. */
   participants: z.array(Participant),
@@ -83,11 +81,13 @@ export const PasskeyRegisterVerifyRequest = z.object({ response: WebAuthnJson })
  * pairing, shows its short code and polls with its secret poll token; a
  * signed-in phone approves the code; the next poll signs the TV in.
  */
-export const TvPairingCode = z.string().transform(normalizeTvPairingCode).refine(isTvPairingCode, "invalid code");
+export const TvPairingCode = z
+  .pipe(z.string(), z.transform(normalizeTvPairingCode))
+  .check(z.refine(isTvPairingCode, "invalid code"));
 export const TvPairingStatus = z.enum(["pending", "approved", "expired"]);
 export type TvPairingStatus = z.infer<typeof TvPairingStatus>;
 /** Secret known only to the TV: it alone can claim the session (URL-safe, see randomToken on the server). */
-export const TvPollToken = z.string().regex(/^[\w-]{16,128}$/, "invalid poll token");
+export const TvPollToken = z.string().check(z.regex(/^[\w-]{16,128}$/, "invalid poll token"));
 export const CreateTvPairingResponse = z.object({
   /** Display form, e.g. "K7P-2QX". */
   code: z.string(),

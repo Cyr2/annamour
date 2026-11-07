@@ -1,5 +1,5 @@
 import { normalizeRoomCode, ROOM_CODE_LENGTH } from "@annamour/protocol";
-import { AnimatePresence, motion, useAnimate, useReducedMotion } from "motion/react";
+import { AnimatePresence, m, useAnimate, useReducedMotion } from "motion/react";
 import { useEffect, useId, useRef, useState } from "react";
 import { exit, shakeKeyframes, shakeTransition, spring } from "../lib/motion.ts";
 import { cx } from "./cx.ts";
@@ -87,7 +87,7 @@ export function CodeInput({
               >
                 <AnimatePresence mode="popLayout" initial={false}>
                   {char ? (
-                    <motion.span
+                    <m.span
                       key={`${slot}-${char}`}
                       className="font-rounded-tight text-[1.75rem] leading-none font-extrabold text-fg"
                       initial={{ y: 10, scale: 0.5, opacity: 0 }}
@@ -95,9 +95,9 @@ export function CodeInput({
                       exit={{ scale: 0.6, opacity: 0, transition: exit.fade }}
                     >
                       {char}
-                    </motion.span>
+                    </m.span>
                   ) : isActive ? (
-                    <motion.span
+                    <m.span
                       key="caret"
                       className="h-7 w-0.5 rounded-full bg-accent"
                       initial={{ opacity: 0 }}

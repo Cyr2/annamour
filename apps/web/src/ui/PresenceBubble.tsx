@@ -1,5 +1,5 @@
 import type { BubbleColor } from "@annamour/protocol";
-import { motion, useReducedMotion } from "motion/react";
+import { m, useReducedMotion } from "motion/react";
 import type { CSSProperties, ReactNode } from "react";
 import { spring } from "../lib/motion.ts";
 import { bubbleColor } from "./colors.ts";
@@ -66,7 +66,7 @@ function PresenceBubbleRoot({
 
   return (
     <div className={cx("flex flex-col items-center gap-2", className)} style={style}>
-      <motion.div
+      <m.div
         role="img"
         aria-label={`${name}, ${STATUS_LABEL[status]}`}
         data-thread-knot=""
@@ -91,7 +91,7 @@ function PresenceBubbleRoot({
           }}
         />
         {/* A soft halo that only shows while waiting. */}
-        <motion.span
+        <m.span
           aria-hidden
           className="absolute -inset-1.5 rounded-full border-2"
           style={{ borderColor: "color-mix(in oklab, var(--bubble) 55%, transparent)" }}
@@ -100,7 +100,7 @@ function PresenceBubbleRoot({
           transition={spring.ui}
         />
         {pulse > 0 ? (
-          <motion.span
+          <m.span
             key={pulse}
             aria-hidden
             className="absolute inset-0 rounded-full border-2"
@@ -111,7 +111,7 @@ function PresenceBubbleRoot({
           />
         ) : null}
         <span className="relative font-rounded-tight font-extrabold text-on-accent select-none">{initialOf(name)}</span>
-      </motion.div>
+      </m.div>
       {children}
     </div>
   );

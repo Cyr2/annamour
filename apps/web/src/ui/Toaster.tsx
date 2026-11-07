@@ -1,14 +1,15 @@
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import { exit, spring } from "../lib/motion.ts";
 import { bubbleColor } from "./colors.ts";
 import { cx } from "./cx.ts";
+import { LayoutMotion } from "./LayoutMotion.tsx";
 import { Surface } from "./Surface.tsx";
 import { type Toast, useToasts } from "./toast.ts";
 
 /** A glass pill that springs down from the top of the screen. */
 function Capsule({ toast }: { toast: Toast }) {
   return (
-    <motion.li
+    <m.li
       layout
       initial={{ opacity: 0, y: -28, scale: 0.86 }}
       animate={{ opacity: 1, y: 0, scale: 1, transition: spring.capsule }}
@@ -31,8 +32,20 @@ function Capsule({ toast }: { toast: Toast }) {
         {toast.icon ? <span className="grid shrink-0 text-accent [&>svg]:size-[18px]">{toast.icon}</span> : null}
         <span>{toast.message}</span>
       </Surface>
-    </motion.li>
+    </m.li>
   );
+}
+
+/** Resolves on the first toast: capsules only reflow once there is something to stack. */
+function firstToast(): Promise<void> {
+  return new Promise((resolve) => {
+    if (useToasts.getState().toasts.length > 0) return resolve();
+    const stop = useToasts.subscribe((state) => {
+      if (state.toasts.length === 0) return;
+      stop();
+      resolve();
+    });
+  });
 }
 
 /** Mount once near the root. */
@@ -44,11 +57,13 @@ export function Toaster() {
       aria-live="polite"
       className="pointer-events-none fixed inset-x-0 top-0 z-[var(--am-z-toast)] flex flex-col items-center gap-2 px-4 pt-[max(12px,var(--am-safe-top))]"
     >
-      <AnimatePresence initial={false} mode="popLayout">
-        {toasts.map((t) => (
-          <Capsule key={t.id} toast={t} />
-        ))}
-      </AnimatePresence>
+      <LayoutMotion when={firstToast}>
+        <AnimatePresence initial={false} mode="popLayout">
+          {toasts.map((t) => (
+            <Capsule key={t.id} toast={t} />
+          ))}
+        </AnimatePresence>
+      </LayoutMotion>
     </ol>
   );
 }

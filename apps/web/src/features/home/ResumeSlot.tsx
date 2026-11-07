@@ -1,5 +1,5 @@
 import { ChevronRight, Play } from "lucide-react";
-import { motion } from "motion/react";
+import { m } from "motion/react";
 import { useMemo } from "react";
 import { spring } from "../../lib/motion.ts";
 import { cx } from "../../ui/cx.ts";
@@ -18,7 +18,7 @@ export function ResumeSlot({ className = "mt-6" }: { className?: string }) {
 
   const progress = progressOf(session) ?? 0;
   return (
-    <motion.div
+    <m.div
       // The TV starts on this card when there is one (see features/tv/focus-engine.ts).
       data-tv-primary="2"
       className={cx("w-[min(28.75rem,100%)]", className)}
@@ -45,6 +45,6 @@ export function ResumeSlot({ className = "mt-6" }: { className?: string }) {
           className="size-5 shrink-0 text-fg-subtle transition-transform duration-200 ease-out group-hover:translate-x-0.5"
         />
       </GlassLink>
-    </motion.div>
+    </m.div>
   );
 }

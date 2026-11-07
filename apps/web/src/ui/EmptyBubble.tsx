@@ -1,4 +1,4 @@
-import { motion, useReducedMotion } from "motion/react";
+import { m, useReducedMotion } from "motion/react";
 import { cx } from "./cx.ts";
 import { BUBBLE_SIZE_CLASSES, type BubbleSize } from "./PresenceBubble.tsx";
 
@@ -6,7 +6,7 @@ import { BUBBLE_SIZE_CLASSES, type BubbleSize } from "./PresenceBubble.tsx";
 export function EmptyBubble({ size = "lg", label }: { size?: BubbleSize; label: string }) {
   const reduceMotion = useReducedMotion() ?? false;
   return (
-    <motion.div
+    <m.div
       role="img"
       aria-label={label}
       data-thread-knot=""
@@ -18,6 +18,6 @@ export function EmptyBubble({ size = "lg", label }: { size?: BubbleSize; label: 
       transition={{ duration: 2.6, ease: "easeInOut", repeat: Infinity }}
     >
       ?
-    </motion.div>
+    </m.div>
   );
 }

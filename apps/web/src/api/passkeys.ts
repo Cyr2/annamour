@@ -3,7 +3,7 @@ import type {
   PublicKeyCredentialCreationOptionsJSON,
   PublicKeyCredentialRequestOptionsJSON,
 } from "@simplewebauthn/browser";
-import { z } from "zod";
+import { z } from "zod/mini";
 import { fetchMe } from "./accounts.ts";
 import { ApiRequestError, request } from "./http.ts";
 

@@ -1,15 +1,18 @@
 import type { SessionSummary } from "@annamour/protocol";
 import { Link2, Play, RotateCcw, Trash2 } from "lucide-react";
-import { motion } from "motion/react";
-import { useMemo } from "react";
+import { m } from "motion/react";
+import { useEffect, useMemo, useState } from "react";
 import { exit, spring } from "../../lib/motion.ts";
+import { sessionPath } from "../../sync/restart.ts";
 import { BubbleStack, type StackedPerson } from "../../ui/BubbleStack.tsx";
-import { Menu } from "../../ui/controls.tsx";
+import { Button, Menu } from "../../ui/controls.tsx";
+import { cx } from "../../ui/cx.ts";
 import { LinkButton } from "../../ui/LinkButton.tsx";
 import { Progress } from "../../ui/Progress.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import { toast } from "../../ui/toast.ts";
 import { companionsLabel, isFinished, progressOf, relativeDay, stopLabel } from "../sessions/session-rules.ts";
+import { useTv } from "../tv/tv-context.ts";
 
 interface SessionRowProps {
   session: SessionSummary;
@@ -58,12 +61,21 @@ export function SessionDetails({ session, me, now }: Omit<SessionRowProps, "onRe
   );
 }
 
-/** One session of « Mes séances »: what, when, with whom, how far, the way back in, and a menu for the rest. */
-export function SessionRow({ session, me, now, onRemove }: SessionRowProps) {
-  const finished = isFinished(session);
+interface SessionRowItemProps extends SessionRowProps {
+  /** The TV starts on the first row's way back in (see features/tv/focus-engine.ts). */
+  primary?: boolean;
+}
+
+/**
+ * One session of « Mes séances »: what, when, with whom, how far, the way
+ * back in, and the rest. A phone tucks the rest in a menu; a TV shows it as
+ * buttons, since a pop-up menu is awkward with a remote.
+ */
+export function SessionRow({ session, me, now, onRemove, primary = false }: SessionRowItemProps) {
+  const tv = useTv();
 
   return (
-    <motion.li
+    <m.li
       layout
       // The open menu is focused: lift this row so its menu floats over the next ones.
       className="relative focus-within:z-(--am-z-raised)"
@@ -71,31 +83,90 @@ export function SessionRow({ session, me, now, onRemove }: SessionRowProps) {
       animate={{ opacity: 1, y: 0, transition: spring.ui }}
       exit={{ opacity: 0, scale: 0.96, transition: exit.quick }}
     >
-      <Surface className="grid gap-3 rounded-panel p-4 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-5 sm:p-5">
+      <Surface
+        className={cx(
+          "grid gap-3 rounded-panel p-4 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-5 sm:p-5",
+          tv && "sm:gap-8 sm:p-6",
+        )}
+      >
         <SessionDetails session={session} me={me} now={now} />
-        <div className="flex items-center gap-2 justify-self-end">
-          <LinkButton
-            href={`/s/${session.code}`}
-            variant={finished ? "glass" : "filled"}
-            icon={finished ? <RotateCcw /> : <Play />}
-          >
-            {finished ? "Revoir" : "Reprendre"}
-          </LinkButton>
-          <Menu
-            aria-label={`Plus d'options pour « ${session.title} »`}
-            items={[
-              { label: "Copier le lien", icon: <Link2 />, onSelect: () => void copyLink(session.code) },
-              "separator",
-              {
-                label: "Retirer de mes séances",
-                icon: <Trash2 />,
-                destructive: true,
-                onSelect: () => onRemove(session),
-              },
-            ]}
-          />
+        <div className="flex items-center gap-2 justify-self-end" data-tv-primary={primary ? "" : undefined}>
+          <OpenSessionLink session={session} size={tv ? "large" : "regular"} />
+          {tv ? (
+            <RemoveButton session={session} onRemove={onRemove} />
+          ) : (
+            <SessionMenu session={session} onRemove={onRemove} />
+          )}
         </div>
       </Surface>
-    </motion.li>
+    </m.li>
+  );
+}
+
+/** « Reprendre » where the séance stopped, or « Revoir » from the beginning once it was watched to the end. */
+function OpenSessionLink({ session, size }: { session: SessionSummary; size: "regular" | "large" }) {
+  const finished = isFinished(session);
+  return (
+    <LinkButton
+      href={sessionPath(session.code, finished)}
+      variant={finished ? "glass" : "filled"}
+      size={size}
+      icon={finished ? <RotateCcw /> : <Play />}
+    >
+      {finished ? "Revoir" : "Reprendre"}
+    </LinkButton>
+  );
+}
+
+type SessionActionProps = Pick<SessionRowProps, "session" | "onRemove">;
+
+function SessionMenu({ session, onRemove }: SessionActionProps) {
+  return (
+    <Menu
+      aria-label={`Plus d'options pour « ${session.title} »`}
+      items={[
+        { label: "Copier le lien", icon: <Link2 />, onSelect: () => void copyLink(session.code) },
+        "separator",
+        {
+          label: "Retirer de mes séances",
+          icon: <Trash2 />,
+          destructive: true,
+          onSelect: () => onRemove(session),
+        },
+      ]}
+    />
+  );
+}
+
+/** How long « Retirer ? » waits for the second press before standing down. */
+const CONFIRM_MS = 4000;
+
+/**
+ * « Retirer » on a TV: a remote press is easy to make by mistake, so the
+ * first press asks (« Vraiment retirer ? ») and only a second one removes.
+ * Moving the focus away, or waiting, stands it down.
+ */
+function RemoveButton({ session, onRemove }: SessionActionProps) {
+  const [asking, setAsking] = useState(false);
+
+  useEffect(() => {
+    if (!asking) return;
+    const timer = setTimeout(() => setAsking(false), CONFIRM_MS);
+    return () => clearTimeout(timer);
+  }, [asking]);
+
+  return (
+    <Button
+      size="large"
+      tone={asking ? "destructive" : "default"}
+      icon={<Trash2 />}
+      // As wide as « Vraiment retirer ? », so asking never reflows the row.
+      className="min-w-[14rem]"
+      aria-label={asking ? `Confirmer : retirer « ${session.title} »` : `Retirer « ${session.title} » de mes séances`}
+      onBlur={() => setAsking(false)}
+      onClick={() => (asking ? onRemove(session) : setAsking(true))}
+    >
+      {asking ? "Vraiment retirer ?" : "Retirer"}
+    </Button>
   );
 }
