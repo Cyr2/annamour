@@ -49,6 +49,22 @@ async function throttle(page: Page, kbps: number) {
   });
 }
 
+/**
+ * The download rate the weak viewer really got (kb/s) since `since` (ms on its
+ * page clock), from the segments' resource timings: proof the throttling holds.
+ */
+function observedKbps(page: Page, since: number): Promise<number> {
+  return page.evaluate((from) => {
+    const entries = performance
+      .getEntriesByType("resource")
+      .filter((e): e is PerformanceResourceTiming => e instanceof PerformanceResourceTiming)
+      .filter((e) => e.startTime >= from && /\.(ts|aac)(\?|$)/.test(e.name) && e.transferSize > 0);
+    const bytes = entries.reduce((sum, e) => sum + e.transferSize, 0);
+    const busyMs = entries.reduce((sum, e) => sum + (e.responseEnd - e.startTime), 0);
+    return busyMs > 0 ? Math.round((bytes * 8) / busyMs) : 0;
+  }, since);
+}
+
 function table(reports: readonly Report[]): string {
   const rows = reports.map((r) => {
     const heights = r.heights
@@ -87,10 +103,15 @@ test("un spectateur sur une 4G faible et changeante regarde avec un autre sur la
   await throttle(weak, PROFILE_KBPS[0] ?? 0);
   await fiber.getByRole("button", { name: "Lancer le film" }).click();
   await expect.poll(() => videoTime(fiber), { timeout: 60_000 }).toBeGreaterThan(2);
+  const steps: string[] = [];
   for (const kbps of PROFILE_KBPS) {
     await throttle(weak, kbps);
+    const since = await weak.evaluate(() => performance.now());
     await weak.waitForTimeout(STEP_MS);
+    steps.push(`${kbps} kb/s asked → ${await observedKbps(weak, since)} kb/s while fetching`);
   }
+  // Large leads may fetch nothing in some steps (0): that is the lead doing its job.
+  console.info(["", "=== Weak link, step by step ===", ...steps].join("\n"));
 
   // Stats go out every minute: wait for the weak viewer's to cover the whole run.
   const reports = async () =>

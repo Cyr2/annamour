@@ -77,12 +77,15 @@ jobs:
       - name: Install Google Chrome (H.264 support)
         run: pnpm --filter @annamour/e2e exec playwright install --with-deps chrome
       - name: A weak 4G viewer and a fiber one watch together
-        run: pnpm e2e:reseau-faible 2>&1 | tee weak-network.log
+        run: |
+          set -o pipefail
+          pnpm e2e:reseau-faible 2>&1 | tee weak-network.log
       - name: Measurement table
         if: always()
         run: |
           {
             echo '```'
+            sed -n '/=== Weak link, step by step ===/,/^$/p' weak-network.log
             sed -n '/=== Weak-network measurement ===/,/^$/p' weak-network.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

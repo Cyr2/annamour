@@ -17,7 +17,8 @@ const TYPES: Record<string, string> = {
 
 const server = createServer({ cert: readFileSync(CERT_FILE), key: readFileSync(KEY_FILE) }, (req, res) => {
   const path = normalize(decodeURIComponent(new URL(req.url ?? "/", "https://cdn").pathname)).replace(/^[/\\]+/, "");
-  const headers = { "access-control-allow-origin": "*", "cache-control": "no-store" };
+  // timing-allow-origin: the test reads how fast each segment really came, through the throttled link.
+  const headers = { "access-control-allow-origin": "*", "timing-allow-origin": "*", "cache-control": "no-store" };
   if (path.startsWith("..") || path === "health") {
     res.writeHead(path === "health" ? 200 : 404, headers).end();
     return;
