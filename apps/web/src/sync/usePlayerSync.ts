@@ -52,6 +52,7 @@ export function usePlayerSync(video: HTMLVideoElement | null, client: SyncClient
     // Store changes reach the engine directly, without re-rendering React.
     const feed = (room: RoomState) => {
       sync.setSource(room.room?.media.src ?? null);
+      sync.setReadying(room.readying);
       sync.setPlayback(room.playback);
     };
     feed(useRoom.getState());

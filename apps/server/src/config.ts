@@ -32,6 +32,11 @@ export interface ServerConfig {
    * and tried on an iPad first.
    */
   hevc: boolean;
+  /**
+   * Films may come from localhost over http (E2E_ALLOW_LOCAL_MEDIA=1): only
+   * for the end-to-end tests' fake CDN; refused in production.
+   */
+  allowLocalMedia: boolean;
 }
 
 const DEFAULT_TRANSCODE_WORKERS = 2;
@@ -80,5 +85,13 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     transcodeWorkers: transcodeWorkers(env.TRANSCODE_WORKERS),
     lightAudio: switchedOn(env.LIGHT_AUDIO),
     hevc: switchedOn(env.HEVC),
+    allowLocalMedia: allowLocalMedia(env, production),
   };
+}
+
+/** The end-to-end tests serve their film from localhost; never a production server. */
+function allowLocalMedia(env: NodeJS.ProcessEnv, production: boolean): boolean {
+  const allowed = env.E2E_ALLOW_LOCAL_MEDIA?.trim() === "1";
+  if (allowed && production) throw new ConfigError("E2E_ALLOW_LOCAL_MEDIA is for tests: never set it in production.");
+  return allowed;
 }

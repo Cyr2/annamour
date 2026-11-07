@@ -30,6 +30,14 @@ describe("server configuration", () => {
     expect(loadConfig({ LIGHT_AUDIO: "yes" }).lightAudio).toBe(false);
   });
 
+  it("lets films come from localhost only for the end-to-end tests, never in production", () => {
+    expect(loadConfig({}).allowLocalMedia).toBe(false);
+    expect(loadConfig({ E2E_ALLOW_LOCAL_MEDIA: "1" }).allowLocalMedia).toBe(true);
+    expect(() => loadConfig({ NODE_ENV: "production", KEY_PEPPER: "s3cret", E2E_ALLOW_LOCAL_MEDIA: "1" })).toThrow(
+      /E2E_ALLOW_LOCAL_MEDIA/,
+    );
+  });
+
   it("has development defaults", () => {
     const config = loadConfig({});
     expect(config).toMatchObject({

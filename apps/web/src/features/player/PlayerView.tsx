@@ -1,5 +1,5 @@
 import type { Reaction } from "@annamour/protocol";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useRoom } from "../../sync/room.ts";
 import type { SyncClient } from "../../sync/SyncClient.ts";
@@ -10,7 +10,7 @@ import { ControlsBar } from "./ControlsBar.tsx";
 import { EpisodeLayer, useEpisodeOver, useSkipNext } from "./EpisodeLayer.tsx";
 import { FloatingReactions } from "./FloatingReactions.tsx";
 import { leaveFullscreen, toggleFullscreen } from "./fullscreen.ts";
-import { BlockedNotice, CenterPlay, PlayerError, VideoLoading, WaitBanner } from "./PlayerOverlays.tsx";
+import { BlockedNotice, CenterPlay, PlayerError, ReadyBanner, VideoLoading, WaitBanner } from "./PlayerOverlays.tsx";
 import { PlayerTopBar } from "./PlayerTopBar.tsx";
 import { SeekBadge } from "./SeekBadge.tsx";
 import { TracksSheet } from "./TracksSheet.tsx";
@@ -18,6 +18,7 @@ import { useEpisodeEndReport } from "./useEpisodeEndReport.ts";
 import { useControlsHidden, usePlaybackNotices, useTrackChoice, useVolumeOnVideo } from "./usePlayerEffects.ts";
 import { usePlayerKeyboard, useSurfaceTap } from "./usePlayerKeyboard.ts";
 import { useTvPlayerRemote } from "./useTvPlayerRemote.ts";
+import { useWaitingForOthers } from "./useWaitingForOthers.ts";
 import { useVolume } from "./volume.ts";
 
 interface PlayerViewProps {
@@ -39,15 +40,13 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
   const media = useRoom((s) => s.room?.media);
   const playing = useRoom((s) => s.playback?.status === "playing");
   const you = useRoom((s) => s.you);
-  // Select the stable array, derive during render: a filtering selector would return a new array every time.
-  const members = useRoom((s) => s.members);
-  const loading = useMemo(() => members.filter((m) => m.buffering && m.id !== you), [members, you]);
   const toggleMute = useVolume((s) => s.toggleMute);
   const [reactionsOpen, setReactionsOpen] = useState(false);
   const [tracksOpen, setTracksOpen] = useState(false);
   const [upNextOpen, setUpNextOpen] = useState(false);
   // The end screen of an episode takes over: its own buttons, the remote moving between them.
   const over = useEpisodeOver();
+  const { loading, slowest, calm } = useWaitingForOthers(you, { active, over });
   const skipNext = useSkipNext(client);
   const [, navigate] = useLocation();
   const controlsLayer = useRef<HTMLDivElement>(null);
@@ -147,12 +146,10 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
           onFullscreen={fullscreen}
         />
       </div>
-      <CenterPlay
-        visible={active && !playing && !player.blocked && !over && loading.length === 0}
-        onPlay={() => controls.play()}
-      />
+      <CenterPlay visible={active && !playing && !player.blocked && !over && calm} onPlay={() => controls.play()} />
       {tv ? <SeekBadge flash={remote.seek} /> : null}
       <WaitBanner members={loading} />
+      <ReadyBanner slowest={slowest} />
       <VideoLoading visible={active && player.buffering && !player.error && !player.blocked && !over} />
       {active && player.blocked ? <BlockedNotice onUnlock={controls.unlock} /> : null}
       {player.error ? <PlayerError message={player.error} /> : null}

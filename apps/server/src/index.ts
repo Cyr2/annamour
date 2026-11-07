@@ -10,7 +10,7 @@ import { segmentSource } from "./media/segment-source.ts";
 import { Transcoder } from "./media/transcoder.ts";
 import { attachRealtime } from "./realtime.ts";
 import { CHECKPOINT_INTERVAL_MS } from "./room-store.ts";
-import { safeFetchBytes } from "./safe-fetch.ts";
+import { localTestFetchBytes, localTestFetchText, safeFetchBytes, safeFetchText } from "./safe-fetch.ts";
 import { createServices } from "./services/services.ts";
 import { openDatabase } from "./storage/database.ts";
 
@@ -20,17 +20,21 @@ const config = loadConfig(process.env);
 mkdirSync(config.dataDir, { recursive: true });
 const db = openDatabase(join(config.dataDir, "annamour.db"));
 const { nakaBridge } = config;
+// The end-to-end tests serve their film from a fake CDN on localhost (refused in production by loadConfig).
+const fetchText = config.allowLocalMedia ? localTestFetchText : safeFetchText;
+const fetchBytes = config.allowLocalMedia ? localTestFetchBytes : safeFetchBytes;
 const transcoder = await lowQualityTranscoder();
 const services = createServices({
   db,
   pepper: config.pepper,
+  fetchText,
   relyingParty: config.relyingParty,
   ...(nakaBridge ? { catalog: new NakaCatalog(bridgeFetcher(nakaBridge.url, nakaBridge.secret)) } : {}),
   ...(transcoder
     ? {
         transcoder,
         timelineProbe: {
-          source: segmentSource(safeFetchBytes, nakaBridge),
+          source: segmentSource(fetchBytes, nakaBridge),
           firstTimestamp,
           describe: describeMedia,
           log: console.info,
@@ -51,7 +55,7 @@ async function lowQualityTranscoder(): Promise<Transcoder | undefined> {
   if (config.hevc && !hevc) console.info("HEVC off: this ffmpeg has no libx265");
   return new Transcoder({
     dir,
-    source: segmentSource(safeFetchBytes, nakaBridge),
+    source: segmentSource(fetchBytes, nakaBridge),
     encode: ffmpegEncoder,
     ...(config.lightAudio ? { encodeAudio: ffmpegAudioEncoder } : {}),
     ...(hevc ? { hevc: { encode: ffmpegHevcEncoder, check: checkHevcSegment, encodeAudio: fmp4AudioEncoder } } : {}),

@@ -105,7 +105,8 @@ describe("PlayerSync", () => {
     sync.setPlayback(paused(30));
     expect(video.currentTime).toBe(30);
     expect(video.paused).toBe(true);
-    expect(client.sent).toEqual([]);
+    // Only its lead is told (to start together later), never a playback action echoed back.
+    expect(client.sent.filter((m) => m.type !== "lead")).toEqual([]);
   });
 
   it("starts playing at the shared position without echoing a play to the room", () => {
@@ -201,6 +202,43 @@ describe("PlayerSync", () => {
     video.bufferedRanges = [[0, video.currentTime + 20]];
     vi.advanceTimersByTime(1000);
     expect(client.of("buffering").at(-1)).toEqual({ type: "buffering", buffering: false });
+  });
+
+  it("tells the room how much it has downloaded ahead while paused, without repeating itself", () => {
+    video.bufferedRanges = [[0, 35]];
+    start();
+    sync.setPlayback(paused(30));
+    expect(client.of("lead")).toEqual([{ type: "lead", seconds: 5 }]);
+    vi.advanceTimersByTime(5000);
+    expect(client.of("lead")).toHaveLength(1);
+    video.bufferedRanges = [[0, 52]];
+    vi.advanceTimersByTime(1000);
+    expect(client.of("lead").at(-1)).toEqual({ type: "lead", seconds: 22 });
+  });
+
+  it("keeps telling it while the room waits to start together, so the room notices its deadline", () => {
+    video.bufferedRanges = [[0, 35]];
+    start();
+    sync.setPlayback(paused(30));
+    sync.setReadying({ target: 30, until: 25_000 });
+    vi.advanceTimersByTime(4100);
+    expect(client.of("lead").length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("says nothing of its lead while the film plays", () => {
+    start();
+    sync.setPlayback(playing(10));
+    vi.advanceTimersByTime(3000);
+    expect(client.of("lead")).toEqual([]);
+  });
+
+  it("tells its lead again after a reconnection, since the server forgot it", () => {
+    video.bufferedRanges = [[0, 35]];
+    start();
+    sync.setPlayback(paused(30));
+    client.reopen();
+    vi.advanceTimersByTime(600);
+    expect(client.of("lead")).toHaveLength(2);
   });
 
   it("reports buffering again after a reconnection, since the server forgot it", () => {
