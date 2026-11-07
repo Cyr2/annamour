@@ -1,0 +1,385 @@
+<title>Annamour TV</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Wireframe of the TV screens: a 16:9 "TV" driven by a D-pad (arrows, OK = Enter, Retour = Échap), a remote under it. Single dark world: a cinema app. */
+:root {
+  color-scheme: dark;
+  --night: #12101A;
+  --ink: #1D1828;
+  --ink-2: #2A2338;
+  --milk: #F6F2FA;
+  --muted: rgb(246 242 250 / 0.68);
+  --peach: #FF8C9E;
+  --lilac: #A99CFF;
+  --mint: #7FE3C1;
+  --butter: #FFD98A;
+  --on: #12101A;
+  --edge: rgb(255 255 255 / 0.14);
+  --focus: #F6F2FA;
+  --rounded: ui-rounded, "Nunito", system-ui, sans-serif;
+  --text: "Inter", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--night); color: var(--milk); font-family: var(--text);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 28px;
+}
+button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 14px; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.bar strong { font-family: var(--rounded); font-weight: 900; font-size: 17px; }
+.bar span { color: var(--muted); font-size: 13px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tabs a { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--edge); }
+.tabs a[aria-current="page"] { color: var(--milk); background: rgb(255 255 255 / .1); }
+
+/* the TV: everything inside is sized in container units so it scales like a real 1920x1080 screen */
+.tv { position: relative; aspect-ratio: 16 / 9; width: 100%; max-width: 100%; container-type: size; border-radius: 18px; overflow: hidden;
+  background: radial-gradient(90% 70% at 50% 0%, #2a2033 0%, var(--night) 60%); border: 10px solid #07060b; box-shadow: 0 30px 80px -30px rgb(0 0 0 / .8); }
+.screen { position: absolute; inset: 0; padding: 5cqh 5cqw; display: none; flex-direction: column; }
+.screen.on { display: flex; }
+.f { outline: none; transition: transform .25s cubic-bezier(.2,1.3,.4,1), box-shadow .2s, background .2s; }
+.f.focused { transform: scale(1.06); box-shadow: 0 0 0 .5cqh var(--focus), 0 2cqh 5cqh -1cqh rgb(0 0 0 / .6); z-index: 2; position: relative; }
+.title { font-family: var(--rounded); font-weight: 900; font-size: 5.6cqh; letter-spacing: -.02em; margin: 0; }
+.lede { color: var(--muted); font-size: 2.6cqh; margin: 1cqh 0 0; }
+.btn { display: inline-flex; align-items: center; gap: 1.2cqh; font-weight: 700; font-size: 2.6cqh; padding: 1.6cqh 3.2cqh; border-radius: 99cqh; background: rgb(255 255 255 / .1); border: 1px solid var(--edge); }
+.btn.primary { background: var(--peach); color: var(--on); border-color: transparent; }
+.top { display: flex; justify-content: space-between; align-items: center; }
+.brand { font-family: var(--rounded); font-weight: 900; font-size: 3.4cqh; }
+.me { display: flex; align-items: center; gap: 1.2cqh; font-weight: 600; font-size: 2.4cqh; }
+.bubble { width: 5cqh; height: 5cqh; border-radius: 50%; display: grid; place-items: center; font-family: var(--rounded); font-weight: 900; color: var(--on); font-size: 2.4cqh; background: var(--c, var(--peach)); flex: none; }
+
+/* pairing */
+.pair { flex: 1; display: grid; grid-template-columns: auto 1fr; gap: 6cqw; align-items: center; }
+.qr { width: 36cqh; height: 36cqh; border-radius: 3cqh; background: var(--milk); padding: 2.4cqh; }
+.qr canvas { width: 100%; height: 100%; image-rendering: pixelated; display: block; }
+.code { font-family: var(--rounded); font-weight: 900; font-size: 7cqh; letter-spacing: .12em; margin: 2cqh 0; }
+.steps { color: var(--muted); font-size: 2.6cqh; line-height: 1.6; margin: 0; padding-left: 3cqh; }
+
+/* home */
+.row-title { font-family: var(--rounded); font-weight: 800; font-size: 3cqh; margin: 5cqh 0 2cqh; }
+.cards { display: flex; gap: 2.4cqw; }
+.card { width: 26cqw; border-radius: 2.4cqh; overflow: hidden; background: var(--ink); border: 1px solid var(--edge); text-align: left; }
+.poster { height: 15cqh; background: var(--art); position: relative; }
+.poster .prog { position: absolute; left: 0; bottom: 0; height: .7cqh; background: var(--peach); width: var(--p); }
+.card-body { padding: 1.6cqh 2cqh 2cqh; display: grid; gap: .6cqh; }
+.card-body b { font-size: 2.5cqh; }
+.card-body span { color: var(--muted); font-size: 2cqh; }
+.actions { display: flex; gap: 2cqw; margin-top: 4cqh; }
+
+/* join */
+.join { flex: 1; display: grid; justify-items: center; align-content: center; gap: 3cqh; text-align: center; }
+.slots { display: flex; gap: 1.6cqh; }
+.slot { width: 9cqh; height: 11cqh; border-radius: 2cqh; display: grid; place-items: center; font-family: var(--rounded); font-weight: 900; font-size: 6cqh; background: rgb(255 255 255 / .07); border: 1px solid var(--edge); }
+.slot.next { border-color: var(--peach); }
+.keys { display: grid; grid-template-columns: repeat(9, 7.4cqh); gap: 1.2cqh; }
+.key { height: 7.4cqh; border-radius: 1.6cqh; background: rgb(255 255 255 / .08); font-family: var(--rounded); font-weight: 800; font-size: 3cqh; }
+.key.wide { grid-column: span 3; font-family: var(--text); font-size: 2.2cqh; font-weight: 600; }
+.hint { color: var(--muted); font-size: 2.2cqh; min-height: 3cqh; }
+.hint.err { color: #FF8A8A; }
+
+/* salon */
+.salon { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 6cqw; align-items: center; }
+.big-code { display: flex; gap: 1.6cqh; }
+.big-code span { width: 10cqh; height: 12cqh; border-radius: 2cqh; display: grid; place-items: center; font-family: var(--rounded); font-weight: 900; font-size: 7cqh; background: rgb(255 255 255 / .07); border: 1px solid var(--edge); }
+.people { display: flex; gap: 4cqh; align-items: center; }
+.people .bubble { width: 11cqh; height: 11cqh; font-size: 5cqh; }
+.thread { height: .5cqh; width: 14cqh; background: var(--peach); border-radius: 1cqh; box-shadow: 0 0 2cqh rgb(255 140 158 / .7); }
+
+/* player */
+.screen[data-s="lecteur"] { padding: 0; }
+.film { position: absolute; inset: 0; background: radial-gradient(60% 50% at 30% 60%, rgb(255 140 158 / .35), transparent 70%), radial-gradient(50% 45% at 72% 38%, rgb(169 156 255 / .35), transparent 70%), linear-gradient(160deg, #2b2340, #120f1a); }
+.film.playing { animation: drift 9s ease-in-out infinite alternate; }
+@keyframes drift { to { filter: hue-rotate(25deg) brightness(1.1); } }
+.subtitle { position: absolute; left: 50%; bottom: 14cqh; translate: -50% 0; font-size: 3.4cqh; font-weight: 600; text-shadow: 0 .3cqh 1cqh rgb(0 0 0 / .8); transition: bottom .35s; }
+.flash { position: absolute; left: 50%; top: 50%; translate: -50% -50%; width: 14cqh; height: 14cqh; border-radius: 50%; display: grid; place-items: center; background: rgb(0 0 0 / .45); font-size: 5cqh; opacity: 0; transition: opacity .3s; }
+.flash.show { opacity: 1; }
+.seekbadge { position: absolute; top: 50%; translate: 0 -50%; font-family: var(--rounded); font-weight: 900; font-size: 4cqh; padding: 1.6cqh 3cqh; border-radius: 99cqh; background: rgb(0 0 0 / .5); opacity: 0; transition: opacity .25s; }
+.seekbadge.show { opacity: 1; }
+.seekbadge.l { left: 8cqw; } .seekbadge.r { right: 8cqw; }
+.osd { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 5cqw 5cqh; background: linear-gradient(transparent, rgb(0 0 0 / .75)); display: grid; gap: 2.4cqh; opacity: 0; translate: 0 4cqh; transition: opacity .3s, translate .4s cubic-bezier(.2,1,.3,1); }
+.osd.show { opacity: 1; translate: 0 0; }
+.osd-top { position: absolute; top: 0; left: 0; right: 0; padding: 4cqh 5cqw 8cqh; background: linear-gradient(rgb(0 0 0 / .6), transparent); display: flex; justify-content: space-between; align-items: center; opacity: 0; transition: opacity .3s; }
+.osd-top.show { opacity: 1; }
+.osd-top b { font-size: 3cqh; }
+.timeline { display: flex; align-items: center; gap: 2cqh; font-size: 2.2cqh; color: var(--muted); font-variant-numeric: tabular-nums; }
+.track { flex: 1; height: .9cqh; border-radius: 1cqh; background: rgb(255 255 255 / .2); position: relative; }
+.track i { position: absolute; inset: 0 auto 0 0; background: var(--peach); border-radius: 1cqh; width: var(--p); }
+.track.f.focused { transform: none; height: 1.6cqh; box-shadow: 0 0 0 .4cqh var(--focus); }
+.ctrls { display: flex; gap: 1.6cqw; align-items: center; }
+.ctrl { min-width: 9cqh; height: 9cqh; padding: 0 2.4cqh; border-radius: 99cqh; background: rgb(255 255 255 / .12); font-size: 2.4cqh; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 1cqh; }
+.ctrl.push { margin-left: auto; }
+.reactions { display: flex; gap: 1.6cqh; }
+.reactions[hidden] { display: none !important; }
+.emoji { width: 9cqh; height: 9cqh; border-radius: 50%; font-size: 4.4cqh; background: rgb(255 255 255 / .12); }
+.floating { position: absolute; right: 12cqw; bottom: 30cqh; font-size: 8cqh; animation: up 2.4s ease-out forwards; pointer-events: none; }
+@keyframes up { from { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } to { transform: translateY(-30cqh); opacity: 0; } }
+.presence-pill { display: flex; align-items: center; gap: 1cqh; background: rgb(0 0 0 / .35); padding: 1cqh 2cqh 1cqh 1cqh; border-radius: 99cqh; font-size: 2cqh; }
+
+/* remote + notes */
+.below { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start; }
+@media (max-width: 760px) { .below { grid-template-columns: 1fr; } }
+.remote { display: grid; grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(3, 52px); gap: 6px; padding: 14px; border-radius: 26px; background: #1a1622; border: 1px solid var(--edge); }
+.remote button { border-radius: 14px; background: rgb(255 255 255 / .08); font-size: 18px; min-height: 44px; }
+.remote .ok { border-radius: 50%; background: rgb(255 255 255 / .16); font-weight: 700; font-size: 14px; }
+.remote .back { grid-column: 3; grid-row: 3; font-size: 13px; }
+.notes { border-radius: 18px; border: 1px solid var(--edge); padding: 14px 18px; display: grid; gap: 8px; min-width: 0; }
+.notes h2 { margin: 0; font-family: var(--rounded); font-size: 17px; font-weight: 800; }
+.notes p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+.notes kbd { font-family: inherit; font-size: 12px; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--edge); color: var(--milk); }
+.notes .demo { justify-self: start; margin-top: 4px; font-size: 13px; font-weight: 600; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--edge); min-height: 40px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <div class="bar">
+    <div><strong>Annamour TV</strong> <span>Maquette fil de fer · télécommande : flèches, OK (Entrée), Retour (Échap)</span></div>
+    <nav class="tabs" aria-label="Écrans TV">
+      <a href="#lier">Lier la TV</a><a href="#accueil">Accueil</a><a href="#rejoindre">Rejoindre</a><a href="#salon">Salon</a><a href="#lecteur">Lecteur</a>
+    </nav>
+  </div>
+
+  <div class="tv" id="tv" tabindex="0" aria-label="Écran de la TV, pilotable avec les flèches">
+    <!-- LIER -->
+    <section class="screen" data-s="lier">
+      <div class="top"><span class="brand">Annamour</span></div>
+      <div class="pair">
+        <div class="qr"><canvas id="qr" width="29" height="29" aria-label="QR code de liaison"></canvas></div>
+        <div>
+          <h1 class="title">Relie cette TV à ton compte</h1>
+          <p class="lede">Scanne ce code avec ton téléphone, ou ouvre Annamour → Profil → « Lier une TV » et tape :</p>
+          <div class="code">K7P · 2QX</div>
+          <ol class="steps"><li>Ton téléphone te demande « Lier la TV du salon ? »</li><li>Tu confirmes : la TV affiche tes séances.</li></ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACCUEIL -->
+    <section class="screen" data-s="accueil">
+      <div class="top"><span class="brand">Annamour</span><span class="me"><span class="bubble" style="--c:#8CC8FF">D</span>Darius</span></div>
+      <h2 class="row-title">Mes séances</h2>
+      <div class="cards">
+        <button class="card f" data-go="salon" data-row="0"><div class="poster" style="--art:linear-gradient(160deg,#4A2E5C,#1A1424);--p:55%"><i class="prog"></i></div><div class="card-body"><b>Film du vendredi</b><span>Reprendre à 1:12:40 · avec Anna</span></div></button>
+        <button class="card f" data-go="salon" data-row="0"><div class="poster" style="--art:linear-gradient(160deg,#5C2A2A,#1C1212);--p:48%"><i class="prog"></i></div><div class="card-body"><b>Soirée frissons</b><span>Samedi · avec Léo et Inès</span></div></button>
+        <button class="card f" data-go="salon" data-row="0"><div class="poster" style="--art:linear-gradient(160deg,#1F4560,#121822);--p:62%"><i class="prog"></i></div><div class="card-body"><b>Saison 2 · Épisode 4</b><span>Mardi · avec Anna</span></div></button>
+      </div>
+      <div class="actions">
+        <button class="btn primary f" data-go="rejoindre" data-row="1">Rejoindre avec un code</button>
+        <button class="btn f" data-go="lier" data-row="1">Changer de compte</button>
+      </div>
+      <p class="lede" style="margin-top:auto">Pour créer une séance, colle le lien sur ton téléphone : elle apparaît ici.</p>
+    </section>
+
+    <!-- REJOINDRE -->
+    <section class="screen" data-s="rejoindre">
+      <div class="top"><span class="brand">Rejoindre une séance</span></div>
+      <div class="join">
+        <div class="slots" id="slots"><span class="slot next"></span><span class="slot"></span><span class="slot"></span><span class="slot"></span></div>
+        <div class="keys" id="keys"></div>
+        <p class="hint" id="joinHint">Choisis les lettres avec les flèches, OK pour valider. Code de démo : YWEK</p>
+      </div>
+    </section>
+
+    <!-- SALON -->
+    <section class="screen" data-s="salon">
+      <div class="top"><span class="brand">Film du vendredi</span><span class="me">Séance YWEK</span></div>
+      <div class="salon">
+        <div>
+          <p class="lede">Le code de la séance</p>
+          <div class="big-code"><span>Y</span><span>W</span><span>E</span><span>K</span></div>
+        </div>
+        <div style="display:grid;gap:3cqh;justify-items:start">
+          <div class="people"><span class="bubble" style="--c:#8CC8FF">D</span><span class="thread"></span><span class="bubble" style="--c:#A99CFF">A</span></div>
+          <h1 class="title">Anna est là</h1>
+          <p class="lede" style="margin:0">On reprend à 1:12:40, là où vous vous étiez arrêtés</p>
+          <div class="actions" style="margin:0"><button class="btn primary f" data-go="lecteur" data-row="0">Reprendre le film</button><button class="btn f" data-go="accueil" data-row="0">Retour</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LECTEUR -->
+    <section class="screen" data-s="lecteur">
+      <div class="film playing" id="film"></div>
+      <div class="subtitle" id="sub">Tu viens ? Ça commence.</div>
+      <div class="flash" id="flash">⏸</div>
+      <div class="seekbadge l" id="back">−10 s</div>
+      <div class="seekbadge r" id="fwd">+10 s</div>
+      <div class="osd-top" id="osdTop"><b>Film du vendredi</b><span class="presence-pill"><span class="bubble" style="--c:#8CC8FF;width:4cqh;height:4cqh;font-size:2cqh">D</span><span class="bubble" style="--c:#A99CFF;width:4cqh;height:4cqh;font-size:2cqh">A</span>Synchro</span></div>
+      <div class="osd" id="osd">
+        <div class="reactions" id="reactRow" hidden>
+          <button class="emoji f" data-row="0" data-react="❤️">❤️</button><button class="emoji f" data-row="0" data-react="😂">😂</button><button class="emoji f" data-row="0" data-react="😮">😮</button><button class="emoji f" data-row="0" data-react="😭">😭</button><button class="emoji f" data-row="0" data-react="🔥">🔥</button><button class="emoji f" data-row="0" data-react="🍿">🍿</button>
+        </div>
+        <div class="timeline"><span id="tNow">1:12:40</span><div class="track f" data-row="1" id="track" style="--p:55%"><i></i></div><span>2:10:26</span></div>
+        <div class="ctrls">
+          <button class="ctrl f" data-row="2" data-act="toggle" id="playBtn">⏸ Pause</button>
+          <button class="ctrl f" data-row="2" data-act="back">−10 s</button>
+          <button class="ctrl f" data-row="2" data-act="fwd">+10 s</button>
+          <button class="ctrl f" data-row="2" data-act="subs">Audio et sous-titres</button>
+          <button class="ctrl f" data-row="2" data-act="react">Réactions</button>
+          <button class="ctrl f push" data-row="2" data-act="quit">Quitter</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="below">
+    <div class="remote" aria-label="Télécommande">
+      <span></span><button data-key="ArrowUp" aria-label="Haut">▲</button><span></span>
+      <button data-key="ArrowLeft" aria-label="Gauche">◀</button><button class="ok" data-key="Enter">OK</button><button data-key="ArrowRight" aria-label="Droite">▶</button>
+      <span></span><button data-key="ArrowDown" aria-label="Bas">▼</button><button class="back" data-key="Escape">Retour</button>
+    </div>
+    <div class="notes" id="notes"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const NOTES = {
+    lier: ["Lier la TV", "Première ouverture : aucune saisie. La TV affiche un QR code et un code court ; le téléphone, déjà connecté, confirme. Le serveur relie alors la TV au compte (comme « Ajouter un appareil », dans l'autre sens).", ["Simuler la confirmation sur le téléphone", () => go("accueil")]],
+    accueil: ["Accueil TV", "« Mes séances » du compte, triées par date : la séance créée sur le téléphone apparaît ici. ◀ ▶ dans une rangée, ▲ ▼ entre les rangées, OK pour ouvrir.", null],
+    rejoindre: ["Rejoindre", "Un clavier de 23 lettres (sans I, L, O) piloté aux flèches. La séance s'ouvre dès la 4e lettre ; un code inconnu fait trembler les cases.", null],
+    salon: ["Salon", "Le même salon que sur le téléphone, en grand. « Lancer » ou « Reprendre » lance le compte à rebours pour tout le monde.", null],
+    lecteur: ["Lecteur", "OK : pause / lecture · ◀ ▶ : −10 s / +10 s (sans ouvrir de menu) · ▲ ou ▼ : affiche la barre, puis on s'y déplace comme sur Netflix · Retour : ferme la barre, puis quitte. Les réactions se font aussi depuis le téléphone.", ["Anna réagit depuis son téléphone", () => float("❤️")]],
+  };
+
+  /* ---------- focus engine: rows of focusable elements per screen ---------- */
+  let screen = "lier", row = 0, col = 0;
+  const focusables = () => $$(`.screen[data-s="${screen}"] .f`).filter((el) => !el.closest("[hidden]") && el.offsetParent !== null);
+  const rows = () => {
+    const by = new Map();
+    focusables().forEach((el) => { const r = +el.dataset.row; if (!by.has(r)) by.set(r, []); by.get(r).push(el); });
+    return [...by.keys()].sort((a, b) => a - b).map((k) => by.get(k));
+  };
+  function paint() {
+    $$(".f.focused").forEach((el) => el.classList.remove("focused"));
+    const r = rows(); if (!r.length) return;
+    row = Math.max(0, Math.min(row, r.length - 1)); col = Math.max(0, Math.min(col, r[row].length - 1));
+    r[row][col].classList.add("focused");
+  }
+  const current = () => rows()[row]?.[col];
+
+  function go(name) {
+    screen = name; row = 0; col = 0;
+    $$(".screen").forEach((s) => s.classList.toggle("on", s.dataset.s === name));
+    $$(".tabs a").forEach((a) => a.toggleAttribute("aria-current", a.getAttribute("href") === "#" + name));
+    $$(".tabs a").forEach((a) => { if (a.getAttribute("href") === "#" + name) a.setAttribute("aria-current", "page"); });
+    if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
+    if (name === "rejoindre") resetJoin();
+    if (name === "lecteur") { hideOsd(); playing = true; render(); }
+    const [h, p, demo] = NOTES[name];
+    $("#notes").innerHTML = `<h2>${h}</h2><p>${p}</p>`;
+    if (demo) { const b = document.createElement("button"); b.className = "demo"; b.textContent = demo[0]; b.onclick = demo[1]; $("#notes").append(b); }
+    paint();
+  }
+
+  /* ---------- join keyboard ---------- */
+  const ALPHA = "ABCDEFGHJKMNPQRSTUVWXYZ";
+  let typed = "";
+  (function buildKeys() {
+    const keys = $("#keys");
+    [...ALPHA].forEach((ch, i) => { const b = document.createElement("button"); b.className = "key f"; b.textContent = ch; b.dataset.row = String(Math.floor(i / 9)); b.dataset.letter = ch; keys.append(b); });
+    const del = document.createElement("button"); del.className = "key wide f"; del.textContent = "⌫ Effacer"; del.dataset.row = "2"; del.dataset.del = "1"; keys.append(del);
+  })();
+  function resetJoin() { typed = ""; renderSlots(); $("#joinHint").className = "hint"; $("#joinHint").textContent = "Choisis les lettres avec les flèches, OK pour valider. Code de démo : YWEK"; }
+  function renderSlots() { $$("#slots .slot").forEach((s, i) => { s.textContent = typed[i] ?? ""; s.classList.toggle("next", i === typed.length); }); }
+  function typeLetter(ch) {
+    if (typed.length >= 4) return;
+    typed += ch; renderSlots();
+    if (typed.length === 4) {
+      if (typed === "YWEK") setTimeout(() => go("salon"), 350);
+      else { $("#joinHint").className = "hint err"; $("#joinHint").textContent = "Aucune séance avec ce code. Vérifie les lettres."; setTimeout(resetJoin, 1600); }
+    }
+  }
+
+  /* ---------- player ---------- */
+  let playing = true, osd = false, pos = 4360, reacting = false;
+  const DUR = 7826;
+  const fmt = (s) => `${Math.floor(s / 3600)}:${String(Math.floor(s % 3600 / 60)).padStart(2, "0")}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  function render() {
+    $("#film").classList.toggle("playing", playing);
+    $("#playBtn").textContent = playing ? "⏸ Pause" : "▶ Lecture";
+    $("#tNow").textContent = fmt(pos);
+    $("#track").style.setProperty("--p", (pos / DUR * 100) + "%");
+    $("#sub").style.bottom = osd ? "34cqh" : "14cqh";
+  }
+  let osdTimer;
+  function showOsd(startRow = 2) { osd = true; $("#osd").classList.add("show"); $("#osdTop").classList.add("show"); row = startRow - ($("#reactRow").hidden ? 1 : 0); col = 0; render(); paint(); armOsd(); }
+  function hideOsd() { osd = false; reacting = false; $("#reactRow").hidden = true; $("#osd").classList.remove("show"); $("#osdTop").classList.remove("show"); $$(".f.focused").forEach((e) => e.classList.remove("focused")); render(); }
+  function armOsd() { clearTimeout(osdTimer); if (playing) osdTimer = setTimeout(hideOsd, 5000); }
+  function toggle() { playing = !playing; const fl = $("#flash"); fl.textContent = playing ? "▶" : "⏸"; fl.classList.add("show"); setTimeout(() => fl.classList.remove("show"), 700); render(); if (osd) armOsd(); }
+  function seek(d) { pos = Math.max(0, Math.min(DUR, pos + d)); const b = $(d < 0 ? "#back" : "#fwd"); b.classList.add("show"); setTimeout(() => b.classList.remove("show"), 650); render(); }
+  function float(e) { const el = document.createElement("div"); el.className = "floating"; el.textContent = e; $('.screen[data-s="lecteur"]').append(el); setTimeout(() => el.remove(), 2400); }
+  setInterval(() => { if (screen === "lecteur" && playing) { pos = Math.min(DUR, pos + 1); render(); } }, 1000);
+
+  function playerKey(key) {
+    if (!osd) {
+      if (key === "Enter") return toggle();
+      if (key === "ArrowLeft") return seek(-10);
+      if (key === "ArrowRight") return seek(10);
+      if (key === "ArrowUp" || key === "ArrowDown") return showOsd();
+      if (key === "Escape") return go("salon");
+      return;
+    }
+    armOsd();
+    if (key === "Escape") return hideOsd();
+    const el = current();
+    if (key === "Enter" && el) {
+      if (el.dataset.react) { float(el.dataset.react); return; }
+      const a = el.dataset.act;
+      if (a === "toggle") toggle(); else if (a === "back") seek(-10); else if (a === "fwd") seek(10);
+      else if (a === "react") { $("#reactRow").hidden = !$("#reactRow").hidden; row = 0; col = 0; paint(); }
+      else if (a === "subs") { $("#sub").textContent = "Sous-titres : Français (forcés) · Audio : Français"; }
+      else if (a === "quit") go("accueil");
+      return;
+    }
+    if (el?.id === "track" && (key === "ArrowLeft" || key === "ArrowRight")) return seek(key === "ArrowLeft" ? -10 : 10);
+    move(key);
+  }
+
+  function move(key) {
+    const r = rows(); if (!r.length) return;
+    if (key === "ArrowLeft") col--; else if (key === "ArrowRight") col++;
+    else if (key === "ArrowUp" || key === "ArrowDown") {
+      const from = current(); row += key === "ArrowUp" ? -1 : 1; row = Math.max(0, Math.min(row, r.length - 1));
+      // keep the column closest to where the focus was
+      if (from) { const x = from.getBoundingClientRect().left; let best = 0, bd = Infinity; r[row].forEach((el, i) => { const d = Math.abs(el.getBoundingClientRect().left - x); if (d < bd) { bd = d; best = i; } }); col = best; }
+    }
+    paint();
+  }
+
+  function press(key) {
+    if (screen === "lecteur") return playerKey(key);
+    if (key === "Escape") return go(screen === "accueil" || screen === "lier" ? screen : "accueil");
+    if (key === "Enter") {
+      const el = current(); if (!el) return;
+      if (el.dataset.letter) return typeLetter(el.dataset.letter);
+      if (el.dataset.del) { typed = typed.slice(0, -1); return renderSlots(); }
+      if (el.dataset.go) return go(el.dataset.go);
+      return;
+    }
+    move(key);
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", "Escape", "Backspace"].includes(e.key)) return;
+    e.preventDefault(); press(e.key === "Backspace" ? "Escape" : e.key);
+  });
+  $$(".remote [data-key]").forEach((b) => b.addEventListener("click", () => press(b.dataset.key)));
+  $$(".tv .f").forEach((el) => el.addEventListener("click", () => { const r = rows(); r.forEach((rw, ri) => rw.forEach((x, ci) => { if (x === el) { row = ri; col = ci; } })); paint(); press("Enter"); }));
+
+  /* illustrative QR */
+  (function () { const c = $("#qr"), x = c.getContext("2d"), n = 29; let s = 11; const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+    x.fillStyle = "#F6F2FA"; x.fillRect(0, 0, n, n); x.fillStyle = "#12101A";
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const f = (i < 8 && j < 8) || (i > n - 9 && j < 8) || (i < 8 && j > n - 9); if (!f && rnd() > .52) x.fillRect(i, j, 1, 1); }
+    const finder = (ox, oy) => { for (let i = 0; i < 7; i++) for (let j = 0; j < 7; j++) if (i === 0 || i === 6 || j === 0 || j === 6 || (i > 1 && i < 5 && j > 1 && j < 5)) x.fillRect(ox + i, oy + j, 1, 1); };
+    finder(0, 0); finder(n - 7, 0); finder(0, n - 7); })();
+
+  addEventListener("hashchange", () => { const h = location.hash.slice(1); if (NOTES[h] && h !== screen) go(h); });
+  go(NOTES[location.hash.slice(1)] ? location.hash.slice(1) : "lier");
+})();
+</script>
