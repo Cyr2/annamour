@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Annamour</string>
+    <string name="error_title">Impossible de joindre Annamour</string>
+    <string name="error_body">Vérifie que l\'appareil est bien connecté à Internet, puis réessaie.</string>
+    <string name="retry">Réessayer</string>
+</resources>

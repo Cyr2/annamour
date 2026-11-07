@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Palette « Nuit douce » (same values as apps/web/src/styles/tokens.css). -->
+<resources>
+    <color name="nuit">#12101A</color>
+    <color name="encre">#1D1828</color>
+    <color name="lait">#F6F2FA</color>
+    <color name="lait_doux">#B3F6F2FA</color>
+    <color name="peche">#FF8C9E</color>
+    <color name="peche_clair">#FFC2CC</color>
+</resources>

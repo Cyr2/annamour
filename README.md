@@ -27,6 +27,11 @@ Chaque appareil lit la vidéo directement depuis le CDN d'origine.
 | `packages/protocol` | Types et schémas zod partagés, maths de synchro (horloge, dérive, état de lecture) |
 | `apps/server`       | Node 26 + Hono + `ws` : API, WebSocket, import HLS, service de la PWA              |
 | `apps/web`          | PWA React 19 + Vite + Tailwind 4 + Motion + glisse (Liquid Glass)                  |
+| `apps/android-tv`   | Appli Android TV / Google TV (Kotlin) : la PWA en mode TV dans une WebView         |
+
+### Appli Android TV
+
+`apps/android-tv` ouvre `https://annamour.dpessin.fr/?tv=1` en plein écran, apparaît dans le lanceur Google TV et transmet la télécommande à la page (flèches, OK = `Enter`, Retour = `Escape` + `window.AnnamourTV.backHandled()`). Elle se construit à part avec Gradle (hors de `pnpm`) ; construction, clé de signature, contrat avec la page et installation par ADB : voir [`apps/android-tv/README.md`](apps/android-tv/README.md).
 
 ## Développement
 
