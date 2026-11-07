@@ -70,7 +70,7 @@ describe("my sessions, for a séance with episodes", () => {
 
     const connection = { send: () => {}, close: () => {} };
     const member = room.join("client-aaaa", "Darius", "peach", connection, 2000) ?? "";
-    room.handle(member, { type: "nextEpisode", episode: 0 }, 3000);
+    room.handle(member, { type: "playEpisode", from: 0, to: 1 }, 3000);
     expect(services.history.list(account.id)[0]).toMatchObject({
       duration: 30,
       position: 0,

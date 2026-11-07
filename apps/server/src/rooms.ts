@@ -1,8 +1,8 @@
 import {
   type BubbleColor,
   type ClientMessage,
+  canGoToEpisode,
   canRemoveEpisode,
-  canStartNextEpisode,
   declineNextEpisode,
   type EpisodeProgress,
   episodeAdded,
@@ -11,6 +11,7 @@ import {
   episodeResumed,
   episodeTitle,
   everyoneLeft,
+  goToEpisode,
   initialPlayback,
   type Media,
   type Member,
@@ -23,7 +24,6 @@ import {
   type RoomSnapshot,
   type ServerMessage,
   seek,
-  startNextEpisode,
   startProgress,
 } from "@annamour/protocol";
 import type { ImportedMedia } from "./hls.ts";
@@ -269,16 +269,16 @@ export class Room {
 
   private handleEpisodeMessage(
     memberId: string,
-    message: Extract<ClientMessage, { type: "ended" | "nextEpisode" | "declineNext" | "removeEpisode" }>,
+    message: Extract<ClientMessage, { type: "ended" | "playEpisode" | "declineNext" | "removeEpisode" }>,
     now: number,
   ): void {
     switch (message.type) {
       case "ended":
         this.onEnded(message.episode, now);
         return;
-      case "nextEpisode":
-        if (canStartNextEpisode(this.progress, message.episode))
-          this.moveTo(startNextEpisode(this.progress), now, "playing", memberId);
+      case "playEpisode":
+        if (canGoToEpisode(this.progress, message.from, message.to))
+          this.moveTo(goToEpisode(this.progress, message.to), now, "playing", memberId);
         return;
       case "declineNext":
         this.setProgress(declineNextEpisode(this.progress), memberId);

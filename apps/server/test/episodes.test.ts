@@ -50,8 +50,8 @@ describe("a séance with episodes", () => {
   it("moves everyone to the next episode once, even when two devices ask together", () => {
     const { room, b, idA, idB, repository } = setup();
     room.handle(idA, { type: "ended", episode: 0 }, 1000);
-    room.handle(idA, { type: "nextEpisode", episode: 0 }, 9000);
-    room.handle(idB, { type: "nextEpisode", episode: 0 }, 9010);
+    room.handle(idA, { type: "playEpisode", from: 0, to: 1 }, 9000);
+    room.handle(idB, { type: "playEpisode", from: 0, to: 1 }, 9010);
 
     const seen = required(b.lastRoom(), "the room after the switch");
     expect(seen).toMatchObject({ current: 1, finished: false, countdownUntil: null });
@@ -60,6 +60,16 @@ describe("a séance with episodes", () => {
     expect(seen.playback).toEqual({ status: "playing", position: 0, at: 9000 });
     expect(b.inbox.filter((m) => m.type === "room" && m.room.current === 1)).toHaveLength(1);
     expect(repository.find(room.code)).toMatchObject({ current: 1, position: 0 });
+  });
+
+  it("skips to the next episode mid-way, and goes back to one already watched, the list kept whole", () => {
+    const { room, b, idA, idB } = setup();
+    room.handle(idA, { type: "play", position: 12 }, 0);
+    room.handle(idB, { type: "playEpisode", from: 0, to: 1 }, 1000);
+    expect(b.lastRoom()).toMatchObject({ current: 1, playback: { status: "playing", position: 0 } });
+
+    room.handle(idA, { type: "playEpisode", from: 1, to: 0 }, 2000);
+    expect(b.lastRoom()).toMatchObject({ current: 0, episodes: [{}, { label: "É2" }] });
   });
 
   it("keeps the next episode waiting after « Pas ce soir », and reopens on it next time", () => {

@@ -12,13 +12,13 @@ test("à la fin d'un épisode, le suivant démarre chez tout le monde", async ({
   await darius.getByRole("button", { name: "Lancer le film" }).click();
   await expect.poll(() => videoTime(anna), { timeout: 30_000 }).toBeGreaterThan(1);
 
-  // Anna queues the next episode from « À suivre »; the label is guessed for her.
+  // Anna queues the next episode from « Épisodes »; the label is guessed for her.
   await anna.mouse.move(10, 10);
-  await anna.getByRole("button", { name: "À suivre" }).click();
+  await anna.getByRole("button", { name: "Épisodes", exact: true }).click();
   await anna.getByLabel("Lien de l'épisode d'après (.m3u8)").fill(HLS_URL);
   await expect(anna.getByLabel("Titre", { exact: true })).toHaveValue("Épisode 2");
   await anna.getByRole("button", { name: "Ajouter à la suite" }).click();
-  await expect(anna.getByRole("dialog", { name: "À suivre" })).toBeHidden({ timeout: 30_000 });
+  await expect(anna.getByRole("dialog", { name: "Épisodes" })).toBeHidden({ timeout: 30_000 });
 
   // Darius jumps to the end: the countdown shows on both screens.
   await darius.mouse.move(20, 20);
@@ -38,4 +38,18 @@ test("à la fin d'un épisode, le suivant démarre chez tout le monde", async ({
   }
   await expect.poll(() => videoTime(darius), { timeout: 30_000 }).toBeGreaterThan(1);
   expect(await videoTime(darius)).toBeLessThan(60);
+
+  // The episode watched stays in the menu, ticked: picking it takes everyone back to it.
+  await darius.mouse.move(30, 30);
+  await darius.getByRole("button", { name: "Épisodes", exact: true }).click();
+  await darius.getByRole("button", { name: "Regarder Épisode 1, Vu" }).click();
+  await expect(anna.getByText("Darius lance Épisode 1")).toBeVisible({ timeout: 15_000 });
+  await expect(anna.getByText("The Bear · Épisode 2")).toBeHidden();
+
+  // Mid-episode, « Épisode suivant » skips everyone ahead without waiting for the end.
+  await anna.mouse.move(40, 40);
+  await anna.getByRole("button", { name: "Épisode suivant" }).click();
+  for (const page of [darius, anna]) {
+    await expect(page.getByText("The Bear · Épisode 2")).toBeVisible({ timeout: 15_000 });
+  }
 });
