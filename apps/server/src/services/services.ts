@@ -34,6 +34,8 @@ export interface ServiceOptions {
   catalog?: Catalog;
   /** Makes lighter qualities of each film (needs ffmpeg); absent, séances keep their source's only quality. */
   transcoder?: Transcoder;
+  /** What the lighter qualities of every séance may take on disk together. */
+  mediaMaxBytes?: number;
   /** Logs how each film's source audio lines up with its video. */
   timelineProbe?: TimelineProbe;
 }
@@ -68,6 +70,7 @@ export function createServices(options: ServiceOptions): Services {
     transcoder: options.transcoder,
     now,
     ...(options.timelineProbe ? { probe: options.timelineProbe } : {}),
+    ...(options.mediaMaxBytes ? { maxBytes: options.mediaMaxBytes } : {}),
   });
   // A new séance starts being prepared at once: by the time someone opens it, the first minute is ready.
   const rooms = new RoomService({

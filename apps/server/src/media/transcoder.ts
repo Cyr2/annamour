@@ -1,6 +1,7 @@
 import { access, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { bytesByFolder } from "./disk-usage.ts";
 import type { AudioSegmentEncoder, SegmentEncoder } from "./ffmpeg.ts";
 import { type HevcRung, Mp4Error, splitMp4 } from "./hevc.ts";
 import type { HevcChecker, HevcEncoder } from "./hevc-ffmpeg.ts";
@@ -232,6 +233,11 @@ export class Transcoder {
       }
     }
     for (let i = Math.max(0, index); i < end; i++) this.enqueue(track, i, priority);
+  }
+
+  /** The bytes each séance's files take on disk, by séance code. */
+  usage(): Promise<Map<string, number>> {
+    return bytesByFolder(this.options.dir);
   }
 
   /** Deletes the files of every séance `keep` no longer wants. */
