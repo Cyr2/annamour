@@ -49,6 +49,20 @@ describe("Room", () => {
     expect(b.last()).toMatchObject({ type: "playback", action: "pause", playback: { status: "paused", position: 14 } });
   });
 
+  it("stops waiting for a loading member whose link dropped, without saying they left", () => {
+    const { room, a, b, idA, idB } = setup();
+    room.handle(idA, { type: "play", position: 0 }, 0);
+    room.handle(idB, { type: "buffering", buffering: true }, 5000);
+    expect(room.playback.status).toBe("paused");
+    room.disconnected(idB, b.connection, 6000);
+    expect(room.playback).toMatchObject({ status: "playing", at: 6000 });
+    expect(room.members().map((m) => m.name)).toEqual(["Darius", "Anna"]);
+    expect(a.last()).toMatchObject({ type: "playback", action: "resume" });
+    // A stale socket closing after its replacement changes nothing.
+    room.disconnected(idA, b.connection, 7000);
+    expect(room.size).toBe(2);
+  });
+
   it("waits for a buffering member, then resumes by itself", () => {
     const { room, a, idA, idB } = setup();
     room.handle(idA, { type: "play", position: 0 }, 0);

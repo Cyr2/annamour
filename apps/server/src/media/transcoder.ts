@@ -56,6 +56,8 @@ export interface TranscoderOptions {
 
 const NOW = 0;
 const AHEAD = 1;
+/** What will be watched later (the next episode's start): only once what is watched now is covered. */
+const LATER = 2;
 const MAX_ATTEMPTS = 4;
 const REPORT_EVERY = 30;
 
@@ -125,9 +127,9 @@ export class Transcoder {
   }
 
   /** Makes this segment first and waits for it however long it takes: true once made, false if it cannot be. */
-  async ensure(track: Track, index: number): Promise<boolean> {
+  async ensure(track: Track, index: number, { later = false } = {}): Promise<boolean> {
     if (await this.isReady(track, index)) return true;
-    return this.enqueue(track, index, NOW).done;
+    return this.enqueue(track, index, later ? LATER : NOW).done;
   }
 
   /** Every output of this segment is encoded. */
@@ -137,6 +139,14 @@ export class Transcoder {
   }
 
   /** Prepares the next minutes from `index` (where the séance is), dropping what a seek left behind. */
+  /**
+   * Prepares a track's first `count` segments after everything else: the next
+   * episode, so moving on to it starts at once.
+   */
+  prepareLater(track: Track, count: number): void {
+    for (let i = 0; i < Math.min(count, track.segments.length); i++) this.enqueue(track, i, LATER);
+  }
+
   prepareFrom(track: Track, index: number): void {
     const end = Math.min(track.segments.length, index + this.options.ahead);
     const id = trackId(track);

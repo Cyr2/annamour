@@ -31,7 +31,28 @@ const patientRetry = {
   backoff: "exponential",
 } as const;
 
-export function hlsConfig(startPosition: number): Partial<HlsConfig> {
+/**
+ * On an iPad (Safari's Media Source), WebKit caps each source's memory:
+ * ~105 MB for video and only ~5.5 MB for a separate audio track, about
+ * 5 minutes of source audio. Asking for more makes appends fail in a loop,
+ * so the lead stays under that, and the bitrate climbs more carefully on 4G.
+ * Plain Media Source, not Managed: the managed kind keeps a 10–30 s lead by
+ * design, no better than Safari's own player.
+ */
+const WEBKIT_LEAD_SECONDS = 300;
+const webkitTuning: Partial<HlsConfig> = {
+  preferManagedMediaSource: false,
+  maxBufferLength: WEBKIT_LEAD_SECONDS,
+  maxMaxBufferLength: WEBKIT_LEAD_SECONDS,
+  maxBufferSize: 100 * MB,
+  abrBandWidthFactor: 0.8,
+  abrBandWidthUpFactor: 0.6,
+  abrEwmaDefaultEstimate: 400_000,
+};
+
+const isWebKit = (nav: Navigator) => /Apple/.test(nav.vendor);
+
+export function hlsConfig(startPosition: number, nav: Navigator = navigator): Partial<HlsConfig> {
   return {
     enableWorker: true,
     startPosition,
@@ -39,6 +60,7 @@ export function hlsConfig(startPosition: number): Partial<HlsConfig> {
     maxBufferLength: MAX_LEAD_SECONDS,
     maxMaxBufferLength: MAX_LEAD_SECONDS,
     maxBufferSize: (lowMemory() ? 60 : 150) * MB,
+    ...(isWebKit(nav) ? webkitTuning : {}),
     // What was watched is let go quickly: memory goes to what comes next.
     backBufferLength: 30,
     // Never pick more pixels than the screen shows (only matters when several qualities exist).

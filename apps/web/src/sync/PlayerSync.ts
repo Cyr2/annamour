@@ -46,6 +46,11 @@ export interface PlayerSyncOptions {
    * through hls.js instead (Managed Media Source on iPhone).
    */
   fromDevice?: (src: string) => boolean;
+  /**
+   * This Apple device chose our player over Safari's (see player-choice.ts):
+   * a lead of minutes rather than seconds, for a weak link.
+   */
+  ownPlayer?: () => boolean;
 }
 
 export const initialPlayerSyncState: PlayerSyncState = {
@@ -91,6 +96,7 @@ export class PlayerSync {
   private readonly client: SyncClient;
   private readonly emit: (state: PlayerSyncState) => void;
   private readonly fromDevice: (src: string) => boolean;
+  private readonly ownPlayer: () => boolean;
   private state: PlayerSyncState = { ...initialPlayerSyncState };
 
   private playback: PlaybackState | null = null;
@@ -134,12 +140,13 @@ export class PlayerSync {
     video: HTMLVideoElement,
     client: SyncClient,
     emit: (state: PlayerSyncState) => void,
-    { fromDevice = () => false }: PlayerSyncOptions = {},
+    { fromDevice = () => false, ownPlayer = () => false }: PlayerSyncOptions = {},
   ) {
     this.video = video;
     this.client = client;
     this.emit = emit;
     this.fromDevice = fromDevice;
+    this.ownPlayer = ownPlayer;
 
     video.playsInline = true;
     video.preload = "auto";
@@ -238,11 +245,16 @@ export class PlayerSync {
     return true;
   }
 
+  /** hls.js rather than Safari's own player: the film is on the device, or this device chose it. */
+  private wantsOwnPlayer(src: string): boolean {
+    return this.fromDevice(src) || this.ownPlayer();
+  }
+
   /** The film was just downloaded (or removed): switch to the player that can read it from the device. */
   refreshEngine(): void {
     const src = this.src;
     if (!src) return;
-    const wanted = this.fromDevice(src) && isApple() ? "hls.js" : this.state.engine;
+    const wanted = this.wantsOwnPlayer(src) && isApple() ? "hls.js" : this.state.engine;
     if (wanted === this.state.engine) return;
     const token = ++this.sourceToken;
     this.teardownSource();
@@ -267,7 +279,7 @@ export class PlayerSync {
     const video = this.video;
     const native = video.canPlayType("application/vnd.apple.mpegurl") !== "";
     // Safari (incl. iPad) gets native HLS: AirPlay, PiP, fullscreen and battery all work best.
-    if (native && isApple() && !this.nativeFailed && !this.fromDevice(src)) {
+    if (native && isApple() && !this.nativeFailed && !this.wantsOwnPlayer(src)) {
       this.attachNative(src);
       return;
     }

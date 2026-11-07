@@ -66,6 +66,21 @@ describe("PlayerSync", () => {
     expect(video.src).toBe("");
   });
 
+  it("uses our player on Safari when this device chose it, for its minutes of lead", async () => {
+    sync = new PlayerSync(video.asElement(), client.asClient(), (s) => states.push(s), { ownPlayer: () => true });
+    sync.setSource("/api/rooms/YWEK/hls/master.m3u8");
+    await vi.waitFor(() => expect(lastState()?.engine).toBe("hls.js"));
+    expect(video.src).toBe("");
+  });
+
+  it("falls back to Safari's own player where ours cannot run (no Media Source)", async () => {
+    hlsCalls.supported = false;
+    sync = new PlayerSync(video.asElement(), client.asClient(), (s) => states.push(s), { ownPlayer: () => true });
+    sync.setSource("/api/rooms/YWEK/hls/master.m3u8");
+    await vi.waitFor(() => expect(lastState()?.engine).toBe("native"));
+    hlsCalls.supported = true;
+  });
+
   it("switches to the device's copy as soon as the download completes", async () => {
     let downloaded = false;
     sync = new PlayerSync(video.asElement(), client.asClient(), (s) => states.push(s), {

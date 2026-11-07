@@ -21,13 +21,16 @@ export interface Rung {
   lightAudio: boolean;
 }
 
-export type RungName = "q540" | "q480" | "q360" | "q234";
+export type RungName = "q540" | "q480" | "q360" | "q288" | "q234";
 
 /** In the order they are listed in the master (see above). */
 export const RUNGS: readonly Rung[] = [
   { name: "q480", height: 480, crf: 23, maxrateKbps: 1000, bufsizeKbps: 2000, level: "3.0", lightAudio: false },
   { name: "q540", height: 540, crf: 22, maxrateKbps: 1600, bufsizeKbps: 3200, level: "3.1", lightAudio: false },
   { name: "q360", height: 360, crf: 24, maxrateKbps: 550, bufsizeKbps: 1100, level: "3.0", lightAudio: true },
+  // Measured on a real séance: an iPad on 4G spent a third of the film at 234p, the step to 360p
+  // (0.19 → 0.62 Mb/s, ×3.2) being too high; good ladders climb by ×1.5–2. ≈ 0.37 Mb/s in all.
+  { name: "q288", height: 288, crf: 25, maxrateKbps: 300, bufsizeKbps: 600, level: "3.0", lightAudio: true },
   // The last resort for a collapsing link: with the lighter audio, under the 192 kb/s Apple asks for on cellular.
   { name: "q234", height: 234, crf: 27, maxrateKbps: 120, bufsizeKbps: 240, level: "3.0", lightAudio: true },
 ];

@@ -1,4 +1,4 @@
-import { isRoomCode, PlaybackReport, type PlaybackStatsList } from "@annamour/protocol";
+import { isRoomCode, PlaybackReport, type PlaybackStatsList, type SeanceReport } from "@annamour/protocol";
 import { Hono } from "hono";
 import { type AppEnv, clientIp, type RouteDeps, readBody } from "../http/context.ts";
 
@@ -25,6 +25,14 @@ export function statsRoutes({ services }: RouteDeps) {
     return c.json({ reports: playbackStats.list(code) } satisfies PlaybackStatsList, 200, {
       "cache-control": "no-store",
     });
+  });
+
+  // The evening at a glance (« Qualité de la séance »): per person and device, against the targets.
+  routes.get("/api/rooms/:code/report", (c) => {
+    const code = c.req.param("code");
+    const report = isRoomCode(code) ? playbackStats.report(code) : undefined;
+    if (!report) return c.json(ROOM_GONE, 404);
+    return c.json(report satisfies SeanceReport, 200, { "cache-control": "no-store" });
   });
 
   return routes;

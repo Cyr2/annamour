@@ -141,6 +141,16 @@ describe("making a film's lighter qualities", () => {
     expect(await t.segment(audio, "q480", 0)).toBeNull();
   });
 
+  it("gets the next episode's start ready only behind what is being watched", async () => {
+    const { t, fetched } = transcoder({ ahead: 3 });
+    const next: VideoTrack = { ...film(), episode: 1, segments: film().segments.map((url) => `${url}?next`) };
+    t.prepareLater(next, 2);
+    t.prepareFrom(film(), 40);
+    await vi.waitFor(() => expect(fetched).toHaveLength(5));
+    // One worker: the first job had already started; after it, the current episode goes first.
+    expect(fetched.slice(1).map((url) => url.endsWith("?next"))).toEqual([false, false, false, true]);
+  });
+
   it("deletes the files of séances nobody watches any more", async () => {
     const { t } = transcoder({ ahead: 0 });
     await t.segment(film(), Q480, 0);

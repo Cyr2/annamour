@@ -44,6 +44,75 @@ async function until(check: () => boolean): Promise<void> {
 
 const hello = (name: string) => JSON.stringify({ type: "hello", clientId: `client-${name}-0000`, name, color: "mint" });
 
+describe("a member whose link drops", () => {
+  const grace = testApp();
+  let graceServer: ServerType;
+  let graceSockets: ReturnType<typeof attachRealtime>;
+  let gracePort: number;
+  const opened: WebSocket[] = [];
+
+  beforeAll(async () => {
+    graceServer = serve({ fetch: grace.app.fetch, port: 0 });
+    graceSockets = attachRealtime(graceServer, grace.services, { reconnectGraceMs: 300 });
+    await new Promise((resolve) => graceServer.once("listening", resolve));
+    gracePort = (graceServer.address() as AddressInfo).port;
+  });
+
+  afterAll(async () => {
+    for (const ws of opened) ws.terminate();
+    graceSockets.close();
+    await new Promise<void>((resolve) => graceServer.close(() => resolve()));
+  });
+
+  const join = async (code: string, name: string) => {
+    const ws = new WebSocket(`ws://localhost:${gracePort}/ws?room=${code}`);
+    opened.push(ws);
+    const inbox: ServerMessage[] = [];
+    ws.on("message", (data) => {
+      const message = parseServerMessage(data.toString());
+      if (message) inbox.push(message);
+    });
+    await new Promise((resolve) => ws.once("open", resolve));
+    ws.send(hello(name));
+    return { ws, inbox };
+  };
+  const membersOf = (inbox: ServerMessage[]) => {
+    const last = inbox.filter((m) => m.type === "members").at(-1);
+    return last?.type === "members" ? last.members.map((m) => m.name) : [];
+  };
+
+  it("stays listed a moment, and comes back without having left", async () => {
+    const room = grace.services.store.create("Film", media, Date.now());
+    const anna = await join(room.code, "Anna");
+    const leo = await join(room.code, "Leo");
+    await until(() => membersOf(anna.inbox).includes("Leo"));
+    leo.ws.terminate(); // the 4G drops: no clean close
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(membersOf(anna.inbox)).toContain("Leo");
+    await join(room.code, "Leo");
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(membersOf(anna.inbox)).toEqual(["Anna", "Leo"]);
+  });
+
+  it("is let go once the moment has passed", async () => {
+    const room = grace.services.store.create("Film", media, Date.now());
+    const anna = await join(room.code, "Anna");
+    const leo = await join(room.code, "Leo");
+    await until(() => membersOf(anna.inbox).includes("Leo"));
+    leo.ws.terminate();
+    await until(() => !membersOf(anna.inbox).includes("Leo"));
+  });
+
+  it("leaves at once when they close the séance themselves", async () => {
+    const room = grace.services.store.create("Film", media, Date.now());
+    const anna = await join(room.code, "Anna");
+    const leo = await join(room.code, "Leo");
+    await until(() => membersOf(anna.inbox).includes("Leo"));
+    leo.ws.close(1000, "left");
+    await until(() => !membersOf(anna.inbox).includes("Leo"));
+  });
+});
+
 describe("realtime transport", () => {
   it("refuses upgrades outside /ws", async () => {
     const ws = new WebSocket(`ws://localhost:${port}/elsewhere`);
@@ -70,7 +139,8 @@ describe("realtime transport", () => {
     await until(() => client.inbox.some((m) => m.type === "welcome"));
     expect(client.inbox.some((m) => m.type === "playback")).toBe(false);
     expect(room.size).toBe(1);
-    client.ws.close();
+    // Leaving on purpose (the app closes with 1000): gone at once, no grace for a dropped link.
+    client.ws.close(1000, "left");
     await client.closed;
     await until(() => room.size === 0);
   });
