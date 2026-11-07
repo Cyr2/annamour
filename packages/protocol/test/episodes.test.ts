@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  canGoToEpisode,
   canRemoveEpisode,
-  canStartNextEpisode,
   declineNextEpisode,
   episodeAdded,
   episodeEnded,
@@ -9,10 +9,10 @@ import {
   episodeResumed,
   episodeTitle,
   everyoneLeft,
+  goToEpisode,
   hasNextEpisode,
   NEXT_EPISODE_COUNTDOWN_MS,
   nextEpisodeLabel,
-  startNextEpisode,
   startProgress,
 } from "../src/index.ts";
 
@@ -37,18 +37,31 @@ describe("the end of an episode", () => {
   });
 });
 
-describe("moving on to the next episode", () => {
+describe("going to another episode", () => {
   it("moves everyone on once, even when two devices ask together", () => {
     const ended = episodeEnded(startProgress(0, 2), 0, 1000);
-    expect(canStartNextEpisode(ended, 0)).toBe(true);
-    const next = startNextEpisode(ended);
+    expect(canGoToEpisode(ended, 0, 1)).toBe(true);
+    const next = goToEpisode(ended, 1);
     expect(next).toEqual({ current: 1, count: 2, finished: false, countdownUntil: null, declined: false });
-    expect(canStartNextEpisode(next, 0)).toBe(false);
+    expect(canGoToEpisode(next, 0, 1)).toBe(false);
   });
 
-  it("has nowhere to go after the last episode", () => {
+  it("skips ahead mid-episode, to any episode still to come", () => {
+    expect(canGoToEpisode(startProgress(0, 4), 0, 3)).toBe(true);
+    expect(goToEpisode(startProgress(0, 4), 3).current).toBe(3);
+  });
+
+  it("goes back to an episode already watched, from its start", () => {
+    expect(canGoToEpisode(startProgress(2, 3), 2, 0)).toBe(true);
+    expect(goToEpisode(startProgress(2, 3), 0)).toMatchObject({ current: 0, finished: false });
+  });
+
+  it("goes nowhere outside the séance, nor to the episode on screen", () => {
     expect(hasNextEpisode(startProgress(1, 2))).toBe(false);
-    expect(canStartNextEpisode(startProgress(1, 2), 1)).toBe(false);
+    expect(canGoToEpisode(startProgress(1, 2), 1, 2)).toBe(false);
+    expect(canGoToEpisode(startProgress(1, 2), 1, -1)).toBe(false);
+    expect(canGoToEpisode(startProgress(1, 2), 1, 1)).toBe(false);
+    expect(canGoToEpisode(startProgress(0, 3), 0, 1.5)).toBe(false);
   });
 });
 
@@ -56,7 +69,7 @@ describe("« Pas ce soir »", () => {
   it("stops the countdown, and a later end does not start it again", () => {
     const declined = declineNextEpisode(episodeEnded(startProgress(0, 2), 0, 1000));
     expect(declined).toMatchObject({ countdownUntil: null, declined: true, finished: true });
-    expect(canStartNextEpisode(declined, 0)).toBe(true);
+    expect(canGoToEpisode(declined, 0, 1)).toBe(true);
   });
 
   it("keeps the next episode for next time once everyone has left", () => {

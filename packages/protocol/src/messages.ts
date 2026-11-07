@@ -107,8 +107,8 @@ export const ClientMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("react"), emoji: Reaction }),
   /** This device reached the end of `episode`. */
   z.object({ type: z.literal("ended"), episode: EpisodeIndex }),
-  /** Move everyone from `episode` to the one after (once, however many devices ask). */
-  z.object({ type: z.literal("nextEpisode"), episode: EpisodeIndex }),
+  /** Move everyone from episode `from` to episode `to` (once, however many devices ask). */
+  z.object({ type: z.literal("playEpisode"), from: EpisodeIndex, to: EpisodeIndex }),
   /** « Pas ce soir »: stop the countdown for everyone. */
   z.object({ type: z.literal("declineNext") }),
   z.object({ type: z.literal("removeEpisode"), episode: EpisodeIndex }),

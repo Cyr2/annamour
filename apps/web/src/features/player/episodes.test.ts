@@ -1,7 +1,7 @@
 import type { SessionSummary } from "@annamour/protocol";
 import { describe, expect, it } from "vitest";
 import { resumeKicker, sessionTitle } from "../sessions/session-rules.ts";
-import { endTitle, episodeEndOf, episodeName, secondsLeft, suggestedLabel } from "./episode-rules.ts";
+import { endTitle, episodeEndOf, episodeName, episodeState, secondsLeft, suggestedLabel } from "./episode-rules.ts";
 import { timelineKeyTarget } from "./seek.ts";
 
 const room = { finished: false, countdownUntil: null, current: 0, episodes: [{}, { label: "É2" }] };
@@ -45,6 +45,12 @@ describe("the timeline's keys", () => {
     expect(timelineKeyTarget("Home", 300, 600)).toBe(0);
     expect(timelineKeyTarget("End", 300, 600)).toBe(600);
     expect(timelineKeyTarget("Enter", 300, 600)).toBeNull();
+  });
+});
+
+describe("the « Épisodes » list", () => {
+  it("ticks the episodes before the one on screen and keeps them, the rest still to come", () => {
+    expect([0, 1, 2, 3].map((index) => episodeState(index, 2))).toEqual(["watched", "watched", "current", "upcoming"]);
   });
 });
 

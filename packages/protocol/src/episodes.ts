@@ -39,16 +39,18 @@ export function episodeEnded(progress: EpisodeProgress, episode: number, now: nu
 }
 
 /**
- * Whether asking for the episode after `episode` should move everyone on. The
- * episode is named so that a late or repeated ask (two devices reaching the
- * end of the countdown together) moves the séance on only once.
+ * Whether asking to go from episode `from` to episode `to` (the next one, a
+ * later one, or one already watched) should move everyone there. `from` is
+ * named so that a late or repeated ask (two devices reaching the end of the
+ * countdown together) moves the séance only once.
  */
-export function canStartNextEpisode(progress: EpisodeProgress, episode: number): boolean {
-  return episode === progress.current && hasNextEpisode(progress);
+export function canGoToEpisode(progress: EpisodeProgress, from: number, to: number): boolean {
+  return from === progress.current && to !== from && Number.isInteger(to) && to >= 0 && to < progress.count;
 }
 
-export function startNextEpisode(progress: EpisodeProgress): EpisodeProgress {
-  return startProgress(progress.current + 1, progress.count);
+/** Everyone on episode `to`, from its start. */
+export function goToEpisode(progress: EpisodeProgress, to: number): EpisodeProgress {
+  return startProgress(to, progress.count);
 }
 
 /** « Pas ce soir »: the countdown stops for everyone, the next episode waits. */
@@ -81,7 +83,7 @@ export function episodeRemoved(progress: EpisodeProgress): EpisodeProgress {
  * that the séance reopens on it (« Pas ce soir » keeps it for next time).
  */
 export function everyoneLeft(progress: EpisodeProgress): EpisodeProgress {
-  if (progress.finished && hasNextEpisode(progress)) return startNextEpisode(progress);
+  if (progress.finished && hasNextEpisode(progress)) return goToEpisode(progress, progress.current + 1);
   return { ...progress, countdownUntil: null };
 }
 
