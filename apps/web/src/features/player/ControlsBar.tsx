@@ -29,7 +29,7 @@ interface ControlsBarProps {
  * The glass capsule floating over the film: the timeline between its two
  * clocks, then play, ±10 s and volume on the left; reactions, tracks and full
  * screen on the right, with « Épisode suivant » and « Épisodes » before it. On a
- * phone the buttons share the width evenly.
+ * phone held upright they sit in two rows of four, each 44px wide.
  * On a TV (always full screen, volume on the remote) there is no full-screen
  * button, leaving the film is the top bar's back arrow (or Retour), and
  * play/pause is where the remote lands.
@@ -49,7 +49,8 @@ export function ControlsBar(props: ControlsBarProps) {
         <Scrubber clock={clock} onSeek={onSeek} className="flex-1" />
         <span>{formatClock(clock.duration)}</span>
       </div>
-      <div className="flex items-center justify-between sm:justify-start sm:gap-1">
+      {/* A phone held upright fits 4 buttons of 44px a row: two rows there, one row from tablets and landscape on. */}
+      <div className="grid grid-cols-4 justify-items-center gap-y-1 sm:flex sm:items-center sm:justify-start sm:gap-1">
         <IconButton
           label={playing ? "Pause" : "Lecture"}
           icon={playing ? <Pause /> : <Play />}

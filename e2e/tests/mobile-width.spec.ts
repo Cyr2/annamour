@@ -47,4 +47,17 @@ test("sur un petit téléphone, rien ne dépasse ni ne défile sur le côté", a
   const room = await createSession(darius, "Le Seigneur des Anneaux : La Communauté de l'Anneau");
   await darius.goto(room);
   await expectFitsWidth(darius, "salon");
+
+  // The player held upright: every control stays inside its glass bar.
+  await darius.getByRole("button", { name: "Lancer le film" }).click();
+  await darius.waitForTimeout(4000);
+  await darius.mouse.move(100, 300);
+  const spill = await darius.evaluate(() => {
+    const bar = document.querySelector('[aria-label="Pause"], [aria-label="Lecture"]')?.closest(".am-frost");
+    const edge = bar?.getBoundingClientRect().right ?? 0;
+    return [...(bar?.querySelectorAll("button") ?? [])]
+      .filter((button) => button.getBoundingClientRect().width > 0 && button.getBoundingClientRect().right > edge)
+      .map((button) => button.getAttribute("aria-label"));
+  });
+  expect(spill, "lecteur : des boutons dépassent de la barre").toEqual([]);
 });
