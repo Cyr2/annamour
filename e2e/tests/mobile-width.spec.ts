@@ -60,4 +60,9 @@ test("sur un petit téléphone, rien ne dépasse ni ne défile sur le côté", a
       .map((button) => button.getAttribute("aria-label"));
   });
   expect(spill, "lecteur : des boutons dépassent de la barre").toEqual([]);
+
+  // Upright, the bar is one row: the rest waits behind « ⋯ ».
+  await darius.getByRole("button", { name: "Plus d'options" }).click();
+  await expect(darius.getByRole("button", { name: /Audio et sous-titres/ })).toBeVisible();
+  await expectFitsWidth(darius, "plus d'options du lecteur");
 });
