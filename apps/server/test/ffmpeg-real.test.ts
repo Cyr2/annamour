@@ -85,8 +85,8 @@ describe.skipIf(!installed)("making a real packed-audio segment lighter", () => 
   it("plays at exactly the source's time between two source segments, with the same frames", async () => {
     const dir = mkdtempSync(join(tmpdir(), "annamour-audio-"));
     const sourceFile = join(dir, "source.aac");
-    // A rising tone in each ear: any shift in time shows as a clear lag.
-    const chirp = "aevalsrc=sin(2*PI*(200+300*t)*t)|sin(2*PI*(300+200*t)*t):s=48000:d=32";
+    // White noise: it matches itself at a single lag only (a tone repeats, and so would its match).
+    const chirp = "anoisesrc=color=white:seed=7:amplitude=0.5:sample_rate=48000:duration=32";
     execFileSync("ffmpeg", [
       "-v",
       "error",
@@ -115,8 +115,8 @@ describe.skipIf(!installed)("making a real packed-audio segment lighter", () => 
     const expected = decode(join(dir, "source.aac"));
     const heard = decode(played);
     const start = 469 * 1024;
-    for (const at of [start + 1024, start + 469 * 512, start + 469 * 1024 - 6000]) {
-      expect(Math.abs(bestLag(expected, heard, at))).toBeLessThanOrEqual(16);
-    }
+    // Its start, middle and end: all in place, so no shift and no drift across the segment.
+    const lags = [start + 1024, start + 469 * 512, start + 469 * 1024 - 6000].map((at) => bestLag(expected, heard, at));
+    expect(lags.map(Math.abs).every((lag) => lag <= 16), `lags ${lags.join(", ")}`).toBe(true);
   }, 60_000);
 });
