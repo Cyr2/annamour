@@ -117,6 +117,9 @@ describe.skipIf(!installed)("making a real packed-audio segment lighter", () => 
     const start = 469 * 1024;
     // Its start, middle and end: all in place, so no shift and no drift across the segment.
     const lags = [start + 1024, start + 469 * 512, start + 469 * 1024 - 6000].map((at) => bestLag(expected, heard, at));
-    expect(lags.map(Math.abs).every((lag) => lag <= 16), `lags ${lags.join(", ")}`).toBe(true);
+    expect(
+      lags.map(Math.abs).every((lag) => lag <= 16),
+      `lags ${lags.join(", ")}`,
+    ).toBe(true);
   }, 60_000);
 });
