@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { BubbleColor, type Participant } from "@annamour/protocol";
 import { z } from "zod";
+import { parseCatalog } from "./room-repository.ts";
 import { changedRows, parseRows } from "./rows.ts";
 
 export interface JoinedRoom {
@@ -11,6 +12,8 @@ export interface JoinedRoom {
   lastUsedAt: number;
   episode: { index: number; count: number; label: string | undefined };
   circleId: string | undefined;
+  /** The current episode's poster, when it came from the catalog. */
+  posterUrl: string | undefined;
 }
 
 const JoinedRoomRow = z.object({
@@ -22,6 +25,7 @@ const JoinedRoomRow = z.object({
   current_episode: z.number(),
   episode_count: z.number(),
   episode_label: z.string().nullable(),
+  episode_catalog: z.string().nullable(),
   circle_id: z.string().nullable(),
 });
 
@@ -67,7 +71,11 @@ export class ParticipationRepository {
            (SELECT e.label FROM room_episodes e
             WHERE e.room_code = r.code
               AND (SELECT COUNT(*) FROM room_episodes b WHERE b.room_code = e.room_code AND b.id < e.id) = r.current_episode
-           ) AS episode_label
+           ) AS episode_label,
+           (SELECT e.catalog FROM room_episodes e
+            WHERE e.room_code = r.code
+              AND (SELECT COUNT(*) FROM room_episodes b WHERE b.room_code = e.room_code AND b.id < e.id) = r.current_episode
+           ) AS episode_catalog
          FROM participations p JOIN rooms r ON r.code = p.room_code
          WHERE p.account_id = ? AND p.hidden = 0
          ORDER BY r.last_used_at DESC`,
@@ -81,6 +89,7 @@ export class ParticipationRepository {
       lastUsedAt: row.last_used_at,
       episode: { index: row.current_episode, count: row.episode_count, label: row.episode_label ?? undefined },
       circleId: row.circle_id ?? undefined,
+      posterUrl: parseCatalog(row.episode_catalog)?.posterUrl,
     }));
   }
 

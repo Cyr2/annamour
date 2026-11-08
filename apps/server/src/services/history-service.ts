@@ -46,6 +46,7 @@ export class HistoryService {
         ...(room.episode.label === undefined ? {} : { label: room.episode.label }),
       },
       ...(room.circleId === undefined ? {} : { circleId: room.circleId }),
+      ...(room.posterUrl === undefined ? {} : { posterUrl: room.posterUrl }),
     }));
   }
 

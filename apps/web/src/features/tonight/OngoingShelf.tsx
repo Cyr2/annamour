@@ -2,7 +2,8 @@ import type { SessionSummary } from "@annamour/protocol";
 import { Play } from "lucide-react";
 import { Link } from "wouter";
 import { sessionPath } from "../../sync/restart.ts";
-import { companionsLabel, progressOf, remainingLabel, sessionTitle } from "../sessions/session-rules.ts";
+import { companionsLabel, remainingLabel, sessionTitle } from "../sessions/session-rules.ts";
+import { SeancePoster } from "./SeancePoster.tsx";
 
 /** « Autres en cours »: the séances left unfinished besides the one offered first, as posters like the list's. */
 export function OngoingShelf({ sessions }: { sessions: SessionSummary[] }) {
@@ -24,25 +25,17 @@ export function OngoingShelf({ sessions }: { sessions: SessionSummary[] }) {
 }
 
 function OngoingTile({ session }: { session: SessionSummary }) {
-  const progress = progressOf(session) ?? 0;
   const detail =
     session.episode.count > 1
       ? `épisode ${session.episode.index + 1} sur ${session.episode.count}`
       : remainingLabel(session);
   return (
     <Link href={sessionPath(session.code)} className="grid gap-2 rounded-control text-left">
-      <span
-        aria-hidden
-        className="relative block aspect-[2/3] w-full overflow-hidden rounded-control"
-        style={{ background: "var(--am-poster-glow), var(--am-poster)" }}
-      >
+      <SeancePoster session={session} className="w-full">
         <span className="absolute inset-0 m-auto grid size-11 place-items-center rounded-full bg-scrim text-fg">
           <Play className="ml-0.5 size-4 fill-current" />
         </span>
-        <span className="absolute inset-x-0 bottom-0 h-1 bg-fill-strong">
-          <span className="block h-full bg-accent" style={{ width: `${Math.round(progress * 100)}%` }} />
-        </span>
-      </span>
+      </SeancePoster>
       <span className="grid gap-0.5 px-0.5">
         <span className="truncate text-sm font-semibold text-fg">{sessionTitle(session)}</span>
         <span className="truncate text-xs text-fg-muted">
