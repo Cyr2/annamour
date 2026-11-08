@@ -11,6 +11,7 @@ vi.mock("../../api/accounts.ts", () => ({
   linkWithToken: vi.fn(async () => anna),
   updateAccount: vi.fn(async (changes: object) => ({ ...anna, ...changes })),
   logout: vi.fn(async () => undefined),
+  checkKey: vi.fn(async () => true),
 }));
 vi.mock("../../api/passkeys.ts", () => ({
   loginWithPasskey: vi.fn(async () => anna),
@@ -31,7 +32,13 @@ const {
 } = await import("./account.ts");
 const { useIdentity } = await import("../../sync/identity.ts");
 
+async function refreshAccountAs(account: Account) {
+  vi.mocked(api.fetchMe).mockResolvedValueOnce(account);
+  await refreshAccount();
+}
+
 beforeEach(() => {
+  vi.mocked(api.checkKey).mockClear();
   localStorage.clear();
   useAccount.setState({ status: "checking", account: null, key: null });
 });
@@ -50,6 +57,40 @@ describe("account store", () => {
     await expect(linkWithToken("abcdefghijklmnop")).resolves.toEqual(anna);
     await expect(loginWithPasskey()).resolves.toEqual(anna);
     expect(useAccount.getState().status).toBe("member");
+  });
+
+  it("never shows the previous account's words after moving to another account by QR code", async () => {
+    await createAccount("Anna", "lilac");
+    vi.mocked(api.linkWithToken).mockResolvedValueOnce({ ...anna, id: "another-account" });
+    await linkWithToken("abcdefghijklmnop");
+    expect(useAccount.getState().key).toBeNull();
+    useAccount.setState({ account: null, key: null });
+    await refreshAccountAs({ ...anna, id: "another-account" });
+    expect(useAccount.getState().key).toBeNull();
+  });
+
+  it("shows words saved by an older version only once the server says they open this account", async () => {
+    localStorage.setItem("annamour:key:v1", JSON.stringify(key));
+    vi.mocked(api.checkKey).mockResolvedValueOnce(true);
+    await refreshAccountAs(anna);
+    await vi.waitFor(() => expect(useAccount.getState().key).toEqual(key));
+
+    localStorage.clear();
+    useAccount.setState({ account: null, key: null });
+    localStorage.setItem("annamour:key:v1", JSON.stringify(key));
+    vi.mocked(api.checkKey).mockResolvedValueOnce(false);
+    await refreshAccountAs(anna);
+    await vi.waitFor(() => expect(localStorage.getItem("annamour:key:v1")).toBeNull());
+    expect(useAccount.getState().key).toBeNull();
+  });
+
+  it("asks again later when the old words could not be checked", async () => {
+    localStorage.setItem("annamour:key:v1", JSON.stringify(key));
+    vi.mocked(api.checkKey).mockRejectedValueOnce(new Error("offline"));
+    await refreshAccountAs(anna);
+    await vi.waitFor(() => expect(api.checkKey).toHaveBeenCalled());
+    expect(localStorage.getItem("annamour:key:v1")).not.toBeNull();
+    expect(useAccount.getState().key).toBeNull();
   });
 
   it("forgets the séances of the account that was here when another one signs in", async () => {

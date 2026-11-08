@@ -5,6 +5,7 @@ import {
   API,
   type BubbleColor,
   CreateAccountResponse,
+  KeyCheckResponse,
   LinkToken,
   SessionList,
   type SessionSummary,
@@ -49,6 +50,12 @@ export async function linkWithToken(token: string): Promise<Account> {
     },
   });
   return account;
+}
+
+/** Whether these words are the key of the account this device is signed in to. */
+export async function checkKey(key: AccountKey): Promise<boolean> {
+  const { matches } = await request(KeyCheckResponse, API.checkKey, { body: { key } });
+  return matches;
 }
 
 /** The signed-in account, or null when this device has no session. */

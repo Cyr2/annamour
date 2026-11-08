@@ -33,6 +33,10 @@ export type CreateAccountResponse = z.infer<typeof CreateAccountResponse>;
 export const LoginWithKeyRequest = z.object({ key: AccountKey });
 export type LoginWithKeyRequest = z.infer<typeof LoginWithKeyRequest>;
 
+/** Whether 4 words a device kept are the key of the account it is signed in to. */
+export const KeyCheckResponse = z.object({ matches: z.boolean() });
+export type KeyCheckResponse = z.infer<typeof KeyCheckResponse>;
+
 export const AccountResponse = z.object({ account: Account });
 export type AccountResponse = z.infer<typeof AccountResponse>;
 
@@ -146,6 +150,7 @@ export const API = {
   linkWithToken: "/api/account/link",
   me: "/api/me",
   linkToken: "/api/me/link-token",
+  checkKey: "/api/me/key",
   sessions: "/api/me/sessions",
   logout: "/api/logout",
   passkeyRegisterOptions: "/api/passkey/register/options",

@@ -100,6 +100,34 @@ describe("creating an account", () => {
   });
 });
 
+describe("checking the key a device kept", () => {
+  it("says whether the words are this account's key, so a device never shows another account's", async () => {
+    const { app, createAccount } = setup();
+    const first = await createAccount();
+    const second = await createAccount();
+    const check = (cookie: string, key: string[]) =>
+      app.request(API.checkKey, jsonRequest("POST", { key }, { cookie }));
+
+    const own = await check(second.cookie, second.body.key);
+    expect(own.status).toBe(200);
+    expect(await own.json()).toEqual({ matches: true });
+    // Same prénom, same colour, but the other account's words.
+    expect(await (await check(second.cookie, first.body.key)).json()).toEqual({ matches: false });
+  });
+
+  it("is only for a signed-in device, and counts as a try against guessing", async () => {
+    const { app, createAccount, clock } = setup();
+    const { cookie } = await createAccount();
+    const wrong = ["lune", "panda", "velours", "cerise"];
+    expect((await app.request(API.checkKey, jsonRequest("POST", { key: wrong }))).status).toBe(401);
+    const check = () => app.request(API.checkKey, jsonRequest("POST", { key: wrong }, { cookie }));
+    for (let i = 0; i < KEY_LOGIN_LIMIT.max; i++) expect((await check()).status).toBe(200);
+    expect((await check()).status).toBe(429);
+    clock.now += KEY_LOGIN_LIMIT.windowMs;
+    expect((await check()).status).toBe(200);
+  });
+});
+
 describe("signing in with the key", () => {
   it("accepts the 4 words however they are typed", async () => {
     const { createAccount, login } = setup();
