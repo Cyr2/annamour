@@ -3,12 +3,12 @@ import { Ellipsis, LogOut, Pencil, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { inviteToCircle, inviteUrl } from "../../api/circles.ts";
 import { errorMessage } from "../../api/http.ts";
+import { plural } from "../../lib/format.ts";
 import { Button } from "../../ui/controls.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import { toast } from "../../ui/toast.ts";
-import { eveningsLine } from "../circles/circle-rules.ts";
 import { leaveCircle } from "../circles/circles.ts";
 import { AccountRow } from "../profile/AccountRow.tsx";
 import { CircleThread } from "./CircleThread.tsx";
@@ -47,7 +47,7 @@ export function CircleCard({ circle, me }: { circle: Circle; me: string }) {
         <div className="flex items-center gap-2">
           <div className="grid min-w-0 flex-1">
             <strong className="truncate font-rounded-tight text-md font-extrabold text-fg">{title}</strong>
-            <span className="text-xs text-pretty text-fg-muted">{eveningsLine(circle, Date.now())}</span>
+            <span className="truncate text-xs text-fg-muted">{plural(circle.evenings, "soirée")}</span>
           </div>
           <Button icon={<UserPlus />} onClick={invite}>
             Inviter

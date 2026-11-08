@@ -9,7 +9,7 @@ vi.mock("../../api/circles.ts", () => ({
 }));
 const api = await import("../../api/circles.ts");
 const store = await import("./circles.ts");
-const { circleShortName, eveningsLine, ofCircle, tonightPick } = await import("./circle-rules.ts");
+const { circleShortName, isCloseCircle, ofCircle, tonightPick } = await import("./circle-rules.ts");
 
 const darius = { accountId: "darius", name: "Darius", color: "peach" } as const;
 const annou = { accountId: "annou", name: "Annou", color: "rose" } as const;
@@ -131,17 +131,14 @@ describe("« Ce soir » for a circle", () => {
 describe("a circle at a glance", () => {
   const DAY = 24 * 60 * 60 * 1000;
 
+  it("is close while its last séance is under a week old: its thread is taut, slack after", () => {
+    expect(isCloseCircle({ lastUsedAt: 0 }, 6 * DAY)).toBe(true);
+    expect(isCloseCircle({ lastUsedAt: 0 }, 8 * DAY)).toBe(false);
+    expect(isCloseCircle({ lastUsedAt: undefined }, 0)).toBe(false);
+  });
+
   it("goes by its name, else by the first names of the others", () => {
     expect(circleShortName(potes, "darius")).toBe("Les potes");
     expect(circleShortName(duo, "darius")).toBe("Annou");
-  });
-
-  it("says how many evenings and when the last one was", () => {
-    const now = new Date(2026, 10, 20, 21).getTime();
-    expect(eveningsLine({ evenings: 12, lastUsedAt: now - DAY }, now)).toBe("12 soirées · la dernière hier");
-    expect(eveningsLine({ evenings: 1, lastUsedAt: now - 15 * DAY }, now)).toBe(
-      "1 soirée · la dernière il y a 2 semaines",
-    );
-    expect(eveningsLine({ evenings: 0 }, now)).toBe("0 soirée");
   });
 });
