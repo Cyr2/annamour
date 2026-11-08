@@ -723,6 +723,11 @@ html[data-tv] .am-sky-stars {
   will-change: auto;
 }
 
+/* The bubbles hold still too: on the projector even a compositor loop redraws the whole screen on every frame (19 ms each). */
+html[data-tv] :is(.am-breathe, .am-breathe-soft, .am-heartbeat) {
+  animation: none;
+}
+
 html[data-tv] .am-sky-shooting {
   display: none;
 }
