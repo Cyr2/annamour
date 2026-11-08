@@ -16,8 +16,10 @@ export function useLaunchTitle() {
   const [error, setError] = useState<string | null>(null);
 
   const launch = async (item: WatchlistItem, episode?: { season: number; episode: number }) => {
-    const { id, type, title } = item.title;
-    const play: PlayCatalogRequest = episode ? { id, type, title, ...episode } : { id, type, title };
+    const { id, type, title, posterUrl } = item.title;
+    // The poster goes along, so the séance can show it on « Ce soir ».
+    const base = { id, type, title, ...(posterUrl ? { posterUrl } : {}) };
+    const play: PlayCatalogRequest = episode ? { ...base, ...episode } : base;
     setBusy(true);
     setError(null);
     try {

@@ -57,7 +57,7 @@ const EpisodeRow = z.object({
 });
 
 /** A saved catalog reference, or undefined when absent or no longer readable (the episode still plays). */
-function parseCatalog(json: string | null): CatalogRef | undefined {
+export function parseCatalog(json: string | null): CatalogRef | undefined {
   if (json === null) return undefined;
   try {
     const parsed = CatalogRef.safeParse(JSON.parse(json));

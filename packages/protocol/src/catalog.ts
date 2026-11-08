@@ -44,6 +44,8 @@ export const PlayCatalogRequest = z
     title: z.string().check(z.trim(), z.minLength(1), z.maxLength(120)),
     season: z.optional(Positive),
     episode: z.optional(Positive),
+    /** The title's poster, kept with the séance so « On reprend » can show it (the server keeps only the catalog's own). */
+    posterUrl: z.optional(z.url({ protocol: /^https$/ })),
   })
   .check(
     z.refine((r) => {
