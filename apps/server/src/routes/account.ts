@@ -3,6 +3,7 @@ import {
   API,
   CreateAccountRequest,
   type CreateAccountResponse,
+  type KeyCheckResponse,
   LinkWithTokenRequest,
   LoginWithKeyRequest,
   UpdateAccountRequest,
@@ -60,6 +61,12 @@ export function accountRoutes({ services, http }: RouteDeps) {
       "Choisis un prénom (24 caractères au plus) ou une couleur.",
     );
     return c.json({ account: accounts.update(c.var.account.id, changes) } satisfies AccountResponse);
+  });
+
+  routes.post(API.checkKey, signedIn, async (c) => {
+    const { key } = await readBody(c, LoginWithKeyRequest, "Saisis les 4 mots de ta clé, séparés par des espaces.");
+    const matches = accounts.isKeyOf(c.var.account.id, key, clientIp(c));
+    return c.json({ matches } satisfies KeyCheckResponse);
   });
 
   routes.post(API.linkToken, signedIn, (c) => c.json(accounts.createLinkToken(c.var.account.id), 201));
