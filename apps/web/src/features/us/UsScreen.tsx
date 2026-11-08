@@ -1,9 +1,8 @@
 import { byRecentUse } from "@annamour/protocol";
-import { LogIn, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BrandBar } from "../../ui/BrandBar.tsx";
 import { Button } from "../../ui/controls.tsx";
-import { LinkButton } from "../../ui/LinkButton.tsx";
 import { ThreadSpinner } from "../../ui/ThreadSpinner.tsx";
 import { useAccount } from "../account/account.ts";
 import { loadCircles, useCircles } from "../circles/circles.ts";
@@ -69,14 +68,10 @@ function Circles({ me, onCreate }: { me: string; onCreate: () => void }) {
           <CircleCard key={circle.id} circle={circle} me={me} />
         ))}
       </ul>
-      <div className="mt-1 grid grid-cols-2 gap-3">
-        <Button variant="filled" icon={<Plus />} onClick={onCreate}>
-          Nouveau cercle
-        </Button>
-        <LinkButton href="/rejoindre" icon={<LogIn />}>
-          J'ai un code
-        </LinkButton>
-      </div>
+      {/* Joining a circle goes through its invitation link; « J'ai un code » is for a séance, on « Ce soir ». */}
+      <Button variant="filled" icon={<Plus />} onClick={onCreate} className="mt-1 w-full">
+        Nouveau cercle
+      </Button>
     </section>
   );
 }
