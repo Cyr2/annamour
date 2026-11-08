@@ -58,6 +58,16 @@ export class AccountService {
     return this.signIn(account.id);
   }
 
+  /**
+   * Whether these 4 words open this account. A device that changed account by QR code or
+   * Face ID may still hold the previous account's words: it asks before showing them.
+   * Counted like a login, so it never helps guessing keys.
+   */
+  isKeyOf(accountId: string, key: AccountKey, clientIp: string): boolean {
+    if (!this.keyAttempts.tryAcquire(clientIp, this.now())) throw new TooManyAttemptsError();
+    return this.repositories.accounts.findByKeyHash(hashAccountKey(key, this.pepper))?.id === accountId;
+  }
+
   /** Opens a new device session for this account. */
   signIn(accountId: string): SignedIn {
     const account = this.get(accountId);
