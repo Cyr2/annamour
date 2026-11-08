@@ -50,6 +50,15 @@ class MainActivity : Activity() {
     private var backFallback: Runnable? = null
 
     private var failedUrl: String? = null
+
+    /**
+     * The page to open: production, or in a debug build the `url` extra (a local server through
+     * `adb reverse`, to measure a version on the TV before it ships).
+     */
+    private val startUrl: String by lazy {
+        intent.getStringExtra(EXTRA_URL)?.takeIf { BuildConfig.DEBUG } ?: START_URL
+    }
+    private val startHost: String by lazy { Uri.parse(startUrl).host ?: START_HOST }
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,7 +75,7 @@ class MainActivity : Activity() {
 
         setUpWebView()
         if (savedInstanceState == null || webView.restoreState(savedInstanceState) == null) {
-            webView.loadUrl(START_URL)
+            webView.loadUrl(startUrl)
         }
         webView.requestFocus()
     }
@@ -166,7 +175,7 @@ class MainActivity : Activity() {
     // region Error screen
 
     private fun showError(url: String?) {
-        failedUrl = url ?: failedUrl ?: START_URL
+        failedUrl = url ?: failedUrl ?: startUrl
         splash.visibility = View.GONE
         errorScreen.visibility = View.VISIBLE
         retryButton.requestFocus()
@@ -177,7 +186,7 @@ class MainActivity : Activity() {
         stopWatchingNetwork()
         errorScreen.visibility = View.GONE
         splash.visibility = View.VISIBLE
-        webView.loadUrl(failedUrl ?: START_URL)
+        webView.loadUrl(failedUrl ?: startUrl)
         failedUrl = null
         webView.requestFocus()
     }
@@ -284,7 +293,7 @@ class MainActivity : Activity() {
     private inner class Client : WebViewClient() {
 
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-            if (request.url.host == START_HOST) return false
+            if (request.url.host == startHost) return false
             // Other sites open outside the app, if the TV has something to open them with.
             try {
                 startActivity(Intent(Intent.ACTION_VIEW, request.url))
@@ -346,6 +355,7 @@ class MainActivity : Activity() {
     companion object {
         const val START_HOST = "annamour.dpessin.fr"
         const val START_URL = "https://$START_HOST/?tv=1"
+        const val EXTRA_URL = "url"
         const val USER_AGENT_SUFFIX = "AnnamourTV"
         const val BACK_TIMEOUT_MS = 200L
     }

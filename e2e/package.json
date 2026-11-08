@@ -7,6 +7,7 @@
     "e2e": "playwright test",
     "e2e:reseau-faible": "playwright test --config playwright.weak.config.ts",
     "e2e:perf-tv": "playwright test --config playwright.tv-perf.config.ts",
+    "perf-tv:appareil": "node tv-perf/on-device.ts",
     "typecheck": "tsc -p ."
   },
   "devDependencies": {
