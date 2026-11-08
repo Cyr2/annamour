@@ -25,6 +25,18 @@ async function typeWithRemote(tv: Page, code: string) {
   }
 }
 
+test("la TV dessine le fil rouge vers la place libre, même immobile", async ({ browser }) => {
+  const tv = await person(browser, TV_SCREEN);
+  await onboard(tv, "Darius");
+  await tv.goto("/?tv=1");
+  await expect(tv.getByRole("img", { name: "Une place libre" })).toBeVisible();
+  // On a TV the thread holds still: its path is drawn once, and must stay drawn.
+  const paths = () =>
+    tv.locator("path.stroke-thread").evaluateAll((all) => all.map((path) => path.getAttribute("d") ?? ""));
+  await expect.poll(async () => (await paths()).length).toBeGreaterThan(0);
+  await expect.poll(async () => (await paths()).every((d) => /^M[\d.-]/.test(d)), { timeout: 5000 }).toBe(true);
+});
+
 test("une TV se relie au compte d'un téléphone et rejoint une séance à la télécommande", async ({ browser }) => {
   const phone = await person(browser);
   const tv = await person(browser, TV_SCREEN);
