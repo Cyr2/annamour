@@ -1,8 +1,8 @@
 import { byRecentUse } from "@annamour/protocol";
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
-import { BrandBar } from "../../ui/BrandBar.tsx";
-import { Button } from "../../ui/controls.tsx";
+import { BrandFooter } from "../../ui/BrandFooter.tsx";
+import { IconButton } from "../../ui/IconButton.tsx";
 import { ThreadSpinner } from "../../ui/ThreadSpinner.tsx";
 import { useAccount } from "../account/account.ts";
 import { loadCircles, useCircles } from "../circles/circles.ts";
@@ -24,7 +24,6 @@ export function UsScreen() {
 
   return (
     <div className="safe-area mx-auto flex min-h-dvh w-full max-w-[1240px] flex-col">
-      <BrandBar />
       <main className="mx-auto grid w-full max-w-[760px] content-start gap-7 py-6">
         <h1 className="sr-only">Nous</h1>
         <Circles me={account?.id ?? ""} onCreate={() => setCreating(true)} />
@@ -38,6 +37,7 @@ export function UsScreen() {
           <PlayerChoiceCard />
         </section>
       </main>
+      <BrandFooter />
       <NameCircleSheet open={creating} onClose={() => setCreating(false)} />
     </div>
   );
@@ -49,9 +49,13 @@ function Circles({ me, onCreate }: { me: string; onCreate: () => void }) {
 
   return (
     <section className="grid gap-2" aria-labelledby="circles-title">
-      <h2 id="circles-title" className="type-heading px-1">
-        Mes cercles
-      </h2>
+      <div className="flex items-center justify-between gap-3 px-1">
+        <h2 id="circles-title" className="type-heading">
+          Mes cercles
+        </h2>
+        {/* Joining a circle goes through its invitation link; « J'ai un code » is for a séance, on « Ce soir ». */}
+        <IconButton label="Nouveau cercle" icon={<Plus />} variant="glass" onClick={onCreate} />
+      </div>
       {status === "loading" || status === "idle" ? (
         <div className="grid place-items-center py-6">
           <ThreadSpinner />
@@ -68,10 +72,6 @@ function Circles({ me, onCreate }: { me: string; onCreate: () => void }) {
           <CircleCard key={circle.id} circle={circle} me={me} />
         ))}
       </ul>
-      {/* Joining a circle goes through its invitation link; « J'ai un code » is for a séance, on « Ce soir ». */}
-      <Button variant="filled" icon={<Plus />} onClick={onCreate} className="mt-1 w-full">
-        Nouveau cercle
-      </Button>
     </section>
   );
 }
