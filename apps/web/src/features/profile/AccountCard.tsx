@@ -11,6 +11,7 @@ import { AccountKeyBox } from "./AccountKeyBox.tsx";
 import { AccountRow } from "./AccountRow.tsx";
 import { AddDeviceSheet } from "./AddDeviceSheet.tsx";
 import { LinkTvSheet } from "./LinkTvSheet.tsx";
+import { NewKeyRow } from "./NewKeyRow.tsx";
 
 /** « Ton compte »: the key, another device, Face ID, and leaving. */
 export function AccountCard() {
@@ -37,6 +38,7 @@ export function AccountCard() {
       </div>
       <AccountKeyBox keyWords={keyWords} />
       <div className="grid gap-1">
+        <NewKeyRow />
         <AccountRow
           icon={<Smartphone />}
           title="Ajouter un appareil"

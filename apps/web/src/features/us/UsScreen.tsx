@@ -2,6 +2,7 @@ import type { Circle } from "@annamour/protocol";
 import { Plus } from "lucide-react";
 import { Reorder } from "motion/react-m";
 import { useEffect, useState } from "react";
+import { offersPlayerChoice } from "../../sync/player-choice.ts";
 import { BrandFooter } from "../../ui/BrandFooter.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { LayoutMotion } from "../../ui/LayoutMotion.tsx";
@@ -17,8 +18,9 @@ import { CircleCard } from "./CircleCard.tsx";
 import { NameCircleSheet } from "./NameCircleSheet.tsx";
 
 /**
- * « Nous »: my circles, each tied by the red thread; then me, like a profile;
- * then my account; then what is set for this device only.
+ * « Nous »: my circles, each tied by the red thread; then me, like a profile,
+ * and my account, side by side once there is room; then what is set for this
+ * device only, when this device has anything to set.
  */
 export function UsScreen() {
   useEffect(() => void loadCircles(), []);
@@ -30,14 +32,18 @@ export function UsScreen() {
       <main className="mx-auto grid w-full max-w-[760px] content-start gap-7 py-6">
         <h1 className="sr-only">Nous</h1>
         <Circles me={account?.id ?? ""} onCreate={() => setCreating(true)} />
-        {account ? <MeCard account={account} /> : null}
-        <AccountCard />
-        <section className="grid gap-3" aria-labelledby="device-title">
-          <h2 id="device-title" className="px-1 text-xs font-bold tracking-[0.06em] text-fg-muted uppercase">
-            Réglages de cet appareil
-          </h2>
-          <PlayerChoiceCard />
-        </section>
+        <div className="grid items-start gap-7 lg:grid-cols-2 lg:gap-5">
+          {account ? <MeCard account={account} /> : null}
+          <AccountCard />
+        </div>
+        {offersPlayerChoice() ? (
+          <section className="grid gap-3" aria-labelledby="device-title">
+            <h2 id="device-title" className="px-1 text-xs font-bold tracking-[0.06em] text-fg-muted uppercase">
+              Réglages de cet appareil
+            </h2>
+            <PlayerChoiceCard />
+          </section>
+        ) : null}
       </main>
       <BrandFooter />
       <NameCircleSheet open={creating} onClose={() => setCreating(false)} />

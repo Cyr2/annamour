@@ -19,7 +19,7 @@ export function AccountKeyBox({ keyWords }: { keyWords: AccountKey | null }) {
         {/* A TV is always linked from a phone: the short version keeps its profile on one screen. */}
         {tv
           ? "Ta clé reste sur l'appareil où tu as créé ton compte."
-          : "Ta clé n'est pas enregistrée sur cet appareil : tu t'es connecté par QR code ou Face ID. Tu la retrouves sur l'appareil où tu as créé ton compte."}
+          : "Ta clé n'est pas enregistrée sur cet appareil. Retrouve-la sur l'appareil où tu as créé ton compte, ou régénère-la ci-dessous."}
       </p>
     );
   }

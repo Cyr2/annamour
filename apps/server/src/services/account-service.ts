@@ -68,6 +68,16 @@ export class AccountService {
     return this.repositories.accounts.findByKeyHash(hashAccountKey(key, this.pepper))?.id === accountId;
   }
 
+  /**
+   * Draws new words for this account: the old ones stop opening it, for whoever has them.
+   * Devices already signed in stay signed in.
+   */
+  newKey(accountId: string): string[] {
+    const { key, keyHash } = this.freshKey();
+    this.repositories.accounts.replaceKeyHash(accountId, keyHash);
+    return key;
+  }
+
   /** Opens a new device session for this account. */
   signIn(accountId: string): SignedIn {
     const account = this.get(accountId);

@@ -128,6 +128,24 @@ describe("checking the key a device kept", () => {
   });
 });
 
+describe("drawing a new key", () => {
+  it("replaces the words: the new ones open the account, the old ones no longer do, devices stay signed in", async () => {
+    const { app, createAccount, login, me } = setup();
+    const { body, cookie } = await createAccount();
+    expect((await app.request(API.newKey, { method: "POST" })).status).toBe(401);
+
+    const response = await app.request(API.newKey, { method: "POST", headers: { cookie } });
+    expect(response.status).toBe(201);
+    const { key } = (await response.json()) as { key: string[] };
+    expect(key).toHaveLength(4);
+    expect(key).not.toEqual(body.key);
+
+    expect((await login(body.key)).status).toBe(401);
+    expect(await (await login(key)).json()).toEqual({ account: body.account });
+    expect((await me(cookie)).status).toBe(200);
+  });
+});
+
 describe("signing in with the key", () => {
   it("accepts the 4 words however they are typed", async () => {
     const { createAccount, login } = setup();

@@ -117,6 +117,14 @@ export async function loginWithKey(key: AccountKey): Promise<Account> {
   return signIn(account);
 }
 
+/** New words for this account, kept here; the old ones stop opening it anywhere. */
+export async function drawNewKey(): Promise<AccountKey> {
+  const key = await accounts.newKey();
+  const { account } = useAccount.getState();
+  if (account) keepKey(account, key);
+  return key;
+}
+
 export async function linkWithToken(token: string): Promise<Account> {
   return signIn(await accounts.linkWithToken(token));
 }
