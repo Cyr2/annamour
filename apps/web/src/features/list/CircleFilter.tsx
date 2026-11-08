@@ -8,17 +8,23 @@ import { circleShortName } from "../circles/circle-rules.ts";
 import { selectCircle, shownCircle, useCircles } from "../circles/circles.ts";
 
 /**
- * « Avec qui ? » on « Notre liste »: « Tout », then each circle as its bubbles.
+ * « Avec qui ? » on « Notre liste » and « Ce soir »: « Tout », then each circle as its bubbles.
  * The pick is the same as on « Ce soir ». With one circle, nothing to pick.
  */
-export function CircleFilter() {
+export function CircleFilter({ centered = false }: { centered?: boolean }) {
   const me = useAccount((s) => s.account?.id ?? "");
   const circles = useCircles((s) => s.circles);
   const shown = useCircles((s) => shownCircle(s));
   if (circles.length < 2) return null;
 
   return (
-    <fieldset className="-mx-1 flex min-w-0 gap-3 overflow-x-auto border-0 px-1 py-1 [scrollbar-width:none]">
+    <fieldset
+      className={cx(
+        "-mx-1 flex min-w-0 gap-3 border-0 px-1 py-1",
+        // Under the title of « Ce soir », the bubbles wrap rather than scroll sideways.
+        centered ? "flex-wrap justify-center" : "overflow-x-auto [scrollbar-width:none]",
+      )}
+    >
       <legend className="sr-only">Avec qui ?</legend>
       <Choice label="Tout" pressed={shown === null} onPress={() => selectCircle(null)}>
         <span className="grid size-14 place-items-center rounded-full bg-fill-strong text-fg">

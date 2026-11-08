@@ -2,15 +2,15 @@ import type { WatchlistItem } from "@annamour/protocol";
 import { LogIn, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useSearch } from "wouter";
-import { BrandBar } from "../../ui/BrandBar.tsx";
+import { BrandFooter } from "../../ui/BrandFooter.tsx";
 import { Button } from "../../ui/controls.tsx";
 import { LinkButton } from "../../ui/LinkButton.tsx";
 import { useAccount } from "../account/account.ts";
-import { CircleSwitcher } from "../circles/CircleSwitcher.tsx";
 import { ofCircle, tonightPick } from "../circles/circle-rules.ts";
 import { loadCircles, useShownCircle } from "../circles/circles.ts";
 import { CreateSessionSheet } from "../home/create/CreateSessionSheet.tsx";
 import { asksToCreate } from "../home/create/create-link.ts";
+import { CircleFilter } from "../list/CircleFilter.tsx";
 import { isFinished } from "../sessions/session-rules.ts";
 import { useSessions } from "../sessions/sessions.ts";
 import { useLoadSessions } from "../sessions/useLoadSessions.ts";
@@ -51,10 +51,9 @@ export function TonightScreen() {
 
   return (
     <div className="safe-area mx-auto flex min-h-dvh w-full max-w-[1240px] flex-col">
-      <BrandBar />
       <main className="mx-auto grid w-full max-w-[760px] content-start gap-6 py-6">
         <TonightHero circle={circle} />
-        <CircleSwitcher />
+        <CircleFilter centered />
         <TonightCard pick={pick} me={me} onOpenItem={setOpenItem} onAdd={() => setAdding(true)} />
         <OngoingShelf sessions={ongoing} />
         <WatchlistShelf circle={circle} title="Notre liste" />
@@ -67,6 +66,7 @@ export function TonightScreen() {
           </LinkButton>
         </div>
       </main>
+      <BrandFooter />
       <CreateSessionSheet open={creating} onClose={() => setCreating(false)} />
       <AddToWatchlistSheet open={adding} onClose={() => setAdding(false)} />
       <WatchlistItemSheet item={openItem} me={me} onClose={() => setOpenItem(null)} />

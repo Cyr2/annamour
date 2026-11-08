@@ -18,8 +18,8 @@ export function TonightHero({ circle }: { circle: Circle | null }) {
   const together = others.length > 0;
 
   return (
-    <header className="grid justify-items-center gap-3 text-center">
-      <RedThread.Root synced={together} className="mb-2 w-[min(20rem,78%)]">
+    <header className="grid justify-items-center gap-2 text-center">
+      <RedThread.Root synced={together} className="w-[min(14rem,64%)]">
         <RedThread.Line />
         <div className="flex items-center justify-between">
           <RedThread.Anchor index={0}>
@@ -27,23 +27,24 @@ export function TonightHero({ circle }: { circle: Circle | null }) {
               name={account?.name ?? "Toi"}
               color={account?.color ?? "peach"}
               status={together ? "here" : "alone"}
-              size="md"
+              size="sm"
             />
           </RedThread.Anchor>
           {together ? (
             others.map((person, index) => (
               <RedThread.Anchor key={person.accountId} index={index + 1}>
-                <PresenceBubble name={person.name} color={person.color} status="here" size="md" />
+                <PresenceBubble name={person.name} color={person.color} status="here" size="sm" />
               </RedThread.Anchor>
             ))
           ) : (
             <RedThread.Anchor index={1}>
-              <EmptyBubble label="Une place libre" size="md" />
+              <EmptyBubble label="Une place libre" size="sm" />
             </RedThread.Anchor>
           )}
         </div>
       </RedThread.Root>
-      <h1 className="type-display">Une soirée ensemble</h1>
+      {/* One line, not the whole first screen: « On reprend » shows without scrolling. */}
+      <h1 className="type-title">Une soirée ensemble</h1>
     </header>
   );
 }
