@@ -21,7 +21,7 @@ test.use({ viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true
 test("sur un petit téléphone, rien ne dépasse ni ne défile sur le côté", async ({ browser }) => {
   const darius = await person(browser, { viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true });
   await onboard(darius, "Darius");
-  await expectFitsWidth(darius, "accueil");
+  await expectFitsWidth(darius, "ce soir");
 
   await darius.getByRole("button", { name: "Créer une séance" }).click();
   await expectFitsWidth(darius, "créer une séance");
@@ -34,14 +34,14 @@ test("sur un petit téléphone, rien ne dépasse ni ne défile sur le côté", a
       want: true,
     },
   });
-  await darius.goto("/a-regarder");
-  await expectFitsWidth(darius, "à regarder");
+  await darius.goto("/liste");
+  await expectFitsWidth(darius, "notre liste");
   await darius.getByRole("button", { name: /^Une série/ }).click();
   await expectFitsWidth(darius, "fiche d'une série");
   await darius.keyboard.press("Escape");
 
-  await darius.goto("/profil");
-  await expectFitsWidth(darius, "profil");
+  await darius.goto("/nous");
+  await expectFitsWidth(darius, "nous");
 
   await darius.goto("/");
   const room = await createSession(darius, "Le Seigneur des Anneaux : La Communauté de l'Anneau");
@@ -60,4 +60,9 @@ test("sur un petit téléphone, rien ne dépasse ni ne défile sur le côté", a
       .map((button) => button.getAttribute("aria-label"));
   });
   expect(spill, "lecteur : des boutons dépassent de la barre").toEqual([]);
+
+  // Upright, the bar is one row: the rest waits behind « ⋯ ».
+  await darius.getByRole("button", { name: "Plus d'options" }).click();
+  await expect(darius.getByRole("button", { name: /Audio et sous-titres/ })).toBeVisible();
+  await expectFitsWidth(darius, "plus d'options du lecteur");
 });

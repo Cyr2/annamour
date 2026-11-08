@@ -8,7 +8,6 @@ import { favoriteOf, rankPeople, withPerson } from "../sessions/session-rules.ts
 import { hideSession, useSessions } from "../sessions/sessions.ts";
 import { useLoadSessions } from "../sessions/useLoadSessions.ts";
 import { useTv } from "../tv/tv-context.ts";
-import { InterfaceChoiceCard } from "../ui-version/InterfaceChoiceCard.tsx";
 import { AccountCard } from "./AccountCard.tsx";
 import { MeCard } from "./MeCard.tsx";
 import { PeopleRow } from "./PeopleRow.tsx";
@@ -63,7 +62,6 @@ export function ProfileScreen() {
             <AccountCard />
             {/* Only on an iPhone or iPad (it renders nothing elsewhere, and a TV never shows it). */}
             {tv ? null : <PlayerChoiceCard />}
-            <InterfaceChoiceCard />
           </div>
         </main>
       ) : null}

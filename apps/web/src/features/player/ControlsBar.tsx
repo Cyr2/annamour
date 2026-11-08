@@ -5,7 +5,6 @@ import { cx } from "../../ui/cx.ts";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import { useTv } from "../tv/tv-context.ts";
-import { useCircleUi } from "../ui-version/ui-version.ts";
 import { EndClock } from "./EndClock.tsx";
 import { ReactionPicker } from "./ReactionPicker.tsx";
 import { Scrubber } from "./Scrubber.tsx";
@@ -34,8 +33,7 @@ interface ControlsBarProps {
  * The glass capsule floating over the film: the timeline between its two
  * clocks, then play, ±10 s and volume on the left; reactions, tracks and full
  * screen on the right, with « Épisode suivant » and « Épisodes » before it. On a
- * phone held upright they sit in two rows of four, each 44px wide; the circles
- * interface keeps one row there: play, ±10 s, reactions and « ⋯ » for the rest.
+ * phone held upright, one row only: play, ±10 s, reactions and « ⋯ » for the rest.
  * On a TV (always full screen, volume on the remote) there is no full-screen
  * button, leaving the film is the top bar's back arrow (or Retour), and
  * play/pause is where the remote lands.
@@ -43,9 +41,8 @@ interface ControlsBarProps {
 export function ControlsBar(props: ControlsBarProps) {
   const { playing, onToggle, onSeek } = props;
   const tv = useTv();
-  const compact = useCircleUi();
-  // In the compact bar, what a phone held upright folds behind « ⋯ ».
-  const folded = compact ? "max-sm:hidden" : undefined;
+  // What a phone held upright folds behind « ⋯ »: one row of five buttons there.
+  const folded = "max-sm:hidden";
   // Only this capsule follows the video frame by frame; the rest of the player does not re-render.
   const clock = useVideoClock(props.video);
   const skip = (delta: number) =>
@@ -58,13 +55,8 @@ export function ControlsBar(props: ControlsBarProps) {
         <Scrubber clock={clock} onSeek={onSeek} className="flex-1" />
         <EndClock clock={clock} />
       </div>
-      {/* Upright, a phone fits 4 buttons of 44px a row: two rows, or one row of five with « ⋯ » in the circles interface. */}
-      <div
-        className={cx(
-          "grid justify-items-center sm:flex sm:items-center sm:justify-start sm:gap-1",
-          compact ? "grid-cols-5" : "grid-cols-4 gap-y-1",
-        )}
-      >
+      {/* A phone held upright keeps five buttons in one row; everything else waits behind « ⋯ ». */}
+      <div className={"grid grid-cols-5 justify-items-center sm:flex sm:items-center sm:justify-start sm:gap-1"}>
         <IconButton
           label={playing ? "Pause" : "Lecture"}
           icon={playing ? <Pause /> : <Play />}
@@ -92,9 +84,7 @@ export function ControlsBar(props: ControlsBarProps) {
         {tv ? null : (
           <IconButton label="Plein écran" icon={<Maximize />} onClick={props.onFullscreen} className={folded} />
         )}
-        {compact ? (
-          <IconButton label="Plus d'options" icon={<Ellipsis />} onClick={props.onOpenMore} className="sm:hidden" />
-        ) : null}
+        <IconButton label="Plus d'options" icon={<Ellipsis />} onClick={props.onOpenMore} className="sm:hidden" />
       </div>
     </Surface>
   );

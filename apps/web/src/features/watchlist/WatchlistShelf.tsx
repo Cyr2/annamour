@@ -8,7 +8,6 @@ import { toast } from "../../ui/toast.ts";
 import { useAccount } from "../account/account.ts";
 import { ofCircle } from "../circles/circle-rules.ts";
 import { useTv } from "../tv/tv-context.ts";
-import { listPath, useCircleUi } from "../ui-version/ui-version.ts";
 import { PosterCard } from "./PosterCard.tsx";
 import { useLaunchTitle } from "./useLaunchTitle.ts";
 import { useLoadWatchlist } from "./useLoadWatchlist.ts";
@@ -18,13 +17,13 @@ import { toggleWant, useWatchlist } from "./watchlist.ts";
 const SHELF_SIZE = 10;
 
 /**
- * « À regarder ensemble » under the home screen: the most wanted titles still
+ * « Notre liste » on « Ce soir » and the TV home: the most wanted titles still
  * to watch. On a TV, OK on a film starts it at once (a series asks for its
  * episode first); adding stays on the phone.
  */
 export function WatchlistShelf({
   circle = null,
-  title = "À regarder ensemble",
+  title = "Notre liste",
 }: {
   /** Only this circle's titles (null: all of them). */
   circle?: Circle | null;
@@ -32,7 +31,6 @@ export function WatchlistShelf({
 }) {
   useLoadWatchlist();
   const tv = useTv();
-  const circleUi = useCircleUi();
   const me = useAccount((s) => s.account?.id ?? "");
   const items = useWatchlist((s) => s.items);
   const toWatch = useMemo(
@@ -58,10 +56,7 @@ export function WatchlistShelf({
             {plural(toWatch.length, "titre")} · ajoute-en depuis ton téléphone
           </span>
         ) : (
-          <Link
-            href={listPath(circleUi)}
-            className="flex min-h-11 items-center gap-1 text-sm font-semibold text-accent"
-          >
+          <Link href="/liste" className="flex min-h-11 items-center gap-1 text-sm font-semibold text-accent">
             Tout voir · {toWatch.length}
             <ChevronRight aria-hidden className="size-4" />
           </Link>
@@ -83,7 +78,7 @@ export function WatchlistShelf({
         {tv ? null : (
           <li className="w-[7.5rem] shrink-0">
             <Link
-              href={listPath(circleUi)}
+              href="/liste"
               className="grid aspect-[2/3] w-full place-items-center rounded-control border border-dashed border-line-strong text-sm font-semibold text-fg-muted"
             >
               <span className="grid justify-items-center gap-1">
