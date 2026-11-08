@@ -6,7 +6,6 @@ import { useState } from "react";
 import { inviteToCircle, inviteUrl } from "../../api/circles.ts";
 import { errorMessage } from "../../api/http.ts";
 import { plural } from "../../lib/format.ts";
-import { Button } from "../../ui/controls.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import { toast } from "../../ui/toast.ts";
@@ -73,9 +72,7 @@ export function CircleCard({ circle, me, onMove, canMoveUp, canMoveDown, onDrop 
             <strong className="truncate font-rounded-tight text-md font-extrabold text-fg">{title}</strong>
             <span className="truncate text-xs text-fg-muted">{plural(circle.evenings, "soirée")}</span>
           </div>
-          <Button icon={<UserPlus />} onClick={invite}>
-            Inviter
-          </Button>
+          <IconButton label={`Inviter dans « ${title} »`} icon={<UserPlus />} variant="glass" onClick={invite} />
           {/* A sheet rather than a pop-up menu: easier to reach and never cut off on a phone. */}
           <IconButton label={`Plus d'options pour « ${title} »`} icon={<Ellipsis />} onClick={() => setOptions(true)} />
         </div>
