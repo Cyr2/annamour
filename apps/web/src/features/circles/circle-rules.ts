@@ -6,7 +6,8 @@ import {
   splitWatchlist,
   type WatchlistItem,
 } from "@annamour/protocol";
-import { latestUnfinished } from "../sessions/session-rules.ts";
+import { joinNames, plural } from "../../lib/format.ts";
+import { latestUnfinished, relativeDay } from "../sessions/session-rules.ts";
 
 /* What « Ce soir » and « Notre liste » show for a circle (null: all of them). */
 
@@ -52,5 +53,22 @@ export function tonightPick(
   return item ? { kind: "title", item } : { kind: "nothing" };
 }
 
-/** Which part of « Notre liste » is shown. */
-export type ListState = "to-watch" | "ongoing" | "watched";
+/** Watched together within this long, a circle's thread is drawn taut; after, it sags. */
+const CLOSE_MS = 14 * 24 * 60 * 60 * 1000;
+
+export function isCloseCircle(circle: Pick<Circle, "lastUsedAt">, now: number): boolean {
+  return circle.lastUsedAt !== undefined && now - circle.lastUsedAt <= CLOSE_MS;
+}
+
+/** « Les potes du jeudi », or just the others' first names (« Léo et Inès ») where a chip has little room. */
+export function circleShortName(circle: Pick<Circle, "name" | "members">, me: string): string {
+  return circle.name ?? joinNames(circle.members.filter((p) => p.accountId !== me).map((p) => p.name));
+}
+
+/** « 12 soirées · la dernière hier », « 1 soirée · la dernière il y a 2 semaines », or just the count. */
+export function eveningsLine(circle: Pick<Circle, "evenings" | "lastUsedAt">, now: number): string {
+  const count = plural(circle.evenings, "soirée");
+  if (circle.lastUsedAt === undefined) return count;
+  const when = relativeDay(circle.lastUsedAt, now).toLowerCase();
+  return `${count} · la dernière ${/^\d/.test(when) ? `il y a ${when}` : when}`;
+}
