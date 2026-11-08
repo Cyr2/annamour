@@ -1,0 +1,44 @@
+import { ArrowDown, ArrowUp, LogOut, Pencil } from "lucide-react";
+import type { ReactNode } from "react";
+import { Sheet } from "../../ui/Sheet.tsx";
+import { AccountRow } from "../profile/AccountRow.tsx";
+
+interface CircleOptionsSheetProps {
+  open: boolean;
+  title: string;
+  onClose: () => void;
+  onRename: () => void;
+  onLeave: () => void;
+  /** Absent when the circle is already first (or last): moving is also a drag of its handle. */
+  onMoveUp: (() => void) | undefined;
+  onMoveDown: (() => void) | undefined;
+}
+
+/** « ⋯ » on a circle: move it, rename it, leave it. Each choice closes the sheet first. */
+export function CircleOptionsSheet({ open, title, onClose, ...actions }: CircleOptionsSheetProps) {
+  const row = (icon: ReactNode, label: string, detail: string, run: () => void, destructive = false) => (
+    <AccountRow
+      icon={icon}
+      title={label}
+      detail={detail}
+      tone={destructive ? "destructive" : "default"}
+      onClick={() => {
+        onClose();
+        run();
+      }}
+    />
+  );
+
+  return (
+    <Sheet open={open} onClose={onClose} title={title}>
+      <div className="grid gap-1">
+        {actions.onMoveUp ? row(<ArrowUp />, "Monter", "Plus haut dans tes cercles, partout", actions.onMoveUp) : null}
+        {actions.onMoveDown
+          ? row(<ArrowDown />, "Descendre", "Plus bas dans tes cercles, partout", actions.onMoveDown)
+          : null}
+        {row(<Pencil />, "Renommer", "Un nom pour tout le cercle", actions.onRename)}
+        {row(<LogOut />, "Quitter le cercle", "Tu ne verras plus sa liste", actions.onLeave, true)}
+      </div>
+    </Sheet>
+  );
+}

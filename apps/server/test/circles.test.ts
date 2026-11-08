@@ -130,6 +130,28 @@ describe("circles", () => {
     expect((await circlesOf(darius.cookie)).find((c) => c.id === potes)?.evenings).toBe(2);
   });
 
+  it("come in the order each person sets, new ones after, without changing anyone else's", async () => {
+    const { account, seance, circlesOf, send, clock } = setup();
+    const darius = await account("Darius");
+    const annou = await account("Annou");
+    const leo = await account("Léo");
+    const ines = await account("Inès");
+    seance(darius.id, annou.id);
+    clock.now = 2000;
+    seance(darius.id, leo.id);
+    const names = async (cookie: string) =>
+      (await circlesOf(cookie)).map((c) => c.members.map((m) => m.name).join("+"));
+    expect(await names(darius.cookie)).toEqual(["Darius+Léo", "Darius+Annou"]);
+
+    const [potes, duo] = (await circlesOf(darius.cookie)).map((c) => c.id);
+    const order = await send(darius.cookie, "PUT", CIRCLES_API.order, { ids: [duo, potes, "pas-a-moi"] });
+    expect(order.status).toBe(204);
+    clock.now = 3000;
+    seance(darius.id, ines.id);
+    expect(await names(darius.cookie)).toEqual(["Darius+Annou", "Darius+Léo", "Darius+Inès"]);
+    expect(await names(annou.cookie)).toEqual(["Darius+Annou"]);
+  });
+
   it("are named, left, and disappear when nobody is left", async () => {
     const { account, seance, circlesOf, send } = setup();
     const darius = await account("Darius");

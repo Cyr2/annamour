@@ -85,6 +85,23 @@ async function change(work: () => Promise<unknown>): Promise<void> {
   await loadCircles();
 }
 
+/** Shows an order at once, everywhere (« Ce soir », « Notre liste »), while a circle is being dragged; saved apart. */
+export function previewCircleOrder(circles: Circle[]): void {
+  useCircles.setState({ circles });
+}
+
+/** Shows the new order at once (« Ce soir » and « Notre liste » follow), then saves it; on failure the saved one comes back. */
+export async function reorderCircles(ids: readonly string[]): Promise<void> {
+  const byId = new Map(useCircles.getState().circles.map((circle) => [circle.id, circle]));
+  useCircles.setState({ circles: ids.flatMap((id) => byId.get(id) ?? []) });
+  try {
+    await api.reorderCircles([...ids]);
+  } catch (error) {
+    await loadCircles();
+    throw new Error(errorMessage(error));
+  }
+}
+
 export const renameCircle = (id: string, name: string) => change(() => api.renameCircle(id, name));
 export const leaveCircle = async (id: string) => {
   await change(() => api.leaveCircle(id));

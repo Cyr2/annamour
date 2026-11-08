@@ -1,4 +1,4 @@
-import { byRecentUse, circleTitle, othersIn } from "@annamour/protocol";
+import { circleTitle, othersIn } from "@annamour/protocol";
 import { Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { cx } from "../../ui/cx.ts";
@@ -31,7 +31,8 @@ export function CircleFilter({ centered = false }: { centered?: boolean }) {
           <Users aria-hidden className="size-5" />
         </span>
       </Choice>
-      {byRecentUse(circles).map((circle) => {
+      {/* In the order set on « Nous » (drag and drop), the most recently used after. */}
+      {circles.map((circle) => {
         const others = othersIn(circle, me).slice(0, 2);
         return (
           <Choice

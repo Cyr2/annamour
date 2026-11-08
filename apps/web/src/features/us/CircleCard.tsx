@@ -1,16 +1,17 @@
-import { type Circle, circleTitle, othersIn } from "@annamour/protocol";
-import { Ellipsis, LogOut, Pencil, UserPlus } from "lucide-react";
+import { type Circle, circleTitle } from "@annamour/protocol";
+import { Ellipsis, GripVertical, UserPlus } from "lucide-react";
+import { useDragControls } from "motion/react";
+import { Reorder } from "motion/react-m";
 import { useState } from "react";
 import { inviteToCircle, inviteUrl } from "../../api/circles.ts";
 import { errorMessage } from "../../api/http.ts";
 import { plural } from "../../lib/format.ts";
 import { Button } from "../../ui/controls.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
-import { Sheet } from "../../ui/Sheet.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import { toast } from "../../ui/toast.ts";
 import { leaveCircle } from "../circles/circles.ts";
-import { AccountRow } from "../profile/AccountRow.tsx";
+import { CircleOptionsSheet } from "./CircleOptionsSheet.tsx";
 import { CircleThread } from "./CircleThread.tsx";
 import { NameCircleSheet } from "./NameCircleSheet.tsx";
 
@@ -27,11 +28,25 @@ async function shareInvite(circle: Circle, me: string): Promise<void> {
   toast({ message: "Lien d'invitation copié" });
 }
 
-/** One circle in « Nous »: its people, how many evenings, and what one can do with it. */
-export function CircleCard({ circle, me }: { circle: Circle; me: string }) {
+interface CircleCardProps {
+  circle: Circle;
+  me: string;
+  /** Moves it a step up (-1) or down (+1) among my circles; absent at that end. */
+  onMove: (delta: -1 | 1) => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  /** The drag of its handle ended: the new order can be saved. */
+  onDrop: () => void;
+}
+
+/**
+ * One circle in « Nous »: its people tied by the thread, how many evenings,
+ * and what one can do with it. Its handle drags it among my circles.
+ */
+export function CircleCard({ circle, me, onMove, canMoveUp, canMoveDown, onDrop }: CircleCardProps) {
   const [renaming, setRenaming] = useState(false);
   const [options, setOptions] = useState(false);
-  const _others = othersIn(circle, me);
+  const drag = useDragControls();
   const title = circleTitle(circle, me);
   const invite = () =>
     void shareInvite(circle, me).catch((failure: unknown) => toast({ message: errorMessage(failure) }));
@@ -41,10 +56,19 @@ export function CircleCard({ circle, me }: { circle: Circle; me: string }) {
       .catch((failure: Error) => toast({ message: failure.message }));
 
   return (
-    <li>
+    <Reorder.Item as="li" value={circle} dragListener={false} dragControls={drag} onDragEnd={onDrop}>
       <Surface className="surface-panel grid gap-4 p-5">
         <CircleThread circle={circle} me={me} />
         <div className="flex items-center gap-2">
+          {/* Only the handle starts a drag: the rest of the card scrolls the page and takes taps. */}
+          <button
+            type="button"
+            aria-label={`Déplacer « ${title} »`}
+            onPointerDown={(event) => drag.start(event)}
+            className="-ml-2 grid size-11 shrink-0 cursor-grab touch-none place-items-center rounded-full text-fg-muted active:cursor-grabbing"
+          >
+            <GripVertical aria-hidden className="size-5" />
+          </button>
           <div className="grid min-w-0 flex-1">
             <strong className="truncate font-rounded-tight text-md font-extrabold text-fg">{title}</strong>
             <span className="truncate text-xs text-fg-muted">{plural(circle.evenings, "soirée")}</span>
@@ -56,30 +80,16 @@ export function CircleCard({ circle, me }: { circle: Circle; me: string }) {
           <IconButton label={`Plus d'options pour « ${title} »`} icon={<Ellipsis />} onClick={() => setOptions(true)} />
         </div>
       </Surface>
-      <Sheet open={options} onClose={() => setOptions(false)} title={title}>
-        <div className="grid gap-1">
-          <AccountRow
-            icon={<Pencil />}
-            title="Renommer"
-            detail="Un nom pour tout le cercle"
-            onClick={() => {
-              setOptions(false);
-              setRenaming(true);
-            }}
-          />
-          <AccountRow
-            icon={<LogOut />}
-            title="Quitter le cercle"
-            detail="Tu ne verras plus sa liste"
-            tone="destructive"
-            onClick={() => {
-              setOptions(false);
-              leave();
-            }}
-          />
-        </div>
-      </Sheet>
+      <CircleOptionsSheet
+        open={options}
+        title={title}
+        onClose={() => setOptions(false)}
+        onRename={() => setRenaming(true)}
+        onLeave={leave}
+        onMoveUp={canMoveUp ? () => onMove(-1) : undefined}
+        onMoveDown={canMoveDown ? () => onMove(1) : undefined}
+      />
       <NameCircleSheet open={renaming} onClose={() => setRenaming(false)} circle={circle} />
-    </li>
+    </Reorder.Item>
   );
 }

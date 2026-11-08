@@ -50,7 +50,12 @@ export const CIRCLES_API = {
   invite: "/api/me/circles/:id/invite",
   join: "/api/me/circles/join",
   preview: "/api/circles/invite/:token",
+  order: "/api/me/circles/order",
 } as const;
+
+/** The order someone puts their circles in (drag and drop on « Nous »), first to last; their own, nobody else's. */
+export const CircleOrderRequest = z.object({ ids: z.array(z.string()).check(z.maxLength(200)) });
+export type CircleOrderRequest = z.infer<typeof CircleOrderRequest>;
 
 /**
  * What a circle is called: its name, else its people seen from `me`:

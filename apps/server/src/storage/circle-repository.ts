@@ -61,6 +61,12 @@ export class CircleRepository {
     this.db.prepare("DELETE FROM circles WHERE id = ?").run(circleId);
   }
 
+  /** Puts `accountId`'s circles in this order; ids of circles they are not in change nothing. */
+  setOrder(accountId: string, circleIds: readonly string[]): void {
+    const place = this.db.prepare("UPDATE circle_members SET position = ? WHERE circle_id = ? AND account_id = ?");
+    for (const [index, circleId] of circleIds.entries()) place.run(index, circleId, accountId);
+  }
+
   rename(circleId: string, name: string): boolean {
     return changedRows(this.db.prepare("UPDATE circles SET name = ? WHERE id = ?").run(name, circleId)) > 0;
   }
@@ -99,7 +105,8 @@ export class CircleRepository {
           `SELECT c.id, c.name,
              (SELECT COUNT(*) FROM rooms r WHERE r.circle_id = c.id) AS evenings,
              (SELECT MAX(r.last_used_at) FROM rooms r WHERE r.circle_id = c.id) AS last_used_at
-           FROM circles c JOIN circle_members me ON me.circle_id = c.id AND me.account_id = ?`,
+           FROM circles c JOIN circle_members me ON me.circle_id = c.id AND me.account_id = ?
+           ORDER BY me.position IS NULL, me.position, last_used_at IS NULL, last_used_at DESC, c.created_at DESC`,
         )
         .all(accountId),
     );
