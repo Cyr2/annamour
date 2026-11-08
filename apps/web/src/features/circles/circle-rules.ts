@@ -53,13 +53,6 @@ export function tonightPick(
   return item ? { kind: "title", item } : { kind: "nothing" };
 }
 
-/** Watched together within this long, a circle's thread is drawn taut; after, it sags. */
-const CLOSE_MS = 14 * 24 * 60 * 60 * 1000;
-
-export function isCloseCircle(circle: Pick<Circle, "lastUsedAt">, now: number): boolean {
-  return circle.lastUsedAt !== undefined && now - circle.lastUsedAt <= CLOSE_MS;
-}
-
 /** « Les potes du jeudi », or just the others' first names (« Léo et Inès ») where a chip has little room. */
 export function circleShortName(circle: Pick<Circle, "name" | "members">, me: string): string {
   return circle.name ?? joinNames(circle.members.filter((p) => p.accountId !== me).map((p) => p.name));
