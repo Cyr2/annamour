@@ -706,6 +706,30 @@ html[data-tv] :is(.am-frost, .am-sheet, .lg-glass, .lg-switch-thumb, .lg-slider-
   backdrop-filter: none;
 }
 
+/*
+ * Measured on the projector: each press repaints what the focus leaves and
+ * reaches. Every remote target keeps its own layer (none made then dropped on
+ * each press), and the costliest paints go: the panels' lit rim (a composited
+ * mask), glisse's rim image and sheen, the panels' long blurred shadows. The
+ * worst press went from 150 to 90 ms; the focus keeps its ring and halo.
+ */
+html[data-tv] :is(a, button, [role="slider"]) {
+  will-change: transform;
+}
+
+html[data-tv] .am-frost::before,
+html[data-tv] .lg-glass::after {
+  display: none;
+}
+
+html[data-tv] .lg-glass {
+  background-image: none;
+}
+
+html[data-tv] :is(.surface-panel, .shadow-float) {
+  box-shadow: var(--am-edge-light);
+}
+
 /* The thread's glow is a wide faint stroke under it, not a drop-shadow filter redrawn on every frame of its wave. */
 html[data-tv] .am-thread-line {
   filter: none;
