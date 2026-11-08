@@ -5,7 +5,7 @@ import {
   catalogLabel,
   type PlayCatalogRequest,
 } from "@annamour/protocol";
-import type { Catalog } from "../catalog/naka-catalog.ts";
+import { type Catalog, isCatalogPoster } from "../catalog/naka-catalog.ts";
 import { CatalogUnavailableError } from "../errors.ts";
 import type { Room } from "../rooms.ts";
 import type { RoomService } from "./room-service.ts";
@@ -19,6 +19,13 @@ export interface CatalogServiceOptions {
   catalog: Catalog | undefined;
   rooms: RoomService;
   now: () => number;
+}
+
+/** The request as kept with the séance: its poster only when the catalog serves it. */
+function withTrustedPoster(request: PlayCatalogRequest): PlayCatalogRequest {
+  if (request.posterUrl === undefined || isCatalogPoster(request.posterUrl)) return request;
+  const { posterUrl: _untrusted, ...rest } = request;
+  return rest;
 }
 
 /** Finds films and series by name and opens a séance on one, without pasting a link. */
@@ -54,7 +61,7 @@ export class CatalogService {
   async play(request: PlayCatalogRequest, accountId: string | undefined): Promise<Room> {
     const url = await this.catalog().videoUrl(request);
     const label = request.type === "tv" ? catalogLabel(request) : undefined;
-    return this.options.rooms.create(url, request.title, accountId, { label, catalog: request });
+    return this.options.rooms.create(url, request.title, accountId, { label, catalog: withTrustedPoster(request) });
   }
 
   /** Queues a catalog title after a séance's episodes: the next one of its series, or another film. */
@@ -62,7 +69,7 @@ export class CatalogService {
     const { rooms } = this.options;
     rooms.roomAcceptingEpisode(code);
     const url = await this.catalog().videoUrl(request);
-    return rooms.addEpisode(code, url, catalogLabel(request), request);
+    return rooms.addEpisode(code, url, catalogLabel(request), withTrustedPoster(request));
   }
 
   private catalog(): Catalog {

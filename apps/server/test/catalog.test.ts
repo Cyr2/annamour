@@ -213,6 +213,24 @@ describe("starting a séance from the catalog", () => {
     expect(room).toMatchObject({ media: { title: "Euphoria · S1 · É3", duration: 120 } });
   });
 
+  it("keeps the title's poster for « On reprend », but only one from the catalog's own images", async () => {
+    const { app, signedIn } = setup({ "streaming/sources/543?type=movie": SOURCES });
+    const { cookie } = await signedIn();
+    const poster = "https://image.tmdb.org/t/p/w342/poster.jpg";
+    const start = (posterUrl: string) =>
+      app.request(
+        CATALOG_API.play,
+        jsonRequest("POST", { id: 543, type: "movie", title: "Interstellar", posterUrl }, { cookie }),
+      );
+    expect((await start(poster)).status).toBe(201);
+    expect((await start("https://example.com/tracker.gif")).status).toBe(201);
+
+    const { sessions } = (await (await app.request(API.sessions, { headers: { cookie } })).json()) as {
+      sessions: { posterUrl?: string }[];
+    };
+    expect(sessions.map((s) => s.posterUrl ?? null).sort()).toEqual([poster, null].sort());
+  });
+
   it("refuses a series without its episode", async () => {
     const { app, signedIn } = setup();
     const { cookie } = await signedIn();

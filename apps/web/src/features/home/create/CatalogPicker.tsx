@@ -15,6 +15,9 @@ interface CatalogPickerProps {
   label?: string;
 }
 
+/** The poster goes along, so the séance can show it on « Ce soir ». */
+const posterOf = (title: CatalogTitle) => (title.posterUrl ? { posterUrl: title.posterUrl } : {});
+
 /** Type a title, pick it (and, for a series, its episode). Used to create a séance and to queue what follows. */
 export function CatalogPicker({ onPick, error, label = "Titre" }: CatalogPickerProps) {
   const queryId = useId();
@@ -24,7 +27,7 @@ export function CatalogPicker({ onPick, error, label = "Titre" }: CatalogPickerP
 
   const pick = (title: CatalogTitle) => {
     if (title.type === "tv") setShow(title);
-    else onPick({ id: title.id, type: "movie", title: title.title });
+    else onPick({ id: title.id, type: "movie", title: title.title, ...posterOf(title) });
   };
 
   if (show) {
@@ -32,7 +35,9 @@ export function CatalogPicker({ onPick, error, label = "Titre" }: CatalogPickerP
       <EpisodePicker
         show={show}
         onBack={() => setShow(null)}
-        onPick={(season, episode) => onPick({ id: show.id, type: "tv", title: show.title, season, episode })}
+        onPick={(season, episode) =>
+          onPick({ id: show.id, type: "tv", title: show.title, season, episode, ...posterOf(show) })
+        }
       />
     );
   }

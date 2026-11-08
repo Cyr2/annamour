@@ -11,6 +11,11 @@ import { CatalogAccountError, CatalogBusyError, CatalogUnreachableError, NoVideo
 export const NAKA_ORIGIN = "https://naka.cx";
 const POSTER_BASE = "https://image.tmdb.org/t/p/w342";
 
+/** A poster the catalog itself serves: the only kind a séance keeps, so no one can make the others load any image. */
+export function isCatalogPoster(url: string): boolean {
+  return url.startsWith(`${POSTER_BASE}/`);
+}
+
 export interface BridgeAnswer {
   status: number;
   body: string;

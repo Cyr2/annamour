@@ -64,6 +64,8 @@ export const SessionSummary = z.object({
   episode: z.object({ index: z.number(), count: z.number(), label: z.optional(z.string()) }),
   /** The circle the séance belongs to (see circles.ts); absent for a séance watched alone. */
   circleId: z.optional(z.string()),
+  /** The current episode's poster, for a séance started from the catalog; absent for a pasted link. */
+  posterUrl: z.optional(z.url({ protocol: /^https$/ })),
 });
 export type SessionSummary = z.infer<typeof SessionSummary>;
 export const SessionList = z.object({ sessions: z.array(SessionSummary) });
