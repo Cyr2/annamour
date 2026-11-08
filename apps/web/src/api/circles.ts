@@ -34,6 +34,11 @@ export async function renameCircle(id: string, name: string): Promise<void> {
   });
 }
 
+/** Saves the order I put my circles in; the others keep theirs. */
+export async function reorderCircles(ids: string[]): Promise<void> {
+  await request(Ignored, CIRCLES_API.order, { method: "PUT", body: { ids } });
+}
+
 export async function leaveCircle(id: string): Promise<void> {
   await request(Ignored, apiPath(CIRCLES_API.item, { id }), { method: "DELETE", messages: GONE });
 }

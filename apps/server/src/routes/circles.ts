@@ -3,6 +3,7 @@ import {
   type CircleInvite,
   type CircleInvitePreview,
   type CircleList,
+  CircleOrderRequest,
   CreateCircleRequest,
   type CreateCircleResponse,
   JoinCircleRequest,
@@ -30,6 +31,12 @@ export function circleRoutes({ services }: RouteDeps) {
   routes.post(CIRCLES_API.join, signedIn, async (c) => {
     const { token } = await readBody(c, JoinCircleRequest, "Ce lien d'invitation est illisible.");
     return c.json({ id: circles.join(c.var.account.id, token) } satisfies CreateCircleResponse);
+  });
+
+  routes.put(CIRCLES_API.order, signedIn, async (c) => {
+    const { ids } = await readBody(c, CircleOrderRequest, "Cet ordre de cercles est illisible.");
+    circles.reorder(c.var.account.id, ids);
+    return c.body(null, 204);
   });
 
   routes.get(CIRCLES_API.preview, signedIn, (c) =>

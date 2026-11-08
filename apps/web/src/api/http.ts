@@ -36,7 +36,7 @@ export class ApiRequestError extends Error {
 export type StatusMessages = Partial<Record<number, string>>;
 
 export interface RequestOptions {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   messages?: StatusMessages;
   signal?: AbortSignal;

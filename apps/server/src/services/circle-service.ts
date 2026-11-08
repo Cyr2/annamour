@@ -1,11 +1,5 @@
 import { randomUUID } from "node:crypto";
-import {
-  byRecentUse,
-  CIRCLE_INVITE_TTL_MS,
-  type Circle,
-  type CircleInvite,
-  type CircleInvitePreview,
-} from "@annamour/protocol";
+import { CIRCLE_INVITE_TTL_MS, type Circle, type CircleInvite, type CircleInvitePreview } from "@annamour/protocol";
 import { InvalidCircleInviteError, NotFoundError } from "../errors.ts";
 import type { Repositories } from "../storage/repositories.ts";
 import { hashToken, randomToken } from "./secrets.ts";
@@ -36,13 +30,19 @@ export class CircleService {
   }
 
   list(accountId: string): Circle[] {
-    return byRecentUse(this.repositories.circles.listFor(accountId));
+    // In the order this person set, then the most recently used: the storage sorts them.
+    return this.repositories.circles.listFor(accountId);
   }
 
   create(accountId: string, name: string): string {
     const id = this.newId();
     this.repositories.circles.create(id, name, this.now(), [accountId]);
     return id;
+  }
+
+  /** Someone's own order of their circles (« Nous »); the other members keep theirs. */
+  reorder(accountId: string, circleIds: readonly string[]): void {
+    this.repositories.circles.setOrder(accountId, circleIds);
   }
 
   rename(accountId: string, circleId: string, name: string): void {

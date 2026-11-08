@@ -1,11 +1,15 @@
-import { byRecentUse } from "@annamour/protocol";
+import type { Circle } from "@annamour/protocol";
 import { Plus } from "lucide-react";
+import { Reorder } from "motion/react-m";
 import { useEffect, useState } from "react";
 import { BrandFooter } from "../../ui/BrandFooter.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
+import { LayoutMotion } from "../../ui/LayoutMotion.tsx";
 import { ThreadSpinner } from "../../ui/ThreadSpinner.tsx";
+import { toast } from "../../ui/toast.ts";
 import { useAccount } from "../account/account.ts";
-import { loadCircles, useCircles } from "../circles/circles.ts";
+import { moveId } from "../circles/circle-rules.ts";
+import { loadCircles, previewCircleOrder, reorderCircles, useCircles } from "../circles/circles.ts";
 import { AccountCard } from "../profile/AccountCard.tsx";
 import { MeCard } from "../profile/MeCard.tsx";
 import { PlayerChoiceCard } from "../profile/PlayerChoiceCard.tsx";
@@ -67,11 +71,32 @@ function Circles({ me, onCreate }: { me: string; onCreate: () => void }) {
           inviter qui tu veux.
         </p>
       ) : null}
-      <ul className="grid gap-3">
-        {byRecentUse(circles).map((circle) => (
-          <CircleCard key={circle.id} circle={circle} me={me} />
-        ))}
-      </ul>
+      <CircleList circles={circles} me={me} />
     </section>
+  );
+}
+
+/** Drag a circle by its handle: the new order shows at once everywhere, and is saved when the drag ends. */
+function CircleList({ circles, me }: { circles: Circle[]; me: string }) {
+  const save = (ids: string[]) =>
+    void reorderCircles(ids).catch((failure: Error) => toast({ message: failure.message }));
+  const ids = circles.map((circle) => circle.id);
+
+  return (
+    <LayoutMotion>
+      <Reorder.Group as="ul" axis="y" values={circles} onReorder={previewCircleOrder} className="grid gap-3">
+        {circles.map((circle, index) => (
+          <CircleCard
+            key={circle.id}
+            circle={circle}
+            me={me}
+            canMoveUp={index > 0}
+            canMoveDown={index < circles.length - 1}
+            onMove={(delta) => save(moveId(ids, circle.id, delta))}
+            onDrop={() => save(useCircles.getState().circles.map((c) => c.id))}
+          />
+        ))}
+      </Reorder.Group>
+    </LayoutMotion>
   );
 }

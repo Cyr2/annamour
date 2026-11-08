@@ -144,6 +144,10 @@ const MIGRATIONS: readonly string[] = [
   ALTER TABLE rooms ADD COLUMN circle_id TEXT REFERENCES circles (id) ON DELETE SET NULL;
   ALTER TABLE watchlist_items ADD COLUMN circle_id TEXT REFERENCES circles (id) ON DELETE CASCADE;
   `,
+  // Where each person put a circle among theirs (drag and drop on « Nous »); null until they order them.
+  `
+  ALTER TABLE circle_members ADD COLUMN position INTEGER;
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

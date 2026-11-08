@@ -6,10 +6,11 @@ vi.mock("../../api/circles.ts", () => ({
   createCircle: vi.fn(),
   renameCircle: vi.fn(),
   leaveCircle: vi.fn(),
+  reorderCircles: vi.fn(),
 }));
 const api = await import("../../api/circles.ts");
 const store = await import("./circles.ts");
-const { circleShortName, isCloseCircle, ofCircle, tonightPick } = await import("./circle-rules.ts");
+const { circleShortName, isCloseCircle, moveId, ofCircle, tonightPick } = await import("./circle-rules.ts");
 
 const darius = { accountId: "darius", name: "Darius", color: "peach" } as const;
 const annou = { accountId: "annou", name: "Annou", color: "rose" } as const;
@@ -140,5 +141,30 @@ describe("a circle at a glance", () => {
   it("goes by its name, else by the first names of the others", () => {
     expect(circleShortName(potes, "darius")).toBe("Les potes");
     expect(circleShortName(duo, "darius")).toBe("Annou");
+  });
+});
+
+describe("the order of my circles", () => {
+  it("moves one up or down by a step, never past the ends", () => {
+    expect(moveId(["a", "b", "c"], "c", -1)).toEqual(["a", "c", "b"]);
+    expect(moveId(["a", "b", "c"], "a", 1)).toEqual(["b", "a", "c"]);
+    expect(moveId(["a", "b", "c"], "a", -1)).toEqual(["a", "b", "c"]);
+    expect(moveId(["a", "b", "c"], "z", 1)).toEqual(["a", "b", "c"]);
+  });
+
+  it("shows the new order at once, everywhere, and keeps it once saved", async () => {
+    store.useCircles.setState({ status: "ready", circles: [duo, potes] });
+    vi.mocked(api.reorderCircles).mockResolvedValue();
+    await store.reorderCircles(["potes", "duo"]);
+    expect(store.useCircles.getState().circles.map((c) => c.id)).toEqual(["potes", "duo"]);
+    expect(api.reorderCircles).toHaveBeenCalledWith(["potes", "duo"]);
+  });
+
+  it("puts the saved order back when saving fails", async () => {
+    store.useCircles.setState({ status: "ready", circles: [duo, potes] });
+    vi.mocked(api.reorderCircles).mockRejectedValue(new Error("Pas de réseau"));
+    vi.mocked(api.fetchCircles).mockResolvedValue([duo, potes]);
+    await expect(store.reorderCircles(["potes", "duo"])).rejects.toThrow();
+    expect(store.useCircles.getState().circles.map((c) => c.id)).toEqual(["duo", "potes"]);
   });
 });

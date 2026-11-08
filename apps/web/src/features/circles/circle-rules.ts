@@ -64,3 +64,14 @@ export function isCloseCircle(circle: Pick<Circle, "lastUsedAt">, now: number): 
 export function circleShortName(circle: Pick<Circle, "name" | "members">, me: string): string {
   return circle.name ?? joinNames(circle.members.filter((p) => p.accountId !== me).map((p) => p.name));
 }
+
+/** The ids with one moved a step up (-1) or down (+1), for « Monter » and « Descendre »; unchanged at the ends. */
+export function moveId(ids: readonly string[], id: string, delta: -1 | 1): string[] {
+  const from = ids.indexOf(id);
+  const to = from + delta;
+  if (from < 0 || to < 0 || to >= ids.length) return [...ids];
+  const next = [...ids];
+  next.splice(from, 1);
+  next.splice(to, 0, id);
+  return next;
+}
