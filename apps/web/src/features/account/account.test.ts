@@ -93,6 +93,14 @@ describe("account store", () => {
     expect(useAccount.getState().key).toBeNull();
   });
 
+  it("forgets the séances of the account that was here when another one signs in", async () => {
+    const { useSessions } = await import("../sessions/sessions.ts");
+    useAccount.setState({ status: "member", account: { ...anna, id: "someone-else" } });
+    useSessions.setState({ status: "ready", sessions: [], error: null });
+    await loginWithKey(key);
+    expect(useSessions.getState().status).toBe("idle");
+  });
+
   it("marks the passkey once registered", async () => {
     await createAccount("Anna", "lilac");
     await registerPasskey();

@@ -7,6 +7,7 @@ import {
   canRemoveEpisode,
   type DeviceLead,
   declineNextEpisode,
+  deviceNames,
   type EpisodeProgress,
   episodeAdded,
   episodeEnded,
@@ -79,6 +80,8 @@ export interface Connection {
 
 interface Participant extends Member {
   clientId: string;
+  /** The signed-in account behind this device; a guest has none. */
+  accountId: string | undefined;
   connection: Connection;
   lastReactionAt: number;
   /** What this device last said of its lead; undefined for an app that never reports it. */
@@ -173,9 +176,11 @@ export class Room {
   }
 
   members(): Member[] {
-    return [...this.participants.values()].map(({ id, name, color, buffering, deviceLead, linkDown }) => ({
+    const participants = [...this.participants.values()];
+    const names = deviceNames(participants);
+    return participants.map(({ id, name, color, buffering, deviceLead, linkDown }, index) => ({
       id,
-      name,
+      name: names[index] ?? name,
       color,
       buffering,
       // Leads only matter (and are only shown) while the room waits to start together, for whom it waits.
@@ -202,7 +207,14 @@ export class Room {
   }
 
   /** Returns the member id, or null when the room is full. */
-  join(clientId: string, name: string, color: BubbleColor, connection: Connection, now: number): string | null {
+  join(
+    clientId: string,
+    name: string,
+    color: BubbleColor,
+    connection: Connection,
+    now: number,
+    accountId?: string,
+  ): string | null {
     let member = [...this.participants.values()].find((p) => p.clientId === clientId);
     if (member) {
       // Same device reconnecting: the new socket replaces the old one.
@@ -210,6 +222,7 @@ export class Room {
       member.connection = connection;
       member.name = name;
       member.color = color;
+      member.accountId = accountId;
       member.buffering = false;
       member.linkDown = false;
       // Back: it says its lead again on arrival, and is waited for again meanwhile.
@@ -217,7 +230,17 @@ export class Room {
     } else {
       if (this.participants.size >= MAX_MEMBERS) return null;
       const id = `m${this.nextMemberId++}`;
-      member = { id, clientId, name, color, buffering: false, connection, lastReactionAt: -Infinity, linkDown: false };
+      member = {
+        id,
+        clientId,
+        accountId,
+        name,
+        color,
+        buffering: false,
+        connection,
+        lastReactionAt: -Infinity,
+        linkDown: false,
+      };
       this.participants.set(id, member);
     }
     this.emptySince = null;

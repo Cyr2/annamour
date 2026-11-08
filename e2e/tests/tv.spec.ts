@@ -81,7 +81,8 @@ test("une TV se relie au compte d'un téléphone et rejoint une séance à la t�
   await expect(tv).toHaveURL(new RegExp(`${roomUrl}$`));
   const start = tv.getByRole("button", { name: "Lancer le film" });
   await expect(start).toBeFocused();
-  await expect(phone.getByRole("heading", { name: "Darius est là" })).toBeVisible();
+  // The TV is Darius's second device in the séance: the phone sees it as « Darius (2) ».
+  await expect(phone.getByRole("heading", { name: "Darius (2) est là" })).toBeVisible();
 
   // OK starts the film for everyone.
   await tv.keyboard.press("Enter");

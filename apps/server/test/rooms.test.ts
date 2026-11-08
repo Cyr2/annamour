@@ -126,6 +126,18 @@ describe("Room", () => {
     expect(room.size).toBe(2);
   });
 
+  it("shows a second device of the same account as « Darius (2) », still waited for on its own", () => {
+    const { store } = testStore();
+    const room = store.create("Film", media, 0);
+    const phone = fakeConnection();
+    required(room.join("client-phone", "Darius", "peach", phone.connection, 0, "account-darius"), "phone to join");
+    required(room.join("client-anna", "Anna", "lilac", fakeConnection().connection, 0, "account-anna"), "Anna");
+    required(room.join("client-tablet", "Darius", "peach", fakeConnection().connection, 0, "account-darius"), "tablet");
+    expect(room.size).toBe(3);
+    expect(phone.isClosed()).toBe(false);
+    expect(room.members().map((member) => member.name)).toEqual(["Darius", "Anna", "Darius (2)"]);
+  });
+
   it("broadcasts reactions to everyone, with a cooldown", () => {
     const { room, a, b, idA } = setup();
     room.handle(idA, { type: "react", emoji: "❤️" }, 1000);

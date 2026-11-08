@@ -53,6 +53,22 @@ describe("circles", () => {
     expect(await circlesOf(annou.cookie)).toEqual(circles);
   });
 
+  it("count one person once, whichever of their devices joins the séance", async () => {
+    const { app, account, seance, circlesOf, send } = setup();
+    const created = await app.request(API.createAccount, jsonRequest("POST", { name: "Darius", color: "peach" }));
+    const darius = (await created.json()) as CreateAccountResponse;
+    const tablet = await app.request(API.loginWithKey, jsonRequest("POST", { key: darius.key }));
+    const tabletCookie = sessionCookieOf(tablet);
+    const annou = await account("Annou", "rose");
+    // The phone, Annou, then the tablet signed in with the 4 words: all in the same séance.
+    seance(darius.account.id, annou.id, darius.account.id);
+
+    const circles = await circlesOf(tabletCookie);
+    expect(circles.map((circle) => circle.members.map((m) => m.name))).toEqual([["Darius", "Annou"]]);
+    const history = (await (await send(tabletCookie, "GET", API.sessions)).json()) as SessionList;
+    expect(history.sessions.map((session) => session.participants.map((p) => p.name))).toEqual([["Annou"]]);
+  });
+
   it("are not made for a séance watched alone", async () => {
     const { account, seance, circlesOf } = setup();
     const darius = await account("Darius");
