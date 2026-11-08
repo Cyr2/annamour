@@ -1,5 +1,5 @@
-import { m, useAnimationFrame, useReducedMotion, useSpring } from "motion/react";
-import { createContext, type ReactNode, use, useCallback, useLayoutEffect, useRef, useState } from "react";
+import { type MotionValue, m, useReducedMotion, useSpring } from "motion/react";
+import { createContext, type ReactNode, use, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { spring } from "../lib/motion.ts";
 import { useCalmMotion } from "./calm-motion.ts";
 import { cx } from "./cx.ts";
@@ -127,6 +127,48 @@ function Anchor({ index, className, children }: AnchorProps) {
 const SLACK_AMPLITUDE = 7;
 const SLACK_SAG = 16;
 
+/**
+ * Draws the thread frame by frame while it moves, written straight onto the
+ * paths (a motion value lost the single write of a still thread while
+ * Motion's features were loading). A still thread (reduced motion, TV) that
+ * has settled asks for no more frames: on a TV each one is a full-screen
+ * redraw. Its springs moving wake it up.
+ */
+function useThreadDrawing(points: Point[], sag: MotionValue<number>, amplitude: MotionValue<number>, still: boolean) {
+  const lineRef = useRef<SVGPathElement>(null);
+  const haloRef = useRef<SVGPathElement>(null);
+
+  useEffect(() => {
+    if (points.length < 2) return;
+    let frame = 0;
+    const draw = (time: number) => {
+      frame = 0;
+      const line = lineRef.current;
+      if (!line) return;
+      const next = threadPath(points, sag.get(), amplitude.get(), still ? 0 : time);
+      if (line.getAttribute("d") !== next) {
+        line.setAttribute("d", next);
+        haloRef.current?.setAttribute("d", next);
+      }
+      const settled = still && !sag.isAnimating() && !amplitude.isAnimating();
+      if (!settled) frame = requestAnimationFrame(draw);
+    };
+    const wake = () => {
+      if (!frame) frame = requestAnimationFrame(draw);
+    };
+    wake();
+    const stopSag = sag.on("change", wake);
+    const stopAmplitude = amplitude.on("change", wake);
+    return () => {
+      cancelAnimationFrame(frame);
+      stopSag();
+      stopAmplitude();
+    };
+  }, [points, sag, amplitude, still]);
+
+  return { lineRef, haloRef };
+}
+
 function Line({ className }: { className?: string }) {
   const {
     state: { synced, points },
@@ -138,8 +180,7 @@ function Line({ className }: { className?: string }) {
 
   const amplitude = useSpring(synced ? 0 : SLACK_AMPLITUDE, spring.thread);
   const sag = useSpring(synced ? 0 : SLACK_SAG, spring.thread);
-  const lineRef = useRef<SVGPathElement>(null);
-  const haloRef = useRef<SVGPathElement>(null);
+  const { lineRef, haloRef } = useThreadDrawing(points, sag, amplitude, stillWave);
 
   useLayoutEffect(() => {
     const amp = synced ? 0 : SLACK_AMPLITUDE;
@@ -152,22 +193,6 @@ function Line({ className }: { className?: string }) {
       sag.set(droop);
     }
   }, [synced, reduceMotion, amplitude, sag]);
-
-  /*
-   * Written straight onto the paths, not through a motion value: a still
-   * thread is written once, and that single write was lost while Motion's
-   * features were still loading (the thread never showed on a TV). Compared
-   * with what the path holds, so a path mounted again is drawn again.
-   */
-  useAnimationFrame((time) => {
-    const line = lineRef.current;
-    if (points.length < 2 || !line) return;
-    // Still (reduced motion, TV): a frozen wave.
-    const next = threadPath(points, sag.get(), amplitude.get(), stillWave ? 0 : time);
-    if (line.getAttribute("d") === next) return;
-    line.setAttribute("d", next);
-    haloRef.current?.setAttribute("d", next);
-  });
 
   if (points.length < 2) return null;
 
