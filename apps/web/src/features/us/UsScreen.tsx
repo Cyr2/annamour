@@ -1,8 +1,9 @@
 import { byRecentUse } from "@annamour/protocol";
-import { Plus } from "lucide-react";
+import { LogIn, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "wouter";
 import { BrandBar } from "../../ui/BrandBar.tsx";
+import { Button } from "../../ui/controls.tsx";
+import { LinkButton } from "../../ui/LinkButton.tsx";
 import { ThreadSpinner } from "../../ui/ThreadSpinner.tsx";
 import { useAccount } from "../account/account.ts";
 import { loadCircles, useCircles } from "../circles/circles.ts";
@@ -14,8 +15,8 @@ import { CircleCard } from "./CircleCard.tsx";
 import { NameCircleSheet } from "./NameCircleSheet.tsx";
 
 /**
- * « Nous »: me first, like a profile; then my circles side by side, a new one
- * at the end; then my account; then what is set for this device only.
+ * « Nous »: me first, like a profile; then my circles, each tied by the red
+ * thread; then my account; then what is set for this device only.
  */
 export function UsScreen() {
   useEffect(() => void loadCircles(), []);
@@ -49,14 +50,9 @@ function Circles({ me, onCreate }: { me: string; onCreate: () => void }) {
 
   return (
     <section className="grid gap-2" aria-labelledby="circles-title">
-      <div className="flex items-center justify-between gap-3 px-1">
-        <h2 id="circles-title" className="type-heading">
-          Mes cercles
-        </h2>
-        <Link href="/rejoindre" className="flex min-h-11 items-center text-sm font-semibold text-accent">
-          J'ai un code
-        </Link>
-      </div>
+      <h2 id="circles-title" className="type-heading px-1">
+        Mes cercles
+      </h2>
       {status === "loading" || status === "idle" ? (
         <div className="grid place-items-center py-6">
           <ThreadSpinner />
@@ -68,23 +64,19 @@ function Circles({ me, onCreate }: { me: string; onCreate: () => void }) {
           inviter qui tu veux.
         </p>
       ) : null}
-      <ul className="-mx-1 flex gap-3 overflow-x-auto px-1 py-1 [scrollbar-width:none]">
+      <ul className="grid gap-3">
         {byRecentUse(circles).map((circle) => (
           <CircleCard key={circle.id} circle={circle} me={me} />
         ))}
-        <li className="w-32 shrink-0">
-          <button
-            type="button"
-            onClick={onCreate}
-            className="grid h-full min-h-44 w-full cursor-pointer place-items-center content-center gap-2 rounded-panel border border-dashed border-line-strong text-sm font-semibold text-fg"
-          >
-            <span className="grid size-11 place-items-center rounded-full bg-accent-soft text-accent">
-              <Plus aria-hidden className="size-5" />
-            </span>
-            Nouveau cercle
-          </button>
-        </li>
       </ul>
+      <div className="mt-1 grid grid-cols-2 gap-3">
+        <Button variant="filled" icon={<Plus />} onClick={onCreate}>
+          Nouveau cercle
+        </Button>
+        <LinkButton href="/rejoindre" icon={<LogIn />}>
+          J'ai un code
+        </LinkButton>
+      </div>
     </section>
   );
 }

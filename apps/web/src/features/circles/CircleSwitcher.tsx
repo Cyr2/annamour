@@ -1,10 +1,10 @@
 import { circleTitle, othersIn } from "@annamour/protocol";
 import { Users } from "lucide-react";
 import type { ReactNode } from "react";
-import { joinNames } from "../../lib/format.ts";
 import { BubbleStack } from "../../ui/BubbleStack.tsx";
 import { cx } from "../../ui/cx.ts";
 import { useAccount } from "../account/account.ts";
+import { circleShortName } from "./circle-rules.ts";
 import { selectCircle, shownCircle, useCircles } from "./circles.ts";
 
 /**
@@ -25,7 +25,7 @@ export function CircleSwitcher({ legend = "Avec qui ce soir ?" }: { legend?: str
       {circles.map((circle) => (
         <Chip
           key={circle.id}
-          label={circle.name ?? joinNames(othersIn(circle, me).map((p) => p.name))}
+          label={circleShortName(circle, me)}
           fullLabel={circleTitle(circle, me)}
           pressed={shown === circle.id}
           onPress={() => selectCircle(circle.id)}

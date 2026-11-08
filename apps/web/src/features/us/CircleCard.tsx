@@ -3,15 +3,15 @@ import { Ellipsis, LogOut, Pencil, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { inviteToCircle, inviteUrl } from "../../api/circles.ts";
 import { errorMessage } from "../../api/http.ts";
-import { plural } from "../../lib/format.ts";
-import { BubbleStack } from "../../ui/BubbleStack.tsx";
 import { Button } from "../../ui/controls.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import { toast } from "../../ui/toast.ts";
+import { eveningsLine } from "../circles/circle-rules.ts";
 import { leaveCircle } from "../circles/circles.ts";
 import { AccountRow } from "../profile/AccountRow.tsx";
+import { CircleThread } from "./CircleThread.tsx";
 import { NameCircleSheet } from "./NameCircleSheet.tsx";
 
 /** Shares an invitation link: the phone's share sheet where there is one, else the clipboard. */
@@ -31,7 +31,7 @@ async function shareInvite(circle: Circle, me: string): Promise<void> {
 export function CircleCard({ circle, me }: { circle: Circle; me: string }) {
   const [renaming, setRenaming] = useState(false);
   const [options, setOptions] = useState(false);
-  const others = othersIn(circle, me);
+  const _others = othersIn(circle, me);
   const title = circleTitle(circle, me);
   const invite = () =>
     void shareInvite(circle, me).catch((failure: unknown) => toast({ message: errorMessage(failure) }));
@@ -41,18 +41,20 @@ export function CircleCard({ circle, me }: { circle: Circle; me: string }) {
       .catch((failure: Error) => toast({ message: failure.message }));
 
   return (
-    <li className="w-44 shrink-0">
-      <Surface className="surface-panel flex h-full flex-col gap-2.5 p-4">
-        <div className="flex items-start justify-between gap-2">
-          <BubbleStack people={others.map((p) => ({ id: p.accountId, name: p.name, color: p.color }))} />
-          {/* A sheet, not a pop-up menu: the row of circles scrolls and would cut a menu off. */}
+    <li>
+      <Surface className="surface-panel grid gap-4 p-5">
+        <CircleThread circle={circle} me={me} />
+        <div className="flex items-center gap-2">
+          <div className="grid min-w-0 flex-1">
+            <strong className="truncate font-rounded-tight text-md font-extrabold text-fg">{title}</strong>
+            <span className="text-xs text-pretty text-fg-muted">{eveningsLine(circle, Date.now())}</span>
+          </div>
+          <Button icon={<UserPlus />} onClick={invite}>
+            Inviter
+          </Button>
+          {/* A sheet rather than a pop-up menu: easier to reach and never cut off on a phone. */}
           <IconButton label={`Plus d'options pour « ${title} »`} icon={<Ellipsis />} onClick={() => setOptions(true)} />
         </div>
-        <strong className="line-clamp-2 font-rounded-tight text-md font-extrabold text-fg">{title}</strong>
-        <span className="text-xs text-fg-muted">{plural(circle.evenings, "soirée")}</span>
-        <Button icon={<UserPlus />} onClick={invite} className="mt-auto w-full">
-          Inviter
-        </Button>
       </Surface>
       <Sheet open={options} onClose={() => setOptions(false)} title={title}>
         <div className="grid gap-1">
