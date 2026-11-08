@@ -1,4 +1,4 @@
-import { m, useAnimationFrame, useMotionValue, useReducedMotion, useSpring } from "motion/react";
+import { m, useAnimationFrame, useReducedMotion, useSpring } from "motion/react";
 import { createContext, type ReactNode, use, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { spring } from "../lib/motion.ts";
 import { useCalmMotion } from "./calm-motion.ts";
@@ -138,8 +138,8 @@ function Line({ className }: { className?: string }) {
 
   const amplitude = useSpring(synced ? 0 : SLACK_AMPLITUDE, spring.thread);
   const sag = useSpring(synced ? 0 : SLACK_SAG, spring.thread);
-  const d = useMotionValue("");
-  const last = useRef("");
+  const lineRef = useRef<SVGPathElement>(null);
+  const haloRef = useRef<SVGPathElement>(null);
 
   useLayoutEffect(() => {
     const amp = synced ? 0 : SLACK_AMPLITUDE;
@@ -153,14 +153,20 @@ function Line({ className }: { className?: string }) {
     }
   }, [synced, reduceMotion, amplitude, sag]);
 
+  /*
+   * Written straight onto the paths, not through a motion value: a still
+   * thread is written once, and that single write was lost while Motion's
+   * features were still loading (the thread never showed on a TV). Compared
+   * with what the path holds, so a path mounted again is drawn again.
+   */
   useAnimationFrame((time) => {
-    if (points.length < 2) return;
-    // With reduced motion the slack thread is drawn still: a frozen wave.
+    const line = lineRef.current;
+    if (points.length < 2 || !line) return;
+    // Still (reduced motion, TV): a frozen wave.
     const next = threadPath(points, sag.get(), amplitude.get(), stillWave ? 0 : time);
-    if (next !== last.current) {
-      last.current = next;
-      d.set(next);
-    }
+    if (line.getAttribute("d") === next) return;
+    line.setAttribute("d", next);
+    haloRef.current?.setAttribute("d", next);
   });
 
   if (points.length < 2) return null;
@@ -169,9 +175,9 @@ function Line({ className }: { className?: string }) {
     // Filters go on a wrapper, not the animated SVG, so the path repaints cheaply.
     <div aria-hidden className={cx("am-thread-line pointer-events-none absolute inset-0 z-0", className)}>
       <svg className="h-full w-full overflow-visible" aria-hidden="true">
-        <m.path d={d} fill="none" strokeLinecap="round" strokeLinejoin="round" className="am-thread-halo" />
+        <path ref={haloRef} fill="none" strokeLinecap="round" strokeLinejoin="round" className="am-thread-halo" />
         <m.path
-          d={d}
+          ref={lineRef}
           fill="none"
           strokeWidth={2.5}
           strokeLinecap="round"
