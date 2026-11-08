@@ -32,8 +32,8 @@ export async function createSession(page: Page, title: string, url = HLS_URL): P
   await page.getByRole("button", { name: "Coller un lien" }).click();
   await page.getByLabel("Lien de la vidéo (.m3u8)").fill(url);
   await page.getByLabel("Nom de la séance").fill(title);
+  // Two steps only: once the film is found, the salon opens by itself.
   await page.getByRole("button", { name: "Préparer la séance" }).click();
-  await page.getByRole("button", { name: "Ouvrir la séance" }).click();
   await expect(page).toHaveURL(/\/s\/[A-Z]{4}$/);
   return new URL(page.url()).pathname;
 }

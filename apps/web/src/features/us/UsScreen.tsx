@@ -13,7 +13,6 @@ import { loadCircles, previewCircleOrder, reorderCircles, useCircles } from "../
 import { AccountCard } from "../profile/AccountCard.tsx";
 import { MeCard } from "../profile/MeCard.tsx";
 import { PlayerChoiceCard } from "../profile/PlayerChoiceCard.tsx";
-import { InterfaceChoiceCard } from "../ui-version/InterfaceChoiceCard.tsx";
 import { CircleCard } from "./CircleCard.tsx";
 import { NameCircleSheet } from "./NameCircleSheet.tsx";
 
@@ -37,7 +36,6 @@ export function UsScreen() {
           <h2 id="device-title" className="px-1 text-xs font-bold tracking-[0.06em] text-fg-muted uppercase">
             Réglages de cet appareil
           </h2>
-          <InterfaceChoiceCard />
           <PlayerChoiceCard />
         </section>
       </main>

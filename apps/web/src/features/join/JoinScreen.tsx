@@ -10,7 +10,6 @@ import { Button } from "../../ui/controls.tsx";
 import { cx } from "../../ui/cx.ts";
 import { BackLink } from "../../ui/ScreenTopBar.tsx";
 import { useTv } from "../tv/tv-context.ts";
-import { useCircleUi } from "../ui-version/ui-version.ts";
 
 /** Only a TV downloads its on-screen keyboard. */
 const LetterKeyboard = lazy(() => import("./LetterKeyboard.tsx").then((m) => ({ default: m.LetterKeyboard })));
@@ -26,7 +25,6 @@ export function withLetter(code: string, letter: string): string {
 /** « Rejoindre la séance »: 4 letters, checked as soon as the last one lands. */
 export function JoinScreen() {
   const tv = useTv();
-  const circles = useCircleUi();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -55,8 +53,8 @@ export function JoinScreen() {
 
   return (
     <div className="safe-area mx-auto flex min-h-dvh max-w-[1240px] flex-col">
-      {/* In the circles interface no tab leads here: a way back to « Ce soir ». The TV keeps its own focus path. */}
-      <BrandBar start={circles && !tv ? <BackLink href="/" /> : undefined} />
+      {/* No tab leads here on a phone: a way back to « Ce soir ». The TV keeps its own focus path. */}
+      <BrandBar start={tv ? undefined : <BackLink href="/" />} />
       <main className="grid flex-1 place-items-center py-8 text-center">
         <form
           className={cx("grid justify-items-center gap-[22px]", tv ? "w-[min(40rem,100%)]" : "w-[min(28.75rem,100%)]")}

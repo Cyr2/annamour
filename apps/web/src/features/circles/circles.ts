@@ -4,7 +4,6 @@ import { create } from "zustand";
 import * as api from "../../api/circles.ts";
 import { errorMessage } from "../../api/http.ts";
 import { readStored, removeStored, writeStored } from "../../lib/storage.ts";
-import { circleUiNow } from "../ui-version/ui-version.ts";
 
 /*
  * My circles (GET /api/me/circles) and the one the app shows (« Avec qui ce
@@ -36,9 +35,9 @@ export function shownCircle(state: Pick<CirclesState, "circles" | "selected">): 
   return state.circles.some((circle) => circle.id === state.selected) ? state.selected : null;
 }
 
-/** The circle a séance started now belongs to: the one on screen, in the circles interface only. */
+/** The circle a séance started now belongs to: the one on screen. */
 export function circleForNewSeance(): string | null {
-  return circleUiNow() ? shownCircle(useCircles.getState()) : null;
+  return shownCircle(useCircles.getState());
 }
 
 /** The circle on screen as a whole, members included; null for « Tout ». */
