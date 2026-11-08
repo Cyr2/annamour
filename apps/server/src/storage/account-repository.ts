@@ -53,6 +53,10 @@ export class AccountRepository {
     return this.db.prepare("SELECT 1 FROM accounts WHERE key_hash = ?").get(keyHash) !== undefined;
   }
 
+  replaceKeyHash(id: string, keyHash: string): void {
+    this.db.prepare("UPDATE accounts SET key_hash = ? WHERE id = ?").run(keyHash, id);
+  }
+
   update(id: string, changes: { name?: string | undefined; color?: BubbleColor | undefined }): void {
     this.db
       .prepare("UPDATE accounts SET name = COALESCE(?, name), color = COALESCE(?, color) WHERE id = ?")

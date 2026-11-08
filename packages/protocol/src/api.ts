@@ -37,6 +37,10 @@ export type LoginWithKeyRequest = z.infer<typeof LoginWithKeyRequest>;
 export const KeyCheckResponse = z.object({ matches: z.boolean() });
 export type KeyCheckResponse = z.infer<typeof KeyCheckResponse>;
 
+/** A new key for the signed-in account: the previous words stop working. */
+export const NewKeyResponse = z.object({ key: AccountKey });
+export type NewKeyResponse = z.infer<typeof NewKeyResponse>;
+
 export const AccountResponse = z.object({ account: Account });
 export type AccountResponse = z.infer<typeof AccountResponse>;
 
@@ -151,6 +155,7 @@ export const API = {
   me: "/api/me",
   linkToken: "/api/me/link-token",
   checkKey: "/api/me/key",
+  newKey: "/api/me/key/new",
   sessions: "/api/me/sessions",
   logout: "/api/logout",
   passkeyRegisterOptions: "/api/passkey/register/options",

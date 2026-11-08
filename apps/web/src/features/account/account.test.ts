@@ -12,6 +12,7 @@ vi.mock("../../api/accounts.ts", () => ({
   updateAccount: vi.fn(async (changes: object) => ({ ...anna, ...changes })),
   logout: vi.fn(async () => undefined),
   checkKey: vi.fn(async () => true),
+  newKey: vi.fn(async () => ["miel", "orage", "tulipe", "zebre"]),
 }));
 vi.mock("../../api/passkeys.ts", () => ({
   loginWithPasskey: vi.fn(async () => anna),
@@ -21,6 +22,7 @@ vi.mock("../../api/passkeys.ts", () => ({
 const api = await import("../../api/accounts.ts");
 const {
   createAccount,
+  drawNewKey,
   linkWithToken,
   loginWithKey,
   loginWithPasskey,
@@ -91,6 +93,15 @@ describe("account store", () => {
     await vi.waitFor(() => expect(api.checkKey).toHaveBeenCalled());
     expect(localStorage.getItem("annamour:key:v1")).not.toBeNull();
     expect(useAccount.getState().key).toBeNull();
+  });
+
+  it("keeps the new key on this device, in place of the old one", async () => {
+    await createAccount("Anna", "lilac");
+    await drawNewKey();
+    expect(useAccount.getState().key).toEqual(["miel", "orage", "tulipe", "zebre"]);
+    useAccount.setState({ key: null });
+    await refreshAccountAs(anna);
+    expect(useAccount.getState().key).toEqual(["miel", "orage", "tulipe", "zebre"]);
   });
 
   it("marks the passkey once registered", async () => {

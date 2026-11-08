@@ -6,6 +6,7 @@ import {
   type KeyCheckResponse,
   LinkWithTokenRequest,
   LoginWithKeyRequest,
+  type NewKeyResponse,
   UpdateAccountRequest,
 } from "@annamour/protocol";
 import { Hono } from "hono";
@@ -68,6 +69,10 @@ export function accountRoutes({ services, http }: RouteDeps) {
     const matches = accounts.isKeyOf(c.var.account.id, key, clientIp(c));
     return c.json({ matches } satisfies KeyCheckResponse);
   });
+
+  routes.post(API.newKey, signedIn, (c) =>
+    c.json({ key: accounts.newKey(c.var.account.id) } satisfies NewKeyResponse, 201),
+  );
 
   routes.post(API.linkToken, signedIn, (c) => c.json(accounts.createLinkToken(c.var.account.id), 201));
 

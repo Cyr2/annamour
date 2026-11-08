@@ -7,6 +7,7 @@ import {
   CreateAccountResponse,
   KeyCheckResponse,
   LinkToken,
+  NewKeyResponse,
   SessionList,
   type SessionSummary,
   type UpdateAccountRequest,
@@ -56,6 +57,12 @@ export async function linkWithToken(token: string): Promise<Account> {
 export async function checkKey(key: AccountKey): Promise<boolean> {
   const { matches } = await request(KeyCheckResponse, API.checkKey, { body: { key } });
   return matches;
+}
+
+/** New words for the signed-in account; the previous ones stop working. */
+export async function newKey(): Promise<AccountKey> {
+  const { key } = await request(NewKeyResponse, API.newKey, { method: "POST" });
+  return key;
 }
 
 /** The signed-in account, or null when this device has no session. */
