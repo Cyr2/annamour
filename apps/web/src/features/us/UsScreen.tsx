@@ -15,8 +15,8 @@ import { CircleCard } from "./CircleCard.tsx";
 import { NameCircleSheet } from "./NameCircleSheet.tsx";
 
 /**
- * « Nous »: me first, like a profile; then my circles, each tied by the red
- * thread; then my account; then what is set for this device only.
+ * « Nous »: my circles, each tied by the red thread; then me, like a profile;
+ * then my account; then what is set for this device only.
  */
 export function UsScreen() {
   useEffect(() => void loadCircles(), []);
@@ -28,8 +28,8 @@ export function UsScreen() {
       <BrandBar />
       <main className="mx-auto grid w-full max-w-[760px] content-start gap-7 py-6">
         <h1 className="sr-only">Nous</h1>
-        {account ? <MeCard account={account} /> : null}
         <Circles me={account?.id ?? ""} onCreate={() => setCreating(true)} />
+        {account ? <MeCard account={account} /> : null}
         <AccountCard />
         <section className="grid gap-3" aria-labelledby="device-title">
           <h2 id="device-title" className="px-1 text-xs font-bold tracking-[0.06em] text-fg-muted uppercase">

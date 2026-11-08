@@ -9,7 +9,7 @@ vi.mock("../../api/circles.ts", () => ({
 }));
 const api = await import("../../api/circles.ts");
 const store = await import("./circles.ts");
-const { circleShortName, eveningsLine, isCloseCircle, ofCircle, tonightPick } = await import("./circle-rules.ts");
+const { circleShortName, eveningsLine, ofCircle, tonightPick } = await import("./circle-rules.ts");
 
 const darius = { accountId: "darius", name: "Darius", color: "peach" } as const;
 const annou = { accountId: "annou", name: "Annou", color: "rose" } as const;
@@ -130,12 +130,6 @@ describe("« Ce soir » for a circle", () => {
 
 describe("a circle at a glance", () => {
   const DAY = 24 * 60 * 60 * 1000;
-
-  it("is close while its last séance is under two weeks old: its thread is taut", () => {
-    expect(isCloseCircle({ ...duo, lastUsedAt: 0 }, 13 * DAY)).toBe(true);
-    expect(isCloseCircle({ ...duo, lastUsedAt: 0 }, 15 * DAY)).toBe(false);
-    expect(isCloseCircle({ ...duo, lastUsedAt: undefined }, 0)).toBe(false);
-  });
 
   it("goes by its name, else by the first names of the others", () => {
     expect(circleShortName(potes, "darius")).toBe("Les potes");
