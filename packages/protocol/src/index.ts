@@ -3,6 +3,7 @@ export * from "./buffering.ts";
 export * from "./catalog.ts";
 export * from "./circles.ts";
 export * from "./clock.ts";
+export * from "./devices.ts";
 export * from "./drift.ts";
 export * from "./episodes.ts";
 export * from "./hls-files.ts";

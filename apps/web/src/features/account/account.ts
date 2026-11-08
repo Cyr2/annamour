@@ -5,6 +5,9 @@ import * as accounts from "../../api/accounts.ts";
 import * as passkeys from "../../api/passkeys.ts";
 import { readStored, removeStored, writeStored } from "../../lib/storage.ts";
 import { useIdentity } from "../../sync/identity.ts";
+import { resetCircles } from "../circles/circles.ts";
+import { resetSessions } from "../sessions/sessions.ts";
+import { resetWatchlist } from "../watchlist/watchlist.ts";
 
 /*
  * Who is signed in on this device. The account is cached so the app opens
@@ -48,7 +51,16 @@ function initialState(): AccountState {
 
 export const useAccount = create<AccountState>()(() => initialState());
 
+/** Another account on this device: never show the previous one's séances, circles or list. */
+function forgetAccountData(): void {
+  resetSessions();
+  resetWatchlist();
+  resetCircles();
+}
+
 function signIn(account: Account): Account {
+  const previous = useAccount.getState().account;
+  if (previous && previous.id !== account.id) forgetAccountData();
   writeStored(ACCOUNT_STORAGE, account);
   useAccount.setState({ status: "member", account, key: keyFor(account) });
   void checkUncheckedKey(account);
@@ -74,6 +86,7 @@ async function checkUncheckedKey(account: Account): Promise<void> {
 }
 
 function signOut(): void {
+  forgetAccountData();
   removeStored(ACCOUNT_STORAGE);
   removeStored(KEY_STORAGE);
   removeStored(UNCHECKED_KEY_STORAGE);

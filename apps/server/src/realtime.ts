@@ -66,7 +66,7 @@ export function attachRealtime(
 
     const welcome = (hello: Extract<ClientMessage, { type: "hello" }>): string | null => {
       clearTimeout(helloTimer);
-      const id = room.join(hello.clientId, hello.name, hello.color, connection, Date.now());
+      const id = room.join(hello.clientId, hello.name, hello.color, connection, Date.now(), accountId);
       if (id === null) {
         connection.send({ type: "error", code: "room_full", message: "La séance est complète." });
         ws.close(4003, "room_full");
