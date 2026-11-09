@@ -26,7 +26,8 @@ import { TonightHero } from "./TonightHero.tsx";
 /**
  * « Ce soir », the home screen: the red thread and « Une soirée ensemble »,
  * with whom (« Avec qui ce soir ? »), the one
- * thing to watch (« On regarde ? »), what is under way, and our list.
+ * thing to watch (« On regarde ? »), what is under way, our list, then quietly
+ * « Créer une séance » and « J'ai un code ».
  */
 export function TonightScreen() {
   useLoadSessions();
@@ -59,15 +60,16 @@ export function TonightScreen() {
         <CircleFilter centered />
         <TonightCard pick={pick} me={me} onOpenItem={setOpenItem} onAdd={() => setAdding(true)} />
         <OngoingShelf sessions={ongoing} />
+        <WatchlistShelf circle={circle} title="Notre liste" />
+        {/* Last and quiet: a séance mostly starts from a title of the list, or is joined from a link. */}
         <div className="grid grid-cols-2 gap-3">
-          <Button variant="filled" icon={<Plus />} onClick={() => setCreating(true)}>
+          <Button icon={<Plus />} onClick={() => setCreating(true)}>
             Créer une séance
           </Button>
           <LinkButton href="/rejoindre" icon={<LogIn />}>
             J'ai un code
           </LinkButton>
         </div>
-        <WatchlistShelf circle={circle} title="Notre liste" />
       </main>
       <BrandFooter />
       <CreateSessionSheet open={creating} onClose={() => setCreating(false)} />
