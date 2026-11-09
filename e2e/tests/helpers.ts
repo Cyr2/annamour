@@ -1,4 +1,18 @@
-import { type Browser, type BrowserContextOptions, expect, type Page } from "@playwright/test";
+import { type Browser, type BrowserContextOptions, test as base, expect, type Page } from "@playwright/test";
+
+/**
+ * Playwright's own `test`, plus: each test closes the browsers its people opened. Left open, a film
+ * still playing from one test slowed the next one down until it timed out.
+ */
+export const test = base.extend<{ closePeople: void }>({
+  closePeople: [
+    async ({ browser }, run) => {
+      await run();
+      await Promise.all(browser.contexts().map((context) => context.close()));
+    },
+    { auto: true },
+  ],
+});
 
 /** A real, public HLS stream by default; set E2E_HLS_URL to try another one (e.g. a Naka link). */
 export const HLS_URL = process.env.E2E_HLS_URL ?? "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";

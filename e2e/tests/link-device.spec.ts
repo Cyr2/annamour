@@ -1,5 +1,5 @@
-import { expect, type Page, test } from "@playwright/test";
-import { onboard, person } from "./helpers.ts";
+import { expect, type Page } from "@playwright/test";
+import { onboard, person, test } from "./helpers.ts";
 
 async function linkToken(page: Page): Promise<string> {
   const response = await page.request.post("/api/me/link-token");

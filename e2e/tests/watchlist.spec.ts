@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { createSession, onboard, person } from "./helpers.ts";
+import { expect } from "@playwright/test";
+import { createSession, onboard, person, test } from "./helpers.ts";
 
 test("« Notre liste » est commune : un titre ajouté et une envie se voient chez l'autre", async ({ browser }) => {
   const darius = await person(browser);

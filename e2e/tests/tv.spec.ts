@@ -1,5 +1,5 @@
-import { expect, type Page, test } from "@playwright/test";
-import { createSession, onboard, person, videoTime } from "./helpers.ts";
+import { expect, type Page } from "@playwright/test";
+import { createSession, onboard, person, test, videoTime } from "./helpers.ts";
 
 const TV_SCREEN = { viewport: { width: 1920, height: 1080 } };
 /** The on-screen keyboard: the room code alphabet, nine keys per row. */

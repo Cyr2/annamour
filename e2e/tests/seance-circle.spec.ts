@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { createSession, onboard, person } from "./helpers.ts";
+import { expect } from "@playwright/test";
+import { createSession, onboard, person, test } from "./helpers.ts";
 
 const phone = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true };
 
