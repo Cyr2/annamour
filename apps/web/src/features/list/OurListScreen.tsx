@@ -63,9 +63,14 @@ export function OurListScreen() {
           onValueChange={(value) => navigate(value === "watched" ? "/liste?vus" : "/liste", { replace: true })}
         />
         {watchedPage ? (
-          <Watched handlers={handlers} items={titles.watched} />
+          <Watched handlers={handlers} items={titles.watched} replayKey={`vus-${circle?.id ?? "tout"}`} />
         ) : titles.toWatch.length ? (
-          <PosterGrid items={titles.toWatch} label="Titres à voir" {...handlers} />
+          <PosterGrid
+            items={titles.toWatch}
+            label="Titres à voir"
+            replayKey={`voir-${circle?.id ?? "tout"}`}
+            {...handlers}
+          />
         ) : (
           <p className="px-1 text-sm text-fg-muted">Rien à voir pour l'instant : ajoutez un film ou une série.</p>
         )}
@@ -81,14 +86,16 @@ export function OurListScreen() {
 function Watched({
   handlers,
   items,
+  replayKey,
 }: {
   handlers: PosterHandlers;
   items: ReturnType<typeof splitWatchlist>["watched"];
+  replayKey: string;
 }) {
   return (
     <div className="grid gap-6">
       {items.length ? (
-        <PosterGrid items={items} label="Titres vus" {...handlers} />
+        <PosterGrid items={items} label="Titres vus" replayKey={replayKey} {...handlers} />
       ) : (
         <p className="px-1 text-sm text-fg-muted">Rien de vu pour l'instant.</p>
       )}
