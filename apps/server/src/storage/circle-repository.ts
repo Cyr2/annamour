@@ -8,7 +8,12 @@ const CircleRow = z.object({
   name: z.string().nullable(),
   evenings: z.number(),
   last_used_at: z.number().nullable(),
+  reunited_by: z.string().nullable(),
+  reunited_by_name: z.string().nullable(),
+  reunited_by_color: z.nullable(BubbleColor),
+  reunited_at: z.number().nullable(),
 });
+const NameRow = z.object({ name: z.string().nullable() });
 
 const MemberRow = z.object({ circle_id: z.string(), account_id: z.string(), name: z.string(), color: BubbleColor });
 const RoomCircleMemberRow = z.object({
@@ -99,7 +104,19 @@ export class CircleRepository {
     for (const [index, circleId] of circleIds.entries()) place.run(index, circleId, accountId);
   }
 
-  rename(circleId: string, name: string): boolean {
+  /** Its name; null when it has none (it is then called after its people), or when it does not exist. */
+  name(circleId: string): string | null {
+    return (
+      parseOptionalRow(NameRow, this.db.prepare("SELECT name FROM circles WHERE id = ?").get(circleId))?.name ?? null
+    );
+  }
+
+  /** Remembers who reunited two circles into this one, for the other members. */
+  markReunited(circleId: string, accountId: string, now: number): void {
+    this.db.prepare("UPDATE circles SET reunited_by = ?, reunited_at = ? WHERE id = ?").run(accountId, now, circleId);
+  }
+
+  rename(circleId: string, name: string | null): boolean {
     return changedRows(this.db.prepare("UPDATE circles SET name = ? WHERE id = ?").run(name, circleId)) > 0;
   }
 
@@ -154,12 +171,13 @@ export class CircleRepository {
       CircleRow,
       this.db
         .prepare(
-          `SELECT c.id, c.name,
+          `SELECT c.id, c.name, c.reunited_by, rb.name AS reunited_by_name, rb.color AS reunited_by_color, c.reunited_at,
              (SELECT COUNT(*) FROM rooms r JOIN participations p ON p.room_code = r.code
               WHERE r.circle_id = c.id AND p.account_id = me.account_id AND p.hidden = 0) AS evenings,
              (SELECT MAX(r.last_used_at) FROM rooms r JOIN participations p ON p.room_code = r.code
               WHERE r.circle_id = c.id AND p.account_id = me.account_id AND p.hidden = 0) AS last_used_at
            FROM circles c JOIN circle_members me ON me.circle_id = c.id AND me.account_id = ?
+           LEFT JOIN accounts rb ON rb.id = c.reunited_by
            ORDER BY me.position IS NULL, me.position, last_used_at IS NULL, last_used_at DESC, c.created_at DESC`,
         )
         .all(accountId),
@@ -183,6 +201,7 @@ export class CircleRepository {
         .map((m) => ({ accountId: m.account_id, name: m.name, color: m.color })),
       evenings: row.evenings,
       ...(row.last_used_at === null ? {} : { lastUsedAt: row.last_used_at }),
+      ...reunitedBy(row),
     }));
   }
 
@@ -267,4 +286,10 @@ export class CircleRepository {
       .get(tokenHash, now);
     return parseOptionalRow(IdRow, row)?.id;
   }
+}
+
+function reunitedBy(row: z.infer<typeof CircleRow>): Pick<Circle, "reunitedBy"> {
+  const { reunited_by: accountId, reunited_by_name: name, reunited_by_color: color, reunited_at: at } = row;
+  if (accountId === null || name === null || color === null || at === null) return {};
+  return { reunitedBy: { accountId, name, color, at } };
 }

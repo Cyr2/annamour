@@ -7,12 +7,13 @@ import {
   CreateCircleRequest,
   type CreateCircleResponse,
   JoinCircleRequest,
+  MergeCirclesRequest,
   RenameCircleRequest,
 } from "@annamour/protocol";
 import { Hono } from "hono";
 import { type AppEnv, type RouteDeps, readBody, requireAccount } from "../http/context.ts";
 
-/** The signed-in person's circles: see, create, name, leave, invite into, join. */
+/** The signed-in person's circles: see, create, name, leave, invite into, join, reunite. */
 export function circleRoutes({ services }: RouteDeps) {
   const { accounts, circles } = services;
   const routes = new Hono<AppEnv>();
@@ -57,6 +58,16 @@ export function circleRoutes({ services }: RouteDeps) {
   routes.post(CIRCLES_API.invite, signedIn, (c) =>
     c.json(circles.invite(c.var.account.id, c.req.param("id")) satisfies CircleInvite, 201),
   );
+
+  routes.post(CIRCLES_API.merge, signedIn, async (c) => {
+    const { into, keepNameOf } = await readBody(
+      c,
+      MergeCirclesRequest,
+      "Choisis le cercle à réunir et le nom à garder.",
+    );
+    circles.merge(c.var.account.id, c.req.param("id"), into, keepNameOf);
+    return c.json({ id: into } satisfies CreateCircleResponse);
+  });
 
   return routes;
 }

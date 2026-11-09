@@ -19,6 +19,8 @@ export const Circle = z.object({
   /** Séances watched in it. */
   evenings: z.number(),
   lastUsedAt: z.optional(z.number()),
+  /** Who last reunited two circles of the same people into this one, and when (« Darius a réuni vos deux cercles »). */
+  reunitedBy: z.optional(z.object({ ...Participant.shape, at: z.number() })),
 });
 export type Circle = z.infer<typeof Circle>;
 
@@ -51,7 +53,15 @@ export const CIRCLES_API = {
   join: "/api/me/circles/join",
   preview: "/api/circles/invite/:token",
   order: "/api/me/circles/order",
+  merge: "/api/me/circles/:id/merge",
 } as const;
+
+/**
+ * Reunites the circle of the path into `into`, both of exactly the same people;
+ * the name kept is the one of `keepNameOf`, either of the two (none if it has none).
+ */
+export const MergeCirclesRequest = z.object({ into: z.string(), keepNameOf: z.string() });
+export type MergeCirclesRequest = z.infer<typeof MergeCirclesRequest>;
 
 /** The order someone puts their circles in (drag and drop on « Nous »), first to last; their own, nobody else's. */
 export const CircleOrderRequest = z.object({ ids: z.array(z.string()).check(z.maxLength(200)) });
@@ -93,4 +103,24 @@ export function othersIn(circle: Pick<Circle, "members">, me: string): Circle["m
 /** The circles in the order they are offered: the most recently used first, never-used ones last. */
 export function byRecentUse(circles: readonly Circle[]): Circle[] {
   return [...circles].sort((a, b) => (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0));
+}
+
+/** Whether two lists name exactly the same people, whatever their order. */
+export function sameMembers(a: readonly string[], b: readonly string[]): boolean {
+  const people = new Set(a);
+  return people.size === new Set(b).size && b.every((id) => people.has(id));
+}
+
+/**
+ * The pairs of circles made of exactly the same people (two « Léo et toi »
+ * after someone left a trio), in the order of the list: they can be reunited.
+ */
+export function twinCircles<T extends Pick<Circle, "id" | "members">>(circles: readonly T[]): [T, T][] {
+  const ids = (circle: T) => circle.members.map((person) => person.accountId);
+  return circles.flatMap((circle, index) =>
+    circles
+      .slice(index + 1)
+      .filter((other) => sameMembers(ids(circle), ids(other)))
+      .map((other): [T, T] => [circle, other]),
+  );
 }

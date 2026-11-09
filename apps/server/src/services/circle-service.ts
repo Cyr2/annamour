@@ -1,6 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { CIRCLE_INVITE_TTL_MS, type Circle, type CircleInvite, type CircleInvitePreview } from "@annamour/protocol";
-import { InvalidCircleInviteError, NotFoundError } from "../errors.ts";
+import {
+  CIRCLE_INVITE_TTL_MS,
+  type Circle,
+  type CircleInvite,
+  type CircleInvitePreview,
+  sameMembers,
+} from "@annamour/protocol";
+import { InvalidCircleInviteError, NameNotFromCirclesError, NotFoundError, NotTwinCirclesError } from "../errors.ts";
 import type { Repositories } from "../storage/repositories.ts";
 import { hashToken, randomToken } from "./secrets.ts";
 
@@ -18,7 +24,8 @@ const NOT_IN_CIRCLE = "Ce cercle n'existe plus, ou tu n'en fais plus partie.";
  * séance's circle never changes once set: anyone else who joins is a guest.
  * Leaving a séance's history
  * never takes anyone out of a circle. Two circles of the same people (after
- * someone leaves, or joins by invitation) become one.
+ * someone leaves, or joins by invitation) stay two until someone in them
+ * chooses to reunite them.
  */
 export class CircleService {
   private readonly repositories: CircleServiceOptions["repositories"];
@@ -55,7 +62,6 @@ export class CircleService {
   leave(accountId: string, circleId: string): void {
     this.requireMember(accountId, circleId);
     this.repositories.circles.removeMember(circleId, accountId);
-    this.mergeIntoTwin(circleId);
   }
 
   invite(accountId: string, circleId: string): CircleInvite {
@@ -75,7 +81,25 @@ export class CircleService {
   join(accountId: string, token: string): string {
     const circleId = this.circleOf(token);
     this.repositories.circles.addMember(circleId, accountId, this.now());
-    return this.mergeIntoTwin(circleId);
+    return circleId;
+  }
+
+  /**
+   * Reunites two circles of exactly the same people, by the choice of one of them: everything of
+   * `fromId` goes into `intoId` (séances keep who was there), under the name of `keepNameOf`.
+   */
+  merge(accountId: string, fromId: string, intoId: string, keepNameOf: string): void {
+    const { circles } = this.repositories;
+    this.requireMember(accountId, fromId);
+    this.requireMember(accountId, intoId);
+    if (fromId === intoId || !sameMembers(circles.memberIds(fromId), circles.memberIds(intoId))) {
+      throw new NotTwinCirclesError();
+    }
+    if (keepNameOf !== fromId && keepNameOf !== intoId) throw new NameNotFromCirclesError();
+    const name = circles.name(keepNameOf);
+    circles.merge(fromId, intoId);
+    circles.rename(intoId, name);
+    circles.markReunited(intoId, accountId, this.now());
   }
 
   /** Puts a séance just created from a circle in it. */
@@ -105,19 +129,6 @@ export class CircleService {
     }
     circles.setRoomCircle(code, existing ?? this.newCircle(people));
     if (forming) circles.remove(forming);
-  }
-
-  /**
-   * A circle that became the same people as another one joins it, so nobody sees two « Annou et toi »;
-   * returns the circle left. Its séances keep who was there, people since gone included.
-   */
-  private mergeIntoTwin(circleId: string): string {
-    const { circles } = this.repositories;
-    const people = circles.memberIds(circleId);
-    const twin = people.length >= 2 ? circles.findByMembers(people, circleId) : undefined;
-    if (!twin) return circleId;
-    circles.merge(circleId, twin);
-    return twin;
   }
 
   private grow(circleId: string, people: readonly string[]): void {
