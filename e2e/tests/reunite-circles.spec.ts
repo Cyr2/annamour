@@ -1,6 +1,6 @@
 import { join } from "node:path";
-import { expect, type Page, test } from "@playwright/test";
-import { createSession, onboard, person } from "./helpers.ts";
+import { expect, type Page } from "@playwright/test";
+import { createSession, onboard, person, test } from "./helpers.ts";
 
 /** With E2E_SHOTS set, keeps a picture of each step in e2e/dist (ignored by git). */
 const shot = async (page: Page, name: string) => {
@@ -21,26 +21,29 @@ test("deux cercles devenus identiques se réunissent sur demande, et les autres 
   const leo = await person(browser);
   await onboard(darius, "Darius");
 
-  // Darius and Annou watch once together, then once with Léo.
+  // Darius and Annou watch once together: their circle forms by itself.
   const duo = await createSession(darius, "Rien que nous");
   await onboard(annou, "Annou", duo);
   await expect(darius.getByRole("heading", { name: "Annou est là" })).toBeVisible();
-  await darius.goto("/");
-  const trio = await createSession(darius, "Avec Léo");
-  await annou.goto(trio);
-  await onboard(leo, "Léo", trio);
+  await onboard(leo, "Léo");
   const circlesOf = async (page: Page) =>
     ((await (await page.request.get("/api/me/circles")).json()) as CircleList).circles;
-  await expect.poll(async () => (await circlesOf(darius)).some((c) => c.members.length === 3)).toBe(true);
 
-  // The trio gets a name, then Léo leaves it: two circles of the same two people.
-  const trioCircle = (await circlesOf(darius)).find((c) => c.members.length === 3);
-  await darius.request.patch(`/api/me/circles/${trioCircle?.id}`, { data: { name: "Les potes du jeudi" } });
-  expect((await leo.request.delete(`/api/me/circles/${trioCircle?.id}`)).status()).toBe(204);
+  // Darius makes « Les potes du jeudi » and invites Annou and Léo (a séance's circle is fixed: Léo
+  // joining theirs would only be a guest), then Léo leaves it: two circles of the same two people.
+  const created = await darius.request.post("/api/me/circles", { data: { name: "Les potes du jeudi" } });
+  const { id } = (await created.json()) as { id: string };
+  const { token } = (await (await darius.request.post(`/api/me/circles/${id}/invite`)).json()) as { token: string };
+  for (const someone of [annou, leo])
+    expect((await someone.request.post("/api/me/circles/join", { data: { token } })).status()).toBe(200);
+  expect((await leo.request.delete(`/api/me/circles/${id}`)).status()).toBe(204);
 
   await darius.goto("/nous");
   const offer = darius.getByRole("region", { name: "Deux cercles identiques" });
-  await expect(offer).toContainText("« Les potes du jeudi » et « Annou et toi », c'est maintenant le même cercle.");
+  // The two names come in the order of « Nous », whichever it is.
+  await expect(offer).toContainText("c'est maintenant le même cercle.");
+  await expect(offer).toContainText("« Les potes du jeudi »");
+  await expect(offer).toContainText("« Annou et toi »");
   await shot(darius, "1-carte-les-reunir");
 
   // « ⋯ » offers the same, as long as another circle has the same people.
