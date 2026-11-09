@@ -1,6 +1,7 @@
 import type { Member, PlaybackState } from "@annamour/protocol";
 import { describe, expect, it } from "vitest";
 import { describePlaybackEvent } from "./playback-notice.ts";
+import { tapToggles } from "./player-keys.ts";
 import { audibleLevel, supportsVolumeControl, toggledMute, useVolume, withLevel } from "./volume.ts";
 
 const anna: Member = { id: "m2", name: "Anna", color: "lilac", buffering: false };
@@ -126,5 +127,22 @@ describe("volume", () => {
     useVolume.getState().toggleMute();
     expect(useVolume.getState()).toMatchObject({ level: 0.25, muted: true });
     expect(JSON.parse(localStorage.getItem("annamour:volume:v1") ?? "{}")).toEqual({ level: 0.25, muted: true });
+  });
+});
+
+describe("a tap on the film", () => {
+  const onFilm = { onSurface: true, controlsHidden: false };
+
+  it("plays or pauses for everyone when the controls are in sight", () => {
+    expect(tapToggles(onFilm, true)).toBe(true);
+  });
+
+  it("only brings the hidden controls back, without pausing anyone", () => {
+    expect(tapToggles({ ...onFilm, controlsHidden: true }, true)).toBe(false);
+  });
+
+  it("ignores a drag that began on a control or ended off the film", () => {
+    expect(tapToggles({ ...onFilm, onSurface: false }, true)).toBe(false);
+    expect(tapToggles(onFilm, false)).toBe(false);
   });
 });

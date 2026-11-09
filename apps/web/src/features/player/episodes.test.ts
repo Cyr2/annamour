@@ -1,7 +1,15 @@
 import type { SessionSummary } from "@annamour/protocol";
 import { describe, expect, it } from "vitest";
 import { resumeKicker, sessionTitle } from "../sessions/session-rules.ts";
-import { endTitle, episodeEndOf, episodeName, episodeState, secondsLeft, suggestedLabel } from "./episode-rules.ts";
+import {
+  endTitle,
+  episodeEndOf,
+  episodeName,
+  episodeState,
+  queueTitle,
+  secondsLeft,
+  suggestedLabel,
+} from "./episode-rules.ts";
 import { timelineKeyTarget } from "./seek.ts";
 
 const room = { finished: false, countdownUntil: null, current: 0, episodes: [{}, { label: "É2" }] };
@@ -56,8 +64,17 @@ describe("the « Épisodes » list", () => {
 
 describe("episode names", () => {
   it("uses the label, or the episode's number without one", () => {
-    expect(episodeName(room.episodes, 1)).toBe("É2");
-    expect(episodeName(room.episodes, 0)).toBe("Épisode 1");
+    expect(episodeName(room.episodes, 1, "The Bear")).toBe("É2");
+    expect(episodeName(room.episodes, 0, "The Bear")).toBe("Épisode 1");
+  });
+
+  it("names a séance of a single film by its title, not « Épisode 1 »", () => {
+    expect(episodeName([{}], 0, "Interstellar")).toBe("Interstellar");
+  });
+
+  it("calls the queue « Épisodes » for a series only", () => {
+    expect(queueTitle(1)).toBe("File");
+    expect(queueTitle(2)).toBe("Épisodes");
   });
 
   it("suggests the label after the last one queued", () => {

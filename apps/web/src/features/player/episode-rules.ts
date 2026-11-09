@@ -26,9 +26,19 @@ export function episodeState(index: number, current: number): EpisodeState {
   return index < current ? "watched" : "upcoming";
 }
 
-/** « S2 · É5 », or « Épisode 5 » for an episode without a label. */
-export function episodeName(episodes: readonly EpisodeInfo[], index: number): string {
-  return episodes[index]?.label ?? `Épisode ${index + 1}`;
+/**
+ * « S2 · É5 », or for a video without a label: « Épisode 5 » in a series, the
+ * séance's own title when it is a single film.
+ */
+export function episodeName(episodes: readonly EpisodeInfo[], index: number, title: string): string {
+  const label = episodes[index]?.label;
+  if (label) return label;
+  return episodes.length > 1 ? `Épisode ${index + 1}` : title;
+}
+
+/** The heading of the list of what the séance plays: « Épisodes » for a series, « File » for a single film. */
+export function queueTitle(episodeCount: number): string {
+  return episodeCount > 1 ? "Épisodes" : "File";
 }
 
 /** The label offered for the episode after the last one queued. */

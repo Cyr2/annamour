@@ -141,6 +141,8 @@
   --am-touch-target: 44px;
   /* Height of the floating tab bar and the gap above it: screens pad their bottom by this while it shows. */
   --am-tab-bar-room: 86px;
+  /* Height of a screen's top bar (back button, title, code) and a gap: toasts come down below it. */
+  --am-top-bar-room: 56px;
 
   /* ---- Shadows (tinted by the night, never grey) ---- */
   --am-shadow-float: 0 12px 40px -12px rgb(6 4 12 / 0.7);
@@ -192,6 +194,7 @@ html[data-tv] {
   --am-tv-safe-x: 5vw;
   --am-tv-safe-y: 5vh;
   --am-tab-bar-room: 0px;
+  --am-top-bar-room: 4rem;
   --am-tv-focus: var(--am-milk);
   --am-tv-ring: 0.25rem;
   --am-tv-ring-offset: 0.25rem;

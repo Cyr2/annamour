@@ -82,6 +82,11 @@ describe("what the watchlist says", () => {
     expect(rules.peopleOf([film], "darius", new Set())).toEqual([]);
   });
 
+  it("keeps under a poster only the year and the length, which fit its width", () => {
+    expect(rules.posterLine({ ...film.title, runtime: 169 })).toBe("2014 · 2 h 49");
+    expect(rules.posterLine({ id: 2, type: "tv", title: "The Bear", year: 2022, seasons: 3 })).toBe("2022 · 3 saisons");
+  });
+
   it("says who added it, who sees it and who wants it", () => {
     expect(rules.itemLine(film, "darius")).toBe("Film · 2014 · ajouté par Léa");
     expect(rules.itemLine(film, "lea")).toBe("Film · 2014 · ajouté par toi");

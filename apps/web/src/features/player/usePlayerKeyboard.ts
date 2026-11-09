@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { keyAction, type PlayerKeys } from "./player-keys.ts";
+import { keyAction, type PlayerKeys, type SurfacePress, tapToggles } from "./player-keys.ts";
 
 /** Wires the player shortcuts to the window while the film is on screen; ignored while typing in a field. */
 export function usePlayerKeyboard(active: boolean, keys: PlayerKeys): void {
@@ -23,18 +23,18 @@ export function usePlayerKeyboard(active: boolean, keys: PlayerKeys): void {
 
 /**
  * A tap or click on the film itself (not on a control) plays or pauses, for
- * everyone. Only when the press also began on the film: a drag that starts on
- * the scrubber and ends over the picture is not a tap.
+ * everyone, once the controls are in sight (see tapToggles). The press is read
+ * before the window wakes the controls, so a first tap only brings them back.
  */
-export function useSurfaceTap(onTap: () => void) {
-  const pressedOnSurface = useRef(false);
+export function useSurfaceTap(onTap: () => void, controlsHidden: boolean) {
+  const press = useRef<SurfacePress>({ onSurface: false, controlsHidden: false });
   return {
     onPointerDown: (event: { target: EventTarget; currentTarget: EventTarget }) => {
-      pressedOnSurface.current = event.target === event.currentTarget;
+      press.current = { onSurface: event.target === event.currentTarget, controlsHidden };
     },
     onClick: (event: { target: EventTarget; currentTarget: EventTarget }) => {
-      if (pressedOnSurface.current && event.target === event.currentTarget) onTap();
-      pressedOnSurface.current = false;
+      if (tapToggles(press.current, event.target === event.currentTarget)) onTap();
+      press.current = { onSurface: false, controlsHidden: false };
     },
   };
 }

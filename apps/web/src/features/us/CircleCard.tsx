@@ -64,15 +64,18 @@ export function CircleCard({ circle, me, onMove, canMoveUp, canMoveDown, onDrop 
       <Surface className="surface-panel grid gap-4 p-5">
         <CircleThread circle={circle} me={me} />
         <div className="flex items-center gap-2">
-          {/* Only the handle starts a drag: the rest of the card scrolls the page and takes taps. */}
-          <button
-            type="button"
-            aria-label={`Déplacer « ${title} »`}
-            onPointerDown={(event) => drag.start(event)}
-            className="-ml-2 grid size-11 shrink-0 cursor-grab touch-none place-items-center rounded-full text-fg-muted active:cursor-grabbing"
-          >
-            <GripVertical aria-hidden className="size-5" />
-          </button>
+          {/* Only the handle starts a drag: the rest of the card scrolls the page and takes taps.
+              A lone circle has nowhere to go: no handle then. */}
+          {canMoveUp || canMoveDown ? (
+            <button
+              type="button"
+              aria-label={`Déplacer « ${title} »`}
+              onPointerDown={(event) => drag.start(event)}
+              className="-ml-2 grid size-11 shrink-0 cursor-grab touch-none place-items-center rounded-full text-fg-muted active:cursor-grabbing"
+            >
+              <GripVertical aria-hidden className="size-5" />
+            </button>
+          ) : null}
           <div className="grid min-w-0 flex-1">
             <strong className="truncate font-rounded-tight text-md font-extrabold text-fg">{title}</strong>
             <Link

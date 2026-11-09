@@ -61,7 +61,7 @@ function useEpisodeNotices(): void {
         const event = state.episodeEvent;
         if (!event || event === before.episodeEvent || !state.room || !event.by || event.by === state.you) return;
         const who = memberById(state.members, event.by);
-        const episode = episodeName(state.room.episodes, state.room.current);
+        const episode = episodeName(state.room.episodes, state.room.current, state.room.media.title);
         toast({ message: `${who?.name ?? "Quelqu'un"} lance ${episode}`, color: who?.color, name: who?.name });
       }),
     [],

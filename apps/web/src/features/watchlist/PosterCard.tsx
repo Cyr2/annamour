@@ -6,6 +6,7 @@ import { BubbleStack } from "../../ui/BubbleStack.tsx";
 import { cx } from "../../ui/cx.ts";
 import { Poster } from "../../ui/Poster.tsx";
 import { describeTitle } from "../home/create/CatalogResults.tsx";
+import { posterLine } from "./watchlist-rules.ts";
 
 interface PosterCardProps {
   item: WatchlistItem;
@@ -40,7 +41,7 @@ export function PosterCard({ item, me, onPick, onWant, hint }: PosterCardProps) 
         </span>
         <span className="grid gap-0.5 px-0.5">
           <span className="truncate text-sm font-semibold text-fg">{item.title.title}</span>
-          <span className="truncate text-xs text-fg-muted">{describeTitle(item.title)}</span>
+          <span className="truncate text-xs text-fg-muted">{posterLine(item.title)}</span>
         </span>
       </button>
       {onWant ? (
