@@ -63,9 +63,12 @@ export type CircleOrderRequest = z.infer<typeof CircleOrderRequest>;
  */
 export function circleTitle(circle: Pick<Circle, "name" | "members">, me: string): string {
   if (circle.name) return circle.name;
+  const inIt = circle.members.some((person) => person.accountId === me);
   const others = circle.members.filter((person) => person.accountId !== me).map((person) => person.name);
   if (others.length === 0) return "Juste toi";
-  const names = [...others, "toi"];
+  // Someone not in it yet (an invitation) reads its people, without « toi ».
+  const names = inIt ? [...others, "toi"] : others;
+  if (names.length === 1) return names[0] ?? "";
   return `${names.slice(0, -1).join(", ")} et ${names.at(-1)}`;
 }
 

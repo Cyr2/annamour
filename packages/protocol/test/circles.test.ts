@@ -18,6 +18,9 @@ describe("a circle's name", () => {
     expect(circleTitle(circle("c1"), "darius")).toBe("Annou et toi");
     expect(circleTitle(circle("c2", { members: [me, leo, ines] }), "darius")).toBe("Léo, Inès et toi");
     expect(circleTitle(circle("c3", { members: [me] }), "darius")).toBe("Juste toi");
+    // Someone invited, not in it yet, reads its people, not « et toi ».
+    expect(circleTitle(circle("c4", { members: [me, leo] }), "zoe")).toBe("Darius et Léo");
+    expect(circleTitle(circle("c5", { members: [me] }), "zoe")).toBe("Darius");
   });
 
   it("takes the name its people gave it", () => {
