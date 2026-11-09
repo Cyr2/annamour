@@ -3,8 +3,8 @@ import { ChevronLeft, Plus } from "lucide-react";
 import { Button } from "../../../ui/controls.tsx";
 import { Sheet } from "../../../ui/Sheet.tsx";
 import { ResumeSeanceAction } from "../../sessions/ResumeSeanceAction.tsx";
+import { SeancePoster } from "../../sessions/SeancePoster.tsx";
 import { sessionTitle } from "../../sessions/session-rules.ts";
-import { SeancePoster } from "../../tonight/SeancePoster.tsx";
 
 interface ExistingSeanceStepProps {
   session: SessionSummary;

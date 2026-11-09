@@ -1,4 +1,4 @@
-import { type SessionSummary, sortWatchlist, splitWatchlist } from "@annamour/protocol";
+import { sortWatchlist, splitWatchlist } from "@annamour/protocol";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearch } from "wouter";
@@ -9,9 +9,7 @@ import { toast } from "../../ui/toast.ts";
 import { useAccount } from "../account/account.ts";
 import { ofCircle } from "../circles/circle-rules.ts";
 import { loadCircles, useShownCircle } from "../circles/circles.ts";
-import { SessionRow } from "../profile/SessionRow.tsx";
-import { splitByStatus } from "../sessions/session-rules.ts";
-import { leaveSession, useSessions } from "../sessions/sessions.ts";
+import { useSessions } from "../sessions/sessions.ts";
 import { useLoadSessions } from "../sessions/useLoadSessions.ts";
 import { AddToWatchlistSheet } from "../watchlist/AddToWatchlistSheet.tsx";
 import { useLoadWatchlist } from "../watchlist/useLoadWatchlist.ts";
@@ -31,7 +29,7 @@ export function OurListScreen() {
   const me = useAccount((s) => s.account?.id ?? "");
   const circle = useShownCircle();
   const items = useWatchlist((s) => s.items);
-  const sessions = useSessions((s) => s.sessions);
+  const _sessions = useSessions((s) => s.sessions);
   const [adding, setAdding] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const watchedPage = new URLSearchParams(useSearch()).has("vus");
@@ -40,7 +38,6 @@ export function OurListScreen() {
     () => splitWatchlist(sortWatchlist(ofCircle(items, circle, me), "wants")),
     [items, circle, me],
   );
-  const finished = useMemo(() => splitByStatus(ofCircle(sessions, circle, me)).finished, [sessions, circle, me]);
   const handlers: PosterHandlers = {
     me,
     onPick: (item) => setOpenId(item.id),
@@ -63,7 +60,7 @@ export function OurListScreen() {
             <LinkButton href="/liste" icon={<ChevronLeft />} className="justify-self-start">
               À voir
             </LinkButton>
-            <Watched handlers={handlers} items={titles.watched} sessions={finished} />
+            <Watched handlers={handlers} items={titles.watched} />
           </>
         ) : (
           <>
@@ -80,7 +77,7 @@ export function OurListScreen() {
                 <p className="px-1 text-sm text-fg-muted">Rien à voir pour l'instant : ajoutez un film ou une série.</p>
               )}
             </section>
-            <WatchedLink count={titles.watched.length + finished.length} />
+            <WatchedLink count={titles.watched.length} />
           </>
         )}
       </main>
@@ -104,39 +101,28 @@ function WatchedLink({ count }: { count: number }) {
   );
 }
 
-type Me = { id: string; name: string; color: SessionSummary["participants"][number]["color"] };
-
+/** « Déjà vus ensemble »: the titles watched. The séances themselves, over or not, live in « Séances ». */
 function Watched({
   handlers,
   items,
-  sessions,
 }: {
   handlers: PosterHandlers;
   items: ReturnType<typeof splitWatchlist>["watched"];
-  sessions: SessionSummary[];
 }) {
-  const account = useAccount((s) => s.account);
-  if (items.length === 0 && sessions.length === 0) {
-    return <p className="px-1 text-sm text-fg-muted">Rien de vu pour l'instant.</p>;
-  }
-  const me: Me | null = account ? { id: account.id, name: account.name, color: account.color } : null;
-  const now = Date.now();
   return (
     <div className="grid gap-6">
-      {items.length ? <PosterGrid items={items} label="Titres vus" {...handlers} /> : null}
-      {sessions.length && me ? (
-        <ul className="grid gap-2.5" aria-label="Séances terminées">
-          {sessions.map((session) => (
-            <SessionRow
-              key={session.code}
-              session={session}
-              me={me}
-              now={now}
-              onRemove={(s) => void leaveSession(s.code).catch((failure: Error) => toast({ message: failure.message }))}
-            />
-          ))}
-        </ul>
-      ) : null}
+      {items.length ? (
+        <PosterGrid items={items} label="Titres vus" {...handlers} />
+      ) : (
+        <p className="px-1 text-sm text-fg-muted">Rien de vu pour l'instant.</p>
+      )}
+      <Link
+        href="/seances"
+        className="surface-tile flex min-h-14 items-center gap-3 px-4 text-sm font-semibold text-fg"
+      >
+        <span className="flex-1">Les séances terminées</span>
+        <ChevronRight aria-hidden className="size-4 text-fg-muted" />
+      </Link>
     </div>
   );
 }

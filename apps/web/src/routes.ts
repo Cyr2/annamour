@@ -14,6 +14,7 @@ const loaders = {
   profile: () => import("./features/profile/ProfileScreen.tsx"),
   list: () => import("./features/list/OurListScreen.tsx"),
   us: () => import("./features/us/UsScreen.tsx"),
+  seances: () => import("./features/seances/SeancesScreen.tsx"),
   joinCircle: () => import("./features/us/JoinCircleScreen.tsx"),
   session: () => import("./features/session/SessionScreen.tsx"),
   report: () => import("./features/report/ReportScreen.tsx"),
@@ -36,6 +37,7 @@ export const JoinScreen = lazy(() => loaders.join().then((m) => ({ default: m.Jo
 export const ProfileScreen = lazy(() => loaders.profile().then((m) => ({ default: m.ProfileScreen })));
 export const OurListScreen = lazy(() => loaders.list().then((m) => ({ default: m.OurListScreen })));
 export const UsScreen = lazy(() => loaders.us().then((m) => ({ default: m.UsScreen })));
+export const SeancesScreen = lazy(() => loaders.seances().then((m) => ({ default: m.SeancesScreen })));
 export const JoinCircleScreen = lazy(() => loaders.joinCircle().then((m) => ({ default: m.JoinCircleScreen })));
 export const SessionScreen = lazy(() => loaders.session().then((m) => ({ default: m.SessionScreen })));
 export const ReportScreen = lazy(() => loaders.report().then((m) => ({ default: m.ReportScreen })));

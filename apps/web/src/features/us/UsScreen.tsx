@@ -1,7 +1,8 @@
 import type { Circle } from "@annamour/protocol";
-import { Plus } from "lucide-react";
+import { ChevronRight, Clapperboard, Plus } from "lucide-react";
 import { Reorder } from "motion/react-m";
 import { useEffect, useState } from "react";
+import { Link } from "wouter";
 import { offersPlayerChoice } from "../../sync/player-choice.ts";
 import { BrandFooter } from "../../ui/BrandFooter.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
@@ -14,6 +15,8 @@ import { loadCircles, previewCircleOrder, reorderCircles, useCircles } from "../
 import { AccountCard } from "../profile/AccountCard.tsx";
 import { MeCard } from "../profile/MeCard.tsx";
 import { PlayerChoiceCard } from "../profile/PlayerChoiceCard.tsx";
+import { useSessions } from "../sessions/sessions.ts";
+import { useLoadSessions } from "../sessions/useLoadSessions.ts";
 import { CircleCard } from "./CircleCard.tsx";
 import { NameCircleSheet } from "./NameCircleSheet.tsx";
 
@@ -76,6 +79,7 @@ function Circles({ me, onCreate }: { me: string; onCreate: () => void }) {
         </p>
       ) : null}
       <CircleList circles={circles} me={me} />
+      <AllSeancesLink />
     </section>
   );
 }
@@ -102,5 +106,21 @@ function CircleList({ circles, me }: { circles: Circle[]; me: string }) {
         ))}
       </Reorder.Group>
     </LayoutMotion>
+  );
+}
+
+/** Every séance, whatever the circle: under way, then over. */
+function AllSeancesLink() {
+  useLoadSessions();
+  const count = useSessions((s) => s.sessions.length);
+  return (
+    <Link
+      href="/seances"
+      className="surface-tile mt-1 flex min-h-14 items-center gap-3 px-4 text-sm font-semibold text-fg"
+    >
+      <Clapperboard aria-hidden className="size-5 text-fg-muted" />
+      <span className="flex-1">Toutes mes séances{count ? ` · ${count}` : ""}</span>
+      <ChevronRight aria-hidden className="size-4 text-fg-muted" />
+    </Link>
   );
 }

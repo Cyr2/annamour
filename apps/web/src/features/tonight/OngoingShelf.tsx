@@ -1,19 +1,28 @@
 import type { SessionSummary } from "@annamour/protocol";
-import { Play } from "lucide-react";
+import { ChevronRight, Play } from "lucide-react";
 import { Link } from "wouter";
 import { sessionPath } from "../../sync/restart.ts";
 import { SeanceOptions } from "../sessions/SeanceOptions.tsx";
+import { SeancePoster } from "../sessions/SeancePoster.tsx";
 import { companionsLabel, remainingLabel, sessionTitle } from "../sessions/session-rules.ts";
-import { SeancePoster } from "./SeancePoster.tsx";
 
 /** « Autres en cours »: the séances left unfinished besides the one offered first, as posters like the list's. */
 export function OngoingShelf({ sessions }: { sessions: SessionSummary[] }) {
   if (sessions.length === 0) return null;
   return (
     <section className="grid gap-1" aria-labelledby="ongoing-title">
-      <h2 id="ongoing-title" className="type-heading px-1">
-        Autres en cours
-      </h2>
+      <div className="flex items-center justify-between gap-3 px-1">
+        <h2 id="ongoing-title" className="type-heading">
+          Autres en cours
+        </h2>
+        <Link
+          href="/seances?depuis=soir"
+          className="flex min-h-11 items-center gap-1 text-sm font-semibold text-accent"
+        >
+          Toutes les séances
+          <ChevronRight aria-hidden className="size-4" />
+        </Link>
+      </div>
       <ul className="-mx-1 flex gap-3 overflow-x-auto px-1 py-2 [scrollbar-width:none]">
         {sessions.map((session) => (
           <li key={session.code} className="relative w-[7.5rem] shrink-0">

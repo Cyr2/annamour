@@ -1,8 +1,9 @@
 import { type Circle, circleTitle } from "@annamour/protocol";
-import { Ellipsis, GripVertical, UserPlus } from "lucide-react";
+import { ChevronRight, Ellipsis, GripVertical, UserPlus } from "lucide-react";
 import { useDragControls } from "motion/react";
 import { Reorder } from "motion/react-m";
 import { useState } from "react";
+import { Link } from "wouter";
 import { inviteToCircle, inviteUrl } from "../../api/circles.ts";
 import { errorMessage } from "../../api/http.ts";
 import { plural } from "../../lib/format.ts";
@@ -70,7 +71,13 @@ export function CircleCard({ circle, me, onMove, canMoveUp, canMoveDown, onDrop 
           </button>
           <div className="grid min-w-0 flex-1">
             <strong className="truncate font-rounded-tight text-md font-extrabold text-fg">{title}</strong>
-            <span className="truncate text-xs text-fg-muted">{plural(circle.evenings, "soirée")}</span>
+            <Link
+              href={`/seances?cercle=${circle.id}`}
+              className="flex min-h-11 items-center gap-0.5 self-start text-xs font-semibold text-accent"
+            >
+              {plural(circle.evenings, "séance")}
+              <ChevronRight aria-hidden className="size-3.5" />
+            </Link>
           </div>
           <IconButton label={`Inviter dans « ${title} »`} icon={<UserPlus />} variant="glass" onClick={invite} />
           {/* A sheet rather than a pop-up menu: easier to reach and never cut off on a phone. */}
