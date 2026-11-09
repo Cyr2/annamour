@@ -154,6 +154,10 @@ const MIGRATIONS: readonly string[] = [
   ALTER TABLE rooms ADD COLUMN created_by TEXT REFERENCES accounts (id) ON DELETE SET NULL;
   ALTER TABLE watchlist_items ADD COLUMN watched_by_room TEXT;
   `,
+  // Who marked a title « vu » by hand, so its sheet can say « Marqué vu par Léo » to the others.
+  `
+  ALTER TABLE watchlist_items ADD COLUMN watched_by_account TEXT REFERENCES accounts (id) ON DELETE SET NULL;
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

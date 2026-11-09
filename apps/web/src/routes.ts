@@ -10,6 +10,7 @@ const loaders = {
   welcome: () => import("./features/welcome/WelcomeScreen.tsx"),
   key: () => import("./features/welcome/KeyLoginScreen.tsx"),
   link: () => import("./features/welcome/LinkDeviceScreen.tsx"),
+  guest: () => import("./features/welcome/GuestWelcome.tsx"),
   join: () => import("./features/join/JoinScreen.tsx"),
   profile: () => import("./features/profile/ProfileScreen.tsx"),
   list: () => import("./features/list/OurListScreen.tsx"),
@@ -33,6 +34,7 @@ export function preloadRoute(name: RouteName): void {
 export const WelcomeScreen = lazy(() => loaders.welcome().then((m) => ({ default: m.WelcomeScreen })));
 export const KeyLoginScreen = lazy(() => loaders.key().then((m) => ({ default: m.KeyLoginScreen })));
 export const LinkDeviceScreen = lazy(() => loaders.link().then((m) => ({ default: m.LinkDeviceScreen })));
+export const GuestWelcome = lazy(() => loaders.guest().then((m) => ({ default: m.GuestWelcome })));
 export const JoinScreen = lazy(() => loaders.join().then((m) => ({ default: m.JoinScreen })));
 export const ProfileScreen = lazy(() => loaders.profile().then((m) => ({ default: m.ProfileScreen })));
 export const OurListScreen = lazy(() => loaders.list().then((m) => ({ default: m.OurListScreen })));

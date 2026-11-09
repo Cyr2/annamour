@@ -40,6 +40,11 @@ export function circleForNewSeance(): string | null {
   return shownCircle(useCircles.getState());
 }
 
+/** The circle a séance of this title goes to: the title's own, else the one on screen. */
+export function circleForTitle(item: { circleId?: string }): string | null {
+  return item.circleId ?? circleForNewSeance();
+}
+
 /** The circle on screen as a whole, members included; null for « Tout ». */
 export function useShownCircle(): Circle | null {
   return useCircles((s) => s.circles.find((circle) => circle.id === shownCircle(s)) ?? null);

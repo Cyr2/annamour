@@ -37,6 +37,15 @@ export class HistoryService {
     this.onParticipation(roomCode);
   }
 
+  /**
+   * Someone who watched as a guest, then made an account (« Garder cette séance »), keeps the
+   * séance they were in. Knowing its code is what joining asks anyway: nothing more is revealed.
+   */
+  keep(roomCode: string, accountId: string): void {
+    if (!this.repositories.rooms.exists(roomCode)) throw new NotFoundError("Cette séance n'existe plus.");
+    this.recordParticipation(roomCode, accountId);
+  }
+
   list(accountId: string): SessionSummary[] {
     const companions = this.repositories.participations.companions(accountId);
     const queues = this.repositories.participations.queues(accountId);

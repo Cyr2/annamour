@@ -10,7 +10,9 @@ import { plural } from "../../lib/format.ts";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import { toast } from "../../ui/toast.ts";
+import { seanceCount } from "../circles/circle-rules.ts";
 import { leaveCircle } from "../circles/circles.ts";
+import { useSessions } from "../sessions/sessions.ts";
 import { CircleOptionsSheet } from "./CircleOptionsSheet.tsx";
 import { CircleThread } from "./CircleThread.tsx";
 import { NameCircleSheet } from "./NameCircleSheet.tsx";
@@ -48,6 +50,8 @@ export function CircleCard({ circle, me, onMove, canMoveUp, canMoveDown, onDrop 
   const [options, setOptions] = useState(false);
   const drag = useDragControls();
   const title = circleTitle(circle, me);
+  // The very séances « Séances » lists for this circle, once mine are loaded.
+  const count = useSessions((s) => seanceCount(circle, s.status === "ready" ? s.sessions : null, me));
   const invite = () =>
     void shareInvite(circle, me).catch((failure: unknown) => toast({ message: errorMessage(failure) }));
   const leave = () =>
@@ -75,7 +79,7 @@ export function CircleCard({ circle, me, onMove, canMoveUp, canMoveDown, onDrop 
               href={`/seances?cercle=${circle.id}`}
               className="flex min-h-11 items-center gap-0.5 self-start text-xs font-semibold text-accent"
             >
-              {plural(circle.evenings, "séance")}
+              {plural(count, "séance")}
               <ChevronRight aria-hidden className="size-3.5" />
             </Link>
           </div>

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { spring } from "../../lib/motion.ts";
 import type { SyncClient } from "../../sync/SyncClient.ts";
 import { BubbleStack } from "../../ui/BubbleStack.tsx";
+import { KeepSeanceLink } from "../account/KeepSeanceLink.tsx";
 import { primaryIn } from "../tv/focus-engine.ts";
 import { useTv } from "../tv/tv-context.ts";
 import { LeaveAction, TogetherActions } from "./EndActions.tsx";
@@ -74,6 +75,7 @@ export function EpisodeEndScreen({ end, room, client, onWatchAgain, onAddNext }:
         {end === "nothing-next" ? <MarkSeriesWatched room={room} /> : null}
         <LeaveAction othersStay={room.members.length > 1} />
       </div>
+      <KeepSeanceLink code={room.code} />
     </m.div>
   );
 }
