@@ -43,13 +43,20 @@ export class RoomService {
 
   /**
    * Queues the next episode of a séance, imported like a new séance. Without
-   * a label it follows the last one's (« É5 » → « É6 »). Returns its index.
+   * a label it follows the last one's (« É5 » → « É6 »). The others are told
+   * who added it, when `byClientId` is a device in the séance. Returns its index.
    */
-  async addEpisode(code: string, url: URL, label: string | undefined, catalog?: CatalogRef): Promise<number> {
+  async addEpisode(
+    code: string,
+    url: URL,
+    label: string | undefined,
+    catalog?: CatalogRef,
+    byClientId?: string,
+  ): Promise<number> {
     const room = this.roomAcceptingEpisode(code);
     const imported = await importHls(url, this.options.fetchText);
     const name = label ?? nextEpisodeLabel(room.lastEpisodeLabel, room.episodeCount);
-    const index = this.options.store.addEpisode(room, name, imported, catalog);
+    const index = this.options.store.addEpisode(room, name, imported, catalog, byClientId);
     this.options.onEpisodeAdded?.(code);
     return index;
   }

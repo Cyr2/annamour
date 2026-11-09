@@ -57,6 +57,8 @@
    * a soft highlight from the top, and a hairline rim lit from the top left.
    */
   --am-frost: rgb(29 24 40 / 0.6);
+  /* The same glass without its live blur (touch screens, TV): denser, so the stars don't show through sharp. */
+  --am-frost-dense: rgb(29 24 40 / 0.86);
   --am-frost-blur: 22px;
   --am-frost-saturate: 1.6;
   --am-frost-sheen: linear-gradient(180deg, rgb(246 242 250 / 0.055), transparent 38%);
@@ -141,6 +143,8 @@
   --am-touch-target: 44px;
   /* Height of the floating tab bar and the gap above it: screens pad their bottom by this while it shows. */
   --am-tab-bar-room: 86px;
+  /* Height of a screen's top bar (back button, title, code) and a gap: toasts come down below it. */
+  --am-top-bar-room: 56px;
 
   /* ---- Shadows (tinted by the night, never grey) ---- */
   --am-shadow-float: 0 12px 40px -12px rgb(6 4 12 / 0.7);
@@ -192,6 +196,7 @@ html[data-tv] {
   --am-tv-safe-x: 5vw;
   --am-tv-safe-y: 5vh;
   --am-tab-bar-room: 0px;
+  --am-top-bar-room: 4rem;
   --am-tv-focus: var(--am-milk);
   --am-tv-ring: 0.25rem;
   --am-tv-ring-offset: 0.25rem;
@@ -202,7 +207,7 @@ html[data-tv] {
   --am-radius-panel: 1.75rem;
   --am-radius-sheet: 2.25rem;
   /* Glass without the live blur (a TV chip redraws it every frame): a denser tint, so the stars don't show through sharp. */
-  --am-frost: rgb(29 24 40 / 0.86);
+  --am-frost: var(--am-frost-dense);
   --lg-glass: rgb(29 24 40 / 0.78);
   --lg-glass-active: rgb(56 47 74 / 0.86);
 }

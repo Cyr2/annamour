@@ -66,7 +66,8 @@ export function KeyLoginScreen() {
 
   return (
     <div className="safe-area mx-auto flex min-h-dvh max-w-[1240px] flex-col">
-      <BrandBar start={<BackLink href="/bienvenue" />} />
+      {/* Back where this came from: the first launch, or the séance link's choice. */}
+      <BrandBar start={<BackLink href={next === "/" ? "/bienvenue" : next} />} />
       <main className="grid flex-1 place-items-center py-8 text-center">
         <form onSubmit={submit} className="grid w-[min(460px,100%)] justify-items-center gap-5" noValidate>
           <h1 className="type-title">J'ai déjà une clé</h1>
@@ -99,6 +100,10 @@ export function KeyLoginScreen() {
               {busy ? "Connexion…" : "Me connecter"}
             </Button>
           </div>
+          <p className="max-w-[36ch] text-xs text-pretty text-fg-subtle">
+            Ou, sur ton téléphone déjà connecté : Nous, puis « Ajouter un appareil », et scanne son QR code avec cet
+            appareil.
+          </p>
         </form>
       </main>
     </div>

@@ -78,8 +78,8 @@ function TitleBody({
   onOpenItem: (i: WatchlistItem) => void;
 }) {
   const { launch, busy, error } = useLaunchTitle();
-  // Under way in another circle already: go back to it rather than start it twice.
-  const ongoing = useSeanceOfTitle(item.title);
+  // Under way in this circle already: go back to it rather than start it twice.
+  const ongoing = useSeanceOfTitle(item.title, item.circleId);
   const wanters = item.sharedWith
     .filter((person) => item.wantedBy.includes(person.accountId))
     .map((person) => ({ id: person.accountId, name: person.name, color: person.color }));

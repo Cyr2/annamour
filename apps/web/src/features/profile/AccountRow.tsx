@@ -4,7 +4,7 @@ import { cx } from "../../ui/cx.ts";
 interface AccountRowProps {
   icon: ReactNode;
   title: string;
-  detail: string;
+  detail?: string;
   onClick?: () => void;
   /** Shown on the right, e.g. « Actif ». */
   trailing?: ReactNode;
@@ -30,7 +30,7 @@ export function AccountRow({ icon, title, detail, onClick, trailing, tone = "def
       </span>
       <span className="grid min-w-0 flex-1">
         <b className="text-sm font-semibold">{title}</b>
-        <small className="text-xs text-fg-muted">{detail}</small>
+        {detail ? <small className="text-xs text-fg-muted">{detail}</small> : null}
       </span>
       {trailing}
     </button>

@@ -68,8 +68,10 @@ export class CatalogService {
   async addEpisode(code: string, request: AddCatalogEpisodeRequest): Promise<number> {
     const { rooms } = this.options;
     rooms.roomAcceptingEpisode(code);
-    const url = await this.catalog().videoUrl(request);
-    return rooms.addEpisode(code, url, catalogLabel(request), withTrustedPoster(request));
+    // The device only names who added it: the title keeps nothing of it.
+    const { clientId, ...title } = request;
+    const url = await this.catalog().videoUrl(title);
+    return rooms.addEpisode(code, url, catalogLabel(title), withTrustedPoster(title), clientId);
   }
 
   private catalog(): Catalog {

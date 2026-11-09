@@ -1,11 +1,12 @@
 import { AnimatePresence } from "motion/react";
 import { useEffect } from "react";
-import { memberById, useRoom } from "../../sync/room.ts";
+import { useRoom } from "../../sync/room.ts";
 import type { SyncClient } from "../../sync/SyncClient.ts";
 import { toast } from "../../ui/toast.ts";
 import { EpisodeEndScreen } from "./EpisodeEndScreen.tsx";
 import { EpisodesSheet } from "./EpisodesSheet.tsx";
-import { episodeEndOf, episodeName } from "./episode-rules.ts";
+import { episodeEndOf } from "./episode-rules.ts";
+import { describeRoomChange } from "./playback-notice.ts";
 
 interface EpisodeLayerProps {
   /** The film is on screen (not the salon). */
@@ -53,16 +54,16 @@ export function useSkipNext(client: SyncClient | null): (() => void) | undefined
   return () => client.send({ type: "playEpisode", from: current, to: current + 1 });
 }
 
-/** « Anna lance Épisode 2 »: someone else moved the séance to another episode. */
+/** « Léo a lancé S1 · É3 », « Inès a retiré S1 · É4 de la file »: what someone else did to the séance's episodes. */
 function useEpisodeNotices(): void {
   useEffect(
     () =>
       useRoom.subscribe((state, before) => {
-        const event = state.episodeEvent;
-        if (!event || event === before.episodeEvent || !state.room || !event.by || event.by === state.you) return;
-        const who = memberById(state.members, event.by);
-        const episode = episodeName(state.room.episodes, state.room.current);
-        toast({ message: `${who?.name ?? "Quelqu'un"} lance ${episode}`, color: who?.color, name: who?.name });
+        const event = state.roomEvent;
+        if (!event || event === before.roomEvent || !state.room) return;
+        const { episodes, current } = state.room;
+        const notice = describeRoomChange({ ...event, episodes, current, members: state.members, you: state.you });
+        if (notice) toast({ message: notice.message, color: notice.member?.color, name: notice.member?.name });
       }),
     [],
   );

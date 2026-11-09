@@ -8,7 +8,7 @@ import {
   type WatchlistItem,
 } from "@annamour/protocol";
 import { joinNames } from "../../lib/format.ts";
-import { latestUnfinished } from "../sessions/session-rules.ts";
+import { latestUnfinished, seanceOfTitle } from "../sessions/session-rules.ts";
 
 /* What « Ce soir » and « Notre liste » show for a circle (null: all of them). */
 
@@ -19,18 +19,54 @@ const peopleOf = (entry: Entry) => ("participants" in entry ? entry.participants
 /**
  * Whether a séance or title belongs to a circle. One made before circles
  * existed has none: it goes with any circle holding someone it was shared or
- * watched with, and a séance watched alone with every circle, so nothing
- * vanishes from a list the day circles arrive.
+ * watched with, so nothing vanishes from a list the day circles arrive. A title
+ * kept for myself alone follows every circle; a séance watched alone has no
+ * circle on purpose (the server gives one as soon as someone joins), so it
+ * shows on « Tout » only.
  */
 function belongsTo(entry: Entry, circle: Circle, me: string): boolean {
   if (entry.circleId) return entry.circleId === circle.id;
   const others = peopleOf(entry).filter((person) => person.accountId !== me);
-  return others.length === 0 || others.some((person) => circle.members.some((m) => m.accountId === person.accountId));
+  if (others.length === 0) return !("participants" in entry);
+  return others.some((person) => circle.members.some((m) => m.accountId === person.accountId));
 }
 
 /** The séances or titles of one circle; everything for « Tout » (null). */
 export function ofCircle<T extends Entry>(list: readonly T[], circle: Circle | null, me: string): T[] {
   return circle === null ? [...list] : list.filter((entry) => belongsTo(entry, circle, me));
+}
+
+/**
+ * The séances a new one for `circleId` would sit beside: that circle's, or for
+ * « Quelqu'un d'autre » (null) those of no circle. A circle not loaded yet
+ * is matched by its id alone.
+ */
+export function seancesFor(
+  sessions: readonly SessionSummary[],
+  circleId: string | null,
+  circles: readonly Circle[],
+  me: string,
+): SessionSummary[] {
+  if (circleId === null) return sessions.filter((session) => !session.circleId);
+  const circle = circles.find((c) => c.id === circleId);
+  return circle ? ofCircle(sessions, circle, me) : sessions.filter((session) => session.circleId === circleId);
+}
+
+interface Target {
+  circleId: string | null;
+  sessions: readonly SessionSummary[];
+  circles: readonly Circle[];
+  me: string;
+}
+
+/** The séance under way for this title in the circle aimed at, to reopen rather than start a second one. */
+export function seanceToResume(title: { id: number; type: "movie" | "tv" }, target: Target): SessionSummary | null {
+  return seanceOfTitle(seancesFor(target.sessions, target.circleId, target.circles, target.me), title);
+}
+
+/** « N séances » of a circle on « Nous »: the very ones « Séances » lists for it, once my séances are loaded. */
+export function seanceCount(circle: Circle, sessions: readonly SessionSummary[] | null, me: string): number {
+  return sessions === null ? circle.evenings : ofCircle(sessions, circle, me).length;
 }
 
 export type TonightPick =

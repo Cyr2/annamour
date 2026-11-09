@@ -1,6 +1,6 @@
-import type { Participant, WatchlistItem } from "@annamour/protocol";
+import type { CatalogTitle, Participant, WatchlistItem } from "@annamour/protocol";
 import { joinNames, plural } from "../../lib/format.ts";
-import { describeTitle } from "../home/create/CatalogResults.tsx";
+import { describeTitle, titleFacts } from "../home/create/CatalogResults.tsx";
 import { relativeDay } from "../sessions/session-rules.ts";
 
 /* What the watchlist says, in French: who is in it, who wants what, who added it, when it was watched. */
@@ -25,6 +25,11 @@ export function wantsLabel(count: number): string {
   return plural(count, "envie");
 }
 
+/** « 2014 · 2 h 49 » under a poster: the type would cut the length off; the title's sheet says it. */
+export function posterLine(title: CatalogTitle): string {
+  return titleFacts(title).join(" · ");
+}
+
 /** « Film · 2024 · 2 h 10 · ajouté par Léo », « … · ajouté par toi ». */
 export function itemLine(item: WatchlistItem, me: string): string {
   const author = item.addedBy.accountId === me ? "toi" : item.addedBy.name;
@@ -36,15 +41,12 @@ function othersOf(item: WatchlistItem, me: string): string[] {
   return item.sharedWith.filter((person) => person.accountId !== me).map((person) => person.name);
 }
 
-/** « Pour toi, Léo et Inès »: who sees it. */
-export function audienceLine(item: WatchlistItem, me: string): string {
-  return `Pour ${joinNames(["toi", ...othersOf(item, me)])}`;
-}
-
-/** « Vu mardi avec Léo et Inès ». */
+/** « Vu mardi avec Léo et Inès »: the people of the séance that watched it, else everyone it is for. */
 export function watchedLine(item: WatchlistItem, me: string, now: number): string {
   const when = item.watchedAt === undefined ? "" : ` ${relativeDay(item.watchedAt, now).toLocaleLowerCase("fr")}`;
-  const others = othersOf(item, me);
+  const others = item.watchedWith
+    ? item.watchedWith.filter((person) => person.accountId !== me).map((person) => person.name)
+    : othersOf(item, me);
   return `Vu${when}${others.length ? ` avec ${joinNames(others)}` : ""}`;
 }
 
@@ -68,10 +70,10 @@ export function watchedHowLine(item: WatchlistItem, me: string, now: number): st
 const NAMED_AUDIENCE_MAX = 3;
 
 /**
- * For whom « C'est vu » and « Retirer » count: everyone who sees the title.
- * « Rien que pour toi », « Pour Léo et toi », « Pour tout le cercle », « Pour tout le monde ».
+ * Who sees the title, said once at the top of its sheet: « C'est vu » and « Retirer » count for them
+ * all. « Rien que pour toi », « Pour Léo et toi », « Pour tout le cercle », « Pour tout le monde ».
  */
-export function actionAudience(item: WatchlistItem, me: string): string {
+export function audienceLine(item: WatchlistItem, me: string): string {
   const others = othersOf(item, me);
   if (others.length === 0) return "Rien que pour toi";
   if (others.length <= NAMED_AUDIENCE_MAX) return `Pour ${joinNames([...others, "toi"])}`;
@@ -101,7 +103,7 @@ export function removedToast(item: WatchlistItem, me: string): string {
 
 function withAudience(done: string, item: WatchlistItem, me: string): string {
   if (!removalNeedsConfirmation(item, me)) return done;
-  const audience = actionAudience(item, me);
+  const audience = audienceLine(item, me);
   // Only its first letter: the names in it keep their capitals.
   return `${done} ${audience.charAt(0).toLocaleLowerCase("fr")}${audience.slice(1)}`;
 }

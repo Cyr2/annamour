@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import { BubbleColor, CatalogTitle, type WatchlistItem } from "@annamour/protocol";
+import { BubbleColor, CatalogTitle, type Participant, type WatchlistItem } from "@annamour/protocol";
 import { z } from "zod";
 import { changedRows, parseOptionalRow, parseRows } from "./rows.ts";
 
@@ -57,6 +57,11 @@ const PersonRow = z.object({
   wants: z.number(),
 });
 type PersonRow = z.infer<typeof PersonRow>;
+const WatcherRow = PersonRow.omit({ wants: true });
+
+function watchedWithOf(watchers: Participant[] | undefined): Pick<WatchlistItem, "watchedWith"> {
+  return watchers ? { watchedWith: watchers } : {};
+}
 
 /** The shared watchlist: each title, and the people who see it. */
 export class WatchlistRepository {
@@ -115,6 +120,22 @@ export class WatchlistRepository {
     return parseOptionalRow(z.object({ id: z.string() }), row)?.id;
   }
 
+  /**
+   * The items of this title still to watch that `accountId` sees and a séance in `circleId` (null: in no
+   * circle) watched: the one of that circle, and those shared the older way, without any circle.
+   */
+  toWatchForSeance(accountId: string, catalogKey: string, circleId: string | null): string[] {
+    const rows = this.db
+      .prepare(
+        `WITH ${AUDIENCE}
+         SELECT i.id FROM watchlist_items i JOIN audience a ON a.item_id = i.id
+         WHERE a.account_id = ? AND i.catalog_key = ? AND i.watched_at IS NULL
+           AND (i.circle_id IS NULL OR i.circle_id = ?)`,
+      )
+      .all(accountId, catalogKey, circleId);
+    return parseRows(z.object({ id: z.string() }), rows).map((row) => row.id);
+  }
+
   /** « J'ai envie » or not; someone seeing it through « Tout le monde » gets their own row. */
   setWant(itemId: string, accountId: string, wants: boolean): void {
     this.db
@@ -169,6 +190,7 @@ export class WatchlistRepository {
         .all(accountId),
     );
     const people = this.peopleOf(accountId);
+    const watchers = this.watchersOf(accountId);
     return items.map((row) => {
       const audience = people.get(row.id) ?? [];
       const toParticipant = (p: PersonRow) => ({ accountId: p.account_id, name: p.name, color: p.color });
@@ -180,6 +202,7 @@ export class WatchlistRepository {
         addedBy: author ? toParticipant(author) : { accountId: row.added_by, name: "?", color: "peach" },
         addedAt: row.added_at,
         ...watchedFields(row),
+        ...watchedWithOf(watchers.get(row.id)),
         // The author first, then the others by name.
         sharedWith: [...audience]
           .sort((a, b) => Number(b.account_id === row.added_by) - Number(a.account_id === row.added_by))
@@ -188,6 +211,27 @@ export class WatchlistRepository {
         ...(row.circle_id === null ? {} : { circleId: row.circle_id }),
       };
     });
+  }
+
+  /** For each watched item `accountId` sees that a séance marked « vu »: that séance's people, in joining order. */
+  private watchersOf(accountId: string): Map<string, Participant[]> {
+    const rows = this.db
+      .prepare(
+        `WITH ${AUDIENCE}
+         SELECT i.id AS item_id, p.account_id, acc.name, acc.color
+         FROM watchlist_items i
+         JOIN participations p ON p.room_code = i.watched_by_room
+         JOIN accounts acc ON acc.id = p.account_id
+         WHERE i.watched_at IS NOT NULL AND i.id IN (SELECT item_id FROM audience WHERE account_id = ?)
+         ORDER BY p.rowid`,
+      )
+      .all(accountId);
+    const byItem = new Map<string, Participant[]>();
+    for (const row of parseRows(WatcherRow, rows)) {
+      const person = { accountId: row.account_id, name: row.name, color: row.color };
+      byItem.set(row.item_id, [...(byItem.get(row.item_id) ?? []), person]);
+    }
+    return byItem;
   }
 
   /** The people who see each item `accountId` sees, by item, with their « J'ai envie ». */

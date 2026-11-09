@@ -46,17 +46,16 @@ test("« Toutes mes séances » les montre toutes, même celles d'un cercle quit
   const withAnnou = await createSession(darius, "Avec Annou");
   await onboard(annou, "Annou", withAnnou);
   await expect(darius.getByRole("heading", { name: "Annou est là" })).toBeVisible();
+  // Started from home, it lands in his only circle, the one with Annou: Léo comes as a guest.
   await darius.goto("/");
   const withLeo = await createSession(darius, "Avec Léo");
   await onboard(leo, "Léo", withLeo);
   await expect(darius.getByRole("heading", { name: "Léo est là" })).toBeVisible();
 
-  // Darius leaves the circle he has with Léo: one circle is left, but his séance with Léo is still his.
-  const { circles } = (await (await darius.request.get("/api/me/circles")).json()) as {
-    circles: { id: string; members: { name: string }[] }[];
-  };
-  const leos = circles.find((circle) => circle.members.some((person) => person.name === "Léo"));
-  expect((await darius.request.delete(`/api/me/circles/${leos?.id}`)).status()).toBe(204);
+  // Darius leaves that circle: none is left, but both séances are still his.
+  const { circles } = (await (await darius.request.get("/api/me/circles")).json()) as { circles: { id: string }[] };
+  expect(circles).toHaveLength(1);
+  expect((await darius.request.delete(`/api/me/circles/${circles[0]?.id}`)).status()).toBe(204);
 
   await darius.goto("/nous");
   await expect(darius.getByRole("link", { name: /Toutes mes séances · 2/ })).toBeVisible();

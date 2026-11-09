@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import { BubbleColor, type Circle } from "@annamour/protocol";
+import { BubbleColor, type Circle, type SeanceCircle } from "@annamour/protocol";
 import { z } from "zod";
 import { changedRows, parseOptionalRow, parseRows } from "./rows.ts";
 
@@ -16,6 +16,13 @@ const CircleRow = z.object({
 const NameRow = z.object({ name: z.string().nullable() });
 
 const MemberRow = z.object({ circle_id: z.string(), account_id: z.string(), name: z.string(), color: BubbleColor });
+const RoomCircleMemberRow = z.object({
+  code: z.string(),
+  circle_name: z.string().nullable(),
+  account_id: z.string(),
+  name: z.string(),
+  color: BubbleColor,
+});
 const IdRow = z.object({ id: z.string() });
 const AccountRow = z.object({ account_id: z.string() });
 
@@ -209,6 +216,38 @@ export class CircleRepository {
   roomCircle(code: string): string | undefined {
     const row = this.db.prepare("SELECT circle_id AS id FROM rooms WHERE code = ? AND circle_id IS NOT NULL").get(code);
     return parseOptionalRow(IdRow, row)?.id;
+  }
+
+  /**
+   * The circle of each séance in `accountId`'s history, by séance code: its name and people, as the
+   * séance's guests see it too (they are not in it).
+   */
+  circlesOfRooms(accountId: string): Map<string, SeanceCircle> {
+    const rows = parseRows(
+      RoomCircleMemberRow,
+      this.db
+        .prepare(
+          `SELECT r.code, c.name AS circle_name, m.account_id, a.name, a.color
+           FROM participations p
+           JOIN rooms r ON r.code = p.room_code
+           JOIN circles c ON c.id = r.circle_id
+           JOIN circle_members m ON m.circle_id = c.id
+           JOIN accounts a ON a.id = m.account_id
+           WHERE p.account_id = ? AND p.hidden = 0
+           ORDER BY m.joined_at, m.rowid`,
+        )
+        .all(accountId),
+    );
+    const byRoom = new Map<string, SeanceCircle>();
+    for (const row of rows) {
+      const circle: SeanceCircle = byRoom.get(row.code) ?? {
+        ...(row.circle_name === null ? {} : { name: row.circle_name }),
+        members: [],
+      };
+      circle.members.push({ accountId: row.account_id, name: row.name, color: row.color });
+      byRoom.set(row.code, circle);
+    }
+    return byRoom;
   }
 
   setRoomCircle(code: string, circleId: string): void {

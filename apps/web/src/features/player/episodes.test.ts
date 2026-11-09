@@ -1,7 +1,17 @@
-import type { SessionSummary } from "@annamour/protocol";
+import type { SessionSummary, WatchlistItem } from "@annamour/protocol";
 import { describe, expect, it } from "vitest";
 import { resumeKicker, sessionTitle } from "../sessions/session-rules.ts";
-import { endTitle, episodeEndOf, episodeName, episodeState, secondsLeft, suggestedLabel } from "./episode-rules.ts";
+import {
+  endTitle,
+  episodeEndOf,
+  episodeName,
+  episodeState,
+  onSeries,
+  queueTitle,
+  secondsLeft,
+  seriesToMarkWatched,
+  suggestedLabel,
+} from "./episode-rules.ts";
 import { timelineKeyTarget } from "./seek.ts";
 
 const room = { finished: false, countdownUntil: null, current: 0, episodes: [{}, { label: "É2" }] };
@@ -26,6 +36,39 @@ describe("the end screen of an episode", () => {
   it("speaks of a film when the séance has a single video", () => {
     expect(endTitle(1)).toBe("C'est fini");
     expect(endTitle(3)).toBe("Épisode terminé");
+  });
+});
+
+describe("what the end screen knows of a series", () => {
+  const bear = { id: 136315, type: "tv", title: "The Bear" } as const;
+  const episode = (n: number) => ({ label: `S1 · É${n}`, catalog: { ...bear, season: 1, episode: n } });
+  const listed: WatchlistItem = {
+    id: "w1",
+    title: { id: 136315, type: "tv", title: "The Bear" },
+    addedBy: { accountId: "lea", name: "Léa", color: "lilac" },
+    addedAt: 0,
+    sharedWith: [],
+    wantedBy: [],
+  };
+
+  it("tells a series episode from a film", () => {
+    expect(onSeries({ episodes: [episode(1)], current: 0 })).toBe(true);
+    expect(onSeries({ episodes: [{ catalog: { id: 7, type: "movie", title: "Alien" } }], current: 0 })).toBe(false);
+    expect(onSeries({ episodes: [{}], current: 0 })).toBe(false);
+    expect(onSeries({ episodes: [{}, { label: "É2" }], current: 1 })).toBe(true);
+  });
+
+  it("offers to mark the series watched at the end of the last episode queued, when it is in the list", () => {
+    const room = { episodes: [episode(1), episode(2)], current: 1 };
+    expect(seriesToMarkWatched([listed], room)).toBe(listed);
+  });
+
+  it("does not offer it before the last episode, for a series not in the list, or already watched", () => {
+    expect(seriesToMarkWatched([listed], { episodes: [episode(1), episode(2)], current: 0 })).toBeUndefined();
+    expect(seriesToMarkWatched([], { episodes: [episode(1)], current: 0 })).toBeUndefined();
+    expect(seriesToMarkWatched([{ ...listed, watchedAt: 1 }], { episodes: [episode(1)], current: 0 })).toBeUndefined();
+    const film = { episodes: [{ catalog: { id: 136315, type: "movie", title: "Homonyme" } as const }], current: 0 };
+    expect(seriesToMarkWatched([listed], film)).toBeUndefined();
   });
 });
 
@@ -56,8 +99,19 @@ describe("the « Épisodes » list", () => {
 
 describe("episode names", () => {
   it("uses the label, or the episode's number without one", () => {
-    expect(episodeName(room.episodes, 1)).toBe("É2");
-    expect(episodeName(room.episodes, 0)).toBe("Épisode 1");
+    expect(episodeName(room.episodes, 1, "The Bear")).toBe("É2");
+    expect(episodeName(room.episodes, 0, "The Bear")).toBe("Épisode 1");
+  });
+
+  it("names a séance of a single film by its title, not « Épisode 1 »", () => {
+    expect(episodeName([{}], 0, "Interstellar")).toBe("Interstellar");
+  });
+
+  it("calls the queue « Épisodes » for a series only", () => {
+    expect(queueTitle({ episodes: [{}], current: 0 })).toBe("File");
+    expect(queueTitle({ episodes: [{}, { label: "É2" }], current: 0 })).toBe("Épisodes");
+    const film = (title: string) => ({ catalog: { id: 7, type: "movie", title } as const });
+    expect(queueTitle({ episodes: [film("Alien"), film("Aliens")], current: 0 })).toBe("File");
   });
 
   it("suggests the label after the last one queued", () => {

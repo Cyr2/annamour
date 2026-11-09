@@ -10,8 +10,9 @@ import { plural } from "../../lib/format.ts";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import { toast } from "../../ui/toast.ts";
-import { twinOf } from "../circles/circle-rules.ts";
+import { seanceCount, twinOf } from "../circles/circle-rules.ts";
 import { leaveCircle, useCircles } from "../circles/circles.ts";
+import { useSessions } from "../sessions/sessions.ts";
 import { CircleOptionsSheet } from "./CircleOptionsSheet.tsx";
 import { CircleThread } from "./CircleThread.tsx";
 import { NameCircleSheet } from "./NameCircleSheet.tsx";
@@ -52,6 +53,8 @@ export function CircleCard({ circle, me, onMove, canMoveUp, canMoveDown, onDrop 
   const twin = useCircles((s) => twinOf(circle, s.circles));
   const drag = useDragControls();
   const title = circleTitle(circle, me);
+  // The very séances « Séances » lists for this circle, once mine are loaded.
+  const count = useSessions((s) => seanceCount(circle, s.status === "ready" ? s.sessions : null, me));
   const invite = () =>
     void shareInvite(circle, me).catch((failure: unknown) => toast({ message: errorMessage(failure) }));
   const leave = () =>
@@ -64,22 +67,25 @@ export function CircleCard({ circle, me, onMove, canMoveUp, canMoveDown, onDrop 
       <Surface className="surface-panel grid gap-4 p-5">
         <CircleThread circle={circle} me={me} />
         <div className="flex items-center gap-2">
-          {/* Only the handle starts a drag: the rest of the card scrolls the page and takes taps. */}
-          <button
-            type="button"
-            aria-label={`Déplacer « ${title} »`}
-            onPointerDown={(event) => drag.start(event)}
-            className="-ml-2 grid size-11 shrink-0 cursor-grab touch-none place-items-center rounded-full text-fg-muted active:cursor-grabbing"
-          >
-            <GripVertical aria-hidden className="size-5" />
-          </button>
+          {/* Only the handle starts a drag: the rest of the card scrolls the page and takes taps.
+              A lone circle has nowhere to go: no handle then. */}
+          {canMoveUp || canMoveDown ? (
+            <button
+              type="button"
+              aria-label={`Déplacer « ${title} »`}
+              onPointerDown={(event) => drag.start(event)}
+              className="-ml-2 grid size-11 shrink-0 cursor-grab touch-none place-items-center rounded-full text-fg-muted active:cursor-grabbing"
+            >
+              <GripVertical aria-hidden className="size-5" />
+            </button>
+          ) : null}
           <div className="grid min-w-0 flex-1">
             <strong className="truncate font-rounded-tight text-md font-extrabold text-fg">{title}</strong>
             <Link
               href={`/seances?cercle=${circle.id}`}
               className="flex min-h-11 items-center gap-0.5 self-start text-xs font-semibold text-accent"
             >
-              {plural(circle.evenings, "séance")}
+              {plural(count, "séance")}
               <ChevronRight aria-hidden className="size-3.5" />
             </Link>
           </div>

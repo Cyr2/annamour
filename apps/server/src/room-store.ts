@@ -82,11 +82,20 @@ export class RoomStore {
     return this.remember(room);
   }
 
-  /** Queues an imported episode after the room's others, on disk and for everyone in it. Returns its index. */
-  addEpisode(room: Room, label: string | undefined, imported: ImportedMedia, catalog?: CatalogRef): number {
+  /**
+   * Queues an imported episode after the room's others, on disk and for everyone
+   * in it, told it came from the device `byClientId`. Returns its index.
+   */
+  addEpisode(
+    room: Room,
+    label: string | undefined,
+    imported: ImportedMedia,
+    catalog?: CatalogRef,
+    byClientId?: string,
+  ): number {
     const episode = { id: room.nextEpisodeId, label, catalog };
     this.repository.addEpisode(room.code, { ...episode, media: imported });
-    return room.addEpisode({ ...episode, imported });
+    return room.addEpisode({ ...episode, imported }, byClientId);
   }
 
   /** Where a room in memory is right now; undefined when it is only on disk. */

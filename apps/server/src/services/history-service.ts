@@ -5,7 +5,7 @@ import type { QueuedItem } from "../storage/participation-repository.ts";
 import type { Repositories } from "../storage/repositories.ts";
 
 export interface HistoryServiceOptions {
-  repositories: Pick<Repositories, "participations" | "rooms" | "watchlist">;
+  repositories: Pick<Repositories, "participations" | "rooms" | "watchlist" | "circles">;
   store: RoomStore;
   now: () => number;
   /** Someone with an account is now in this séance (its circle follows, see CircleService.syncRoom). */
@@ -16,6 +16,14 @@ export interface HistoryServiceOptions {
 function queueOf(items: readonly QueuedItem[] | undefined, seanceTitle: string): Pick<SessionSummary, "queue"> {
   if (!items || items.length < 2) return {};
   return { queue: items.map(({ title, ...rest }) => ({ title: title ?? seanceTitle, ...rest })) };
+}
+
+function circleOf(
+  circleId: string | undefined,
+  circle: SessionSummary["circle"],
+): Pick<SessionSummary, "circleId" | "circle"> {
+  if (circleId === undefined) return {};
+  return circle === undefined ? { circleId } : { circleId, circle };
 }
 
 /** The sessions each account took part in: the same session shows up for everyone in it. */
@@ -37,9 +45,19 @@ export class HistoryService {
     this.onParticipation(roomCode);
   }
 
+  /**
+   * Someone who watched as a guest, then made an account (« Garder cette séance »), keeps the
+   * séance they were in. Knowing its code is what joining asks anyway: nothing more is revealed.
+   */
+  keep(roomCode: string, accountId: string): void {
+    if (!this.repositories.rooms.exists(roomCode)) throw new NotFoundError("Cette séance n'existe plus.");
+    this.recordParticipation(roomCode, accountId);
+  }
+
   list(accountId: string): SessionSummary[] {
     const companions = this.repositories.participations.companions(accountId);
     const queues = this.repositories.participations.queues(accountId);
+    const circles = this.repositories.circles.circlesOfRooms(accountId);
     const now = this.now();
     return this.repositories.participations.visibleRooms(accountId).map((room) => ({
       code: room.code,
@@ -54,7 +72,7 @@ export class HistoryService {
         ...(room.episode.label === undefined ? {} : { label: room.episode.label }),
       },
       ...queueOf(queues.get(room.code), room.title),
-      ...(room.circleId === undefined ? {} : { circleId: room.circleId }),
+      ...circleOf(room.circleId, circles.get(room.code)),
       ...(room.posterUrl === undefined ? {} : { posterUrl: room.posterUrl }),
       ...(room.catalog === undefined ? {} : { catalog: room.catalog }),
       ...(room.createdBy === accountId ? { createdByMe: true } : {}),

@@ -1,4 +1,4 @@
-import { type BubbleColor, episodeTitle, type SessionSummary } from "@annamour/protocol";
+import { type BubbleColor, catalogEpisodeLabel, episodeTitle, type SessionSummary } from "@annamour/protocol";
 import { formatClock, formatDuration, joinNames } from "../../lib/format.ts";
 
 /* What the sessions history means: finished or not, how far, with whom, and when, in French. */
@@ -229,6 +229,40 @@ export const isSameTitle = (a: SessionSummary, b: SessionSummary) => (a.catalog 
 /** The séance still under way for this catalog title (the latest), to go back to rather than start another. */
 export function seanceOfTitle(sessions: readonly SessionSummary[], title: TitleRef): SessionSummary | null {
   return latestUnfinished(sessions.filter((session) => sameTitle(session, title)));
+}
+
+/** « S1 · É3 avec Inès », « Film 2 sur 3 avec Léo et Inès », « S1 · É3 · rien que toi pour l'instant »: where a séance is, and with whom. */
+export function whereAndWho(session: SessionSummary): string {
+  const where = isFilms(session) ? queuePlace(session) : (session.episode.label ?? "");
+  const who = session.participants.length ? companionsLabel(session) : "· rien que toi pour l'instant";
+  const line = `${where} ${who}`.replace(/^ ·? ?/, "");
+  return line.charAt(0).toUpperCase() + line.slice(1);
+}
+
+type EpisodeRef = { season: number; episode: number };
+
+/** « S2 · É5 » read back into numbers; null for a label typed by hand or none. */
+function episodeOfLabel(label: string | undefined): EpisodeRef | null {
+  const match = /^S(\d+) · É(\d+)$/.exec(label ?? "");
+  return match ? { season: Number(match[1]), episode: Number(match[2]) } : null;
+}
+
+const isAfter = (a: EpisodeRef, b: EpisodeRef) =>
+  a.season > b.season || (a.season === b.season && a.episode > b.episode);
+
+/**
+ * When the episode picked is not the one the séance is on: it is still the
+ * same series, so resuming is still offered, and said so. Empty otherwise.
+ */
+export function chosenEpisodeNote(session: SessionSummary, chosen: { season?: number; episode?: number }): string {
+  const current = episodeOfLabel(session.episode.label);
+  if (!current || chosen.season === undefined || chosen.episode === undefined) return "";
+  const picked = { season: chosen.season, episode: chosen.episode };
+  if (picked.season === current.season && picked.episode === current.episode) return "";
+  const pickedLabel = catalogEpisodeLabel(picked.season, picked.episode);
+  return isAfter(picked, current)
+    ? `${pickedLabel} vient après : c'est la même série. Reprenez la séance à ${session.episode.label}, les épisodes suivants s'enchaînent.`
+    : `La séance est déjà à ${session.episode.label}, plus loin que ${pickedLabel}.`;
 }
 
 /**

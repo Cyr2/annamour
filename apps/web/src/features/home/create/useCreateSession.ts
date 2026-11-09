@@ -4,7 +4,6 @@ import { useLocation } from "wouter";
 import { playCatalog } from "../../../api/catalog.ts";
 import { errorMessage } from "../../../api/http.ts";
 import { createRoom, fetchRoom } from "../../../api/rooms.ts";
-import { circleForNewSeance } from "../../circles/circles.ts";
 
 export type CreateSessionState = { step: "link"; error: string | null } | { step: "loading" };
 
@@ -13,6 +12,7 @@ const START: CreateSessionState = { step: "link", error: null };
 /**
  * Title or link → import (the server fetches the playlist) → straight into the
  * salon: languages and subtitles are chosen there, from the player, by each one.
+ * The séance goes to the circle picked on the sheet (null: nobody in particular).
  */
 export function useCreateSession() {
   const [state, setState] = useState<CreateSessionState>(START);
@@ -36,11 +36,11 @@ export function useCreateSession() {
   );
 
   const prepare = useCallback(
-    (url: string, title: string) => run(() => createRoom(url, title, circleForNewSeance())),
+    (url: string, title: string, circleId: string | null) => run(() => createRoom(url, title, circleId)),
     [run],
   );
   const prepareFromCatalog = useCallback(
-    (play: PlayCatalogRequest) => run(() => playCatalog(play, circleForNewSeance())),
+    (play: PlayCatalogRequest, circleId: string | null) => run(() => playCatalog(play, circleId)),
     [run],
   );
 

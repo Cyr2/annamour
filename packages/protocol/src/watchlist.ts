@@ -3,7 +3,7 @@ import { Participant } from "./api.ts";
 import { CatalogTitle } from "./catalog.ts";
 
 /*
- * The shared watchlist, « À regarder ensemble »: titles someone wants to watch
+ * The shared watchlist, « Notre liste »: titles someone wants to watch
  * with others. There are no friend lists in Annamour: an item is shared with
  * people its author already watched séances with (or all of them), and
  * everyone it is shared with sees it, can say « J'ai envie », start it or
@@ -18,10 +18,12 @@ export const WatchlistItem = z.object({
   title: CatalogTitle,
   addedBy: Participant,
   addedAt: z.number(),
-  /** Set once watched: the item then sits in « Vus ». */
+  /** Set once watched: the item then sits in « Déjà vus ». */
   watchedAt: z.optional(z.number()),
   /** Watched: a séance reached the end of it (otherwise someone marked it by hand). */
   watchedInSeance: z.optional(z.boolean()),
+  /** Watched in a séance: that séance's people (absent when someone marked it « vu » by hand). */
+  watchedWith: z.optional(z.array(Participant)),
   /** Watched by hand: who said « C'est vu » (absent for marks older than this field). */
   watchedBy: z.optional(Participant),
   /** Everyone the item is shared with, its author included. */
@@ -77,7 +79,7 @@ export function watchlistWith(items: readonly WatchlistItem[], accountId: string
   return items.filter((item) => item.sharedWith.some((person) => person.accountId === accountId));
 }
 
-/** « À regarder » then « Vus » (the most recently watched first). */
+/** « À voir » then « Déjà vus » (the most recently watched first). */
 export function splitWatchlist(items: readonly WatchlistItem[]): {
   toWatch: WatchlistItem[];
   watched: WatchlistItem[];

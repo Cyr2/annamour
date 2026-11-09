@@ -48,14 +48,14 @@ function firstToast(): Promise<void> {
   });
 }
 
-/** Mount once near the root. */
+/** Mount once near the root. The capsules come down under the top bar, never over the title, the code or the bubbles. */
 export function Toaster() {
   const toasts = useToasts((s) => s.toasts);
   return (
     <ol
       role="status"
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 top-0 z-[var(--am-z-toast)] flex flex-col items-center gap-2 px-4 pt-[max(12px,var(--am-safe-top))]"
+      className="pointer-events-none fixed inset-x-0 top-0 z-[var(--am-z-toast)] flex flex-col items-center gap-2 px-4 pt-[calc(max(var(--am-space-4),var(--am-safe-top))+var(--am-top-bar-room))]"
     >
       <LayoutMotion when={firstToast}>
         <AnimatePresence initial={false} mode="popLayout">

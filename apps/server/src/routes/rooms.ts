@@ -76,7 +76,8 @@ export function roomRoutes({ services }: RouteDeps) {
     if (!isRoomCode(code)) return c.json({ error: "Cette séance n'existe plus." }, 404);
     if (!imports.tryAcquire(clientIp(c), now())) return c.json(tooMany, 429);
     const request = await readBody(c, AddEpisodeRequest, IMPORT_HELP);
-    const episode = await importing(rooms.addEpisode(code, new URL(request.url), request.label));
+    const { url, label, clientId } = request;
+    const episode = await importing(rooms.addEpisode(code, new URL(url), label, undefined, clientId));
     return c.json({ episode } satisfies AddEpisodeResponse, 201);
   });
 

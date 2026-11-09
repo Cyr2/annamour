@@ -19,9 +19,10 @@ export interface CircleServiceOptions {
 const NOT_IN_CIRCLE = "Ce cercle n'existe plus, ou tu n'en fais plus partie.";
 
 /**
- * Circles form by themselves: a séance of several people belongs to the circle
- * made of exactly them (created when needed). A séance started from a circle
- * stays in it as long as only its members join. Leaving a séance's history
+ * Circles form by themselves: a séance of several people started outside any
+ * circle belongs to the circle made of exactly them (created when needed). A
+ * séance's circle never changes once set: anyone else who joins is a guest.
+ * Leaving a séance's history
  * never takes anyone out of a circle. Two circles of the same people (after
  * someone leaves, or joins by invitation) stay two until someone in them
  * chooses to reunite them.
@@ -107,16 +108,21 @@ export class CircleService {
     this.repositories.circles.setRoomCircle(code, circleId);
   }
 
-  /** After someone joins a séance: the séance belongs to the circle of exactly its people. */
+  /**
+   * After someone joins a séance. A séance with no circle yet gets the circle of exactly its people as
+   * soon as two of them have an account. A séance in a circle stays in it: whoever else comes is a
+   * guest, who changes neither the circle nor its people (« vos prochaines séances s'y rangeront »).
+   */
   syncRoom(code: string): void {
     const { circles } = this.repositories;
     const people = circles.roomAccounts(code);
     const current = circles.roomCircle(code);
-    if (current && people.every((id) => circles.isMember(current, id))) return;
+    // People join a new séance seconds apart: the circle the first ones formed may still grow.
+    const forming = current && circles.isForming(current, code) ? current : undefined;
+    if (current && !forming) return;
+    if (forming && people.every((id) => circles.isMember(forming, id))) return;
     if (people.length < 2) return;
     const existing = circles.findByMembers(people);
-    // People join a séance seconds apart: the circle the first ones formed grows instead of staying behind.
-    const forming = current && circles.isForming(current, code) ? current : undefined;
     if (forming && !existing) {
       this.grow(forming, people);
       return;

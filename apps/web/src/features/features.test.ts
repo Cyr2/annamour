@@ -1,4 +1,4 @@
-import type { Member } from "@annamour/protocol";
+import type { Account, Member } from "@annamour/protocol";
 import { describe, expect, it, vi } from "vitest";
 import { safeNext, welcomePath } from "./account/AccountGate.tsx";
 import { asksToCreate, CREATE_PATH } from "./home/create/create-link.ts";
@@ -6,7 +6,7 @@ import { memberChanges } from "./player/member-changes.ts";
 import { keyAction, type PlayerKeys } from "./player/player-keys.ts";
 import { presenceOf } from "./session/Presence.tsx";
 import { splitKey } from "./welcome/KeyLoginScreen.tsx";
-import { tokenFromHash } from "./welcome/LinkDeviceScreen.tsx";
+import { replacesAccount, tokenFromHash } from "./welcome/LinkDeviceScreen.tsx";
 
 const member = (id: string, buffering = false): Member => ({ id, name: id.toUpperCase(), color: "mint", buffering });
 
@@ -62,6 +62,14 @@ describe("account helpers", () => {
   it("reads the QR token from the hash only when it is long enough", () => {
     expect(tokenFromHash("#abcdefghijklmnop")).toBe("abcdefghijklmnop");
     expect(tokenFromHash("#short")).toBeNull();
+  });
+
+  it("asks before a QR code puts another account in place of this device's, never for the same one", () => {
+    const lea: Account = { id: "lea", name: "Léa", color: "mint", hasPasskey: false };
+    const darius: Account = { id: "darius", name: "Darius", color: "sky", hasPasskey: false };
+    expect(replacesAccount(lea, darius)).toBe(true);
+    expect(replacesAccount(darius, darius)).toBe(false);
+    expect(replacesAccount(null, darius)).toBe(false);
   });
 
   it("returns only to internal pages after the first launch", () => {

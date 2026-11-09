@@ -4,13 +4,17 @@ import { Poster } from "../../../ui/Poster.tsx";
 
 /** « Film · 2014 · 2 h 49 », « Série · 2019 · 3 saisons ». */
 export function describeTitle(title: CatalogTitle): string {
+  return [title.type === "movie" ? "Film" : "Série", ...titleFacts(title)].join(" · ");
+}
+
+/** Its year and its length (or its seasons), the ones it has. */
+export function titleFacts(title: CatalogTitle): string[] {
   const parts = [
-    title.type === "movie" ? "Film" : "Série",
     title.year ? String(title.year) : null,
     title.runtime ? formatDuration(title.runtime * 60) : null,
     title.seasons ? plural(title.seasons, "saison") : null,
   ];
-  return parts.filter(Boolean).join(" · ");
+  return parts.filter((part) => part !== null);
 }
 
 interface CatalogResultsProps {

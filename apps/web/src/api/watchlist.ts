@@ -9,7 +9,7 @@ import {
 import { z } from "zod/mini";
 import { request } from "./http.ts";
 
-/* « À regarder ensemble »: the shared watchlist of the signed-in person. */
+/* « Notre liste »: the shared watchlist of the signed-in person. */
 
 /** Writes answer 204: there is nothing to read back. */
 const Ignored = z.unknown();

@@ -1,4 +1,12 @@
-import type { ErrorCode, Member, PlaybackAction, PlaybackState, Readying, RoomSnapshot } from "@annamour/protocol";
+import type {
+  ErrorCode,
+  Member,
+  PlaybackAction,
+  PlaybackState,
+  Readying,
+  RoomChange,
+  RoomSnapshot,
+} from "@annamour/protocol";
 import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { currentIdentity } from "./identity.ts";
@@ -24,8 +32,8 @@ export interface RoomState {
   /** Authoritative playback, owned by the server. */
   playback: PlaybackState | null;
   lastEvent: PlaybackEvent | null;
-  /** The séance moved to another episode: who did it (absent when the room did, e.g. everyone left). */
-  episodeEvent: { by: string | undefined; seq: number } | null;
+  /** Someone changed the séance's episodes (started one, « Pas ce soir », added or removed one): who, and what. */
+  roomEvent: { by: string | undefined; change: RoomChange; seq: number } | null;
   error: { code: ErrorCode; message: string } | null;
   /** Set while the room waits for every device to download a little before starting. */
   readying: Readying | null;
@@ -39,7 +47,7 @@ const empty: RoomState = {
   readying: null,
   playback: null,
   lastEvent: null,
-  episodeEvent: null,
+  roomEvent: null,
   error: null,
 };
 
@@ -77,13 +85,13 @@ export function bindRoom(client: SyncClient): () => void {
         break;
       // Episodes changed: the whole room again, its playback included (a new episode starts at 0).
       case "room": {
-        const moved = useRoom.getState().room?.current !== message.room.current;
+        const { change, by } = message;
         useRoom.setState({
           room: message.room,
           members: message.room.members,
           playback: message.room.playback,
           readying: message.room.readying ?? null,
-          ...(moved ? { episodeEvent: { by: message.by, seq: ++seq } } : {}),
+          ...(change ? { roomEvent: { by, change, seq: ++seq } } : {}),
         });
         break;
       }

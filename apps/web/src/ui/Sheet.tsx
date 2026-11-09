@@ -47,7 +47,8 @@ function SheetPanel({ onClose, title, children }: Omit<SheetProps, "open">) {
   useEffect(() => {
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const panel = panelRef.current;
-    const first = panel?.querySelector<HTMLElement>(FOCUSABLE);
+    // A field marked data-autofocus wins over choices above it (« Pour : … » before the search).
+    const first = panel?.querySelector<HTMLElement>("[data-autofocus]") ?? panel?.querySelector<HTMLElement>(FOCUSABLE);
     (first ?? panel)?.focus({ preventScroll: true });
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;

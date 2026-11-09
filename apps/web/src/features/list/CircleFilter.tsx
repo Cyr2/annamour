@@ -1,5 +1,5 @@
 import { circleTitle, othersIn } from "@annamour/protocol";
-import { Users } from "lucide-react";
+import { User, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { cx } from "../../ui/cx.ts";
 import { PresenceBubble } from "../../ui/PresenceBubble.tsx";
@@ -12,6 +12,11 @@ interface CircleFilterProps {
   /** A pick of its own (« Séances »), rather than the one « Ce soir » and « Notre liste » share. */
   value?: string | null;
   onChange?: (circleId: string | null) => void;
+  /**
+   * Picks whom a new séance is for: no circle reads « Quelqu'un d'autre », not « Tout »: the séance
+   * then goes to the circle of whoever joins it.
+   */
+  forNewSeance?: boolean;
 }
 
 /**
@@ -19,7 +24,7 @@ interface CircleFilterProps {
  * « Notre liste » the pick is shared, and with one circle there is nothing to
  * pick. With a pick of its own, « Tout » stays offered beside a single circle.
  */
-export function CircleFilter({ centered = false, value, onChange }: CircleFilterProps) {
+export function CircleFilter({ centered = false, value, onChange, forNewSeance = false }: CircleFilterProps) {
   const me = useAccount((s) => s.account?.id ?? "");
   const circles = useCircles((s) => s.circles);
   const shared = useCircles((s) => shownCircle(s));
@@ -36,10 +41,10 @@ export function CircleFilter({ centered = false, value, onChange }: CircleFilter
         centered ? "flex-wrap justify-center" : "overflow-x-auto [scrollbar-width:none]",
       )}
     >
-      <legend className="sr-only">Avec qui ?</legend>
-      <Choice label="Tout" pressed={shown === null} onPress={() => pick(null)}>
+      <legend className="sr-only">{forNewSeance ? "Pour qui est cette séance ?" : "Avec qui ?"}</legend>
+      <Choice label={forNewSeance ? "Quelqu'un d'autre" : "Tout"} pressed={shown === null} onPress={() => pick(null)}>
         <span className="grid size-14 place-items-center rounded-full bg-fill-strong text-fg">
-          <Users aria-hidden className="size-5" />
+          {forNewSeance ? <User aria-hidden className="size-5" /> : <Users aria-hidden className="size-5" />}
         </span>
       </Choice>
       {/* In the order set on « Nous » (drag and drop), the most recently used after. */}
@@ -87,13 +92,17 @@ function Choice(props: {
       aria-pressed={props.pressed}
       aria-label={props.fullLabel}
       onClick={props.onPress}
-      className="grid w-17 shrink-0 cursor-pointer justify-items-center gap-1.5 rounded-control py-1"
+      className="grid w-20 shrink-0 cursor-pointer content-start justify-items-center gap-1.5 rounded-control py-1"
     >
       <span aria-hidden className={cx("rounded-full p-0.5", props.pressed && "ring-2 ring-accent")}>
         {props.children}
       </span>
+      {/* A circle's name wraps on two lines rather than being cut after a few letters. */}
       <span
-        className={cx("w-full truncate text-center text-xs", props.pressed ? "font-bold text-fg" : "text-fg-muted")}
+        className={cx(
+          "line-clamp-2 w-full text-center text-xs text-balance wrap-break-word",
+          props.pressed ? "font-bold text-fg" : "text-fg-muted",
+        )}
       >
         {props.label}
       </span>

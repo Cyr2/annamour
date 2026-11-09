@@ -256,4 +256,18 @@ describe("adding a device with a QR code", () => {
     expect((await link("x".repeat(43))).status).toBe(401);
     expect((await link("short")).status).toBe(400);
   });
+
+  it("tells whose account it opens without using it, so a signed-in device can ask first", async () => {
+    const { app, token, link, account, clock } = await linkSetup();
+    const whose = (value: string) => app.request(API.linkTokenAccount, jsonRequest("POST", { token: value }));
+    const answer = await whose(token.token);
+    expect(answer.status).toBe(200);
+    expect(await answer.json()).toEqual({ account });
+    expect(sessionCookieOf(answer)).toBe("");
+    expect((await link(token.token)).status).toBe(200);
+    expect((await whose(token.token)).status).toBe(401);
+    clock.now += LINK_TOKEN_TTL_MS;
+    expect((await whose("y".repeat(43))).status).toBe(401);
+    expect((await whose("short")).status).toBe(400);
+  });
 });

@@ -7,6 +7,7 @@ import {
   MergeCirclesRequest,
   othersIn,
   sameMembers,
+  seanceCircleLine,
   twinCircles,
 } from "../src/index.ts";
 
@@ -79,5 +80,22 @@ describe("circles of the same people", () => {
   it("are reunited by naming the circle whose name stays", () => {
     expect(MergeCirclesRequest.safeParse({ into: "duo", keepNameOf: "duo" }).success).toBe(true);
     expect(MergeCirclesRequest.safeParse({ into: "duo" }).success).toBe(false);
+  });
+});
+
+describe("the salon's line about its séance's circle", () => {
+  it("names a named circle, for its people and for a guest alike", () => {
+    const potes = { name: "Les potes du jeudi", members: [me, annou] };
+    expect(seanceCircleLine(potes, "darius")).toBe("Cercle · Les potes du jeudi");
+    expect(seanceCircleLine(potes, "zoe")).toBe("Cercle · Les potes du jeudi");
+  });
+
+  it("says with whom for one of its people, and names the circle for a guest", () => {
+    expect(seanceCircleLine({ members: [me, leo, ines] }, "darius")).toBe("avec Léo et Inès");
+    expect(seanceCircleLine({ members: [me, leo] }, "zoe")).toBe("Cercle · Darius et Léo");
+  });
+
+  it("says nothing of an unnamed circle with nobody else left in it", () => {
+    expect(seanceCircleLine({ members: [me] }, "darius")).toBeNull();
   });
 });

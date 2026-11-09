@@ -148,6 +148,56 @@ describe("my sessions", () => {
     }
   });
 
+  it("let a guest in with a prénom alone, and keep nothing for them", async () => {
+    const { app, services, account, createRoom, sessions } = setup();
+    const darius = await account("Darius");
+    const code = await createRoom(darius.cookie);
+    const server = serve({ fetch: app.fetch, port: 0 });
+    attachRealtime(server, services);
+    await new Promise((resolve) => server.once("listening", resolve));
+    const { port } = server.address() as AddressInfo;
+    try {
+      const ws = new WebSocket(`ws://localhost:${port}/ws?room=${code}`);
+      await new Promise((resolve) => ws.once("open", resolve));
+      const welcomed = new Promise<string>((resolve) => ws.once("message", (data) => resolve(data.toString())));
+      ws.send(JSON.stringify({ type: "hello", clientId: "client-lea-00000", name: "Léa", color: "mint" }));
+      expect(JSON.parse(await welcomed)).toMatchObject({ type: "welcome" });
+      expect(
+        services.store
+          .get(code)
+          ?.snapshot()
+          .members.map((m) => m.name),
+      ).toContain("Léa");
+      expect((await sessions(darius.cookie))[0]?.participants).toEqual([]);
+      ws.close();
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  it("keep the séance a guest was in once they make an account, shared with the others", async () => {
+    const { app, account, createRoom, sessions } = setup();
+    const darius = await account("Darius");
+    const code = await createRoom(darius.cookie, "Harry");
+    const lea = await account("Léa", "mint");
+    const response = await app.request(`${API.sessions}/${code.toLowerCase()}`, {
+      method: "POST",
+      headers: { cookie: lea.cookie },
+    });
+    expect(response.status).toBe(204);
+    expect(await sessions(lea.cookie)).toMatchObject([{ code, title: "Harry", participants: [{ name: "Darius" }] }]);
+    expect((await sessions(darius.cookie))[0]?.participants.map((p) => p.name)).toEqual(["Léa"]);
+  });
+
+  it("cannot keep a séance that no longer exists, nor without an account", async () => {
+    const { app, account, createRoom } = setup();
+    const lea = await account("Léa");
+    const missing = await app.request(`${API.sessions}/ZZZZ`, { method: "POST", headers: { cookie: lea.cookie } });
+    expect(missing.status).toBe(404);
+    const code = await createRoom();
+    expect((await app.request(`${API.sessions}/${code}`, { method: "POST" })).status).toBe(401);
+  });
+
   it("keep sessions that only live on disk", async () => {
     const { account, sessions, services, clock } = setup();
     const darius = await account("Darius");

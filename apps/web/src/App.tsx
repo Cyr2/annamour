@@ -2,11 +2,13 @@ import { House } from "lucide-react";
 import { lazy, type ReactNode, Suspense } from "react";
 import { Redirect, Route, Router, Switch, useSearch } from "wouter";
 import { AccountGate } from "./features/account/AccountGate.tsx";
+import { SeanceGate } from "./features/account/SeanceGate.tsx";
 import { HomeScreen } from "./features/home/HomeScreen.tsx";
 import { TabNav } from "./features/nav/TabNav.tsx";
 import { TonightScreen } from "./features/tonight/TonightScreen.tsx";
 import { useTv } from "./features/tv/tv-context.ts";
 import { useTvLocation } from "./features/tv/tv-location.ts";
+import { useTopOfNewPage } from "./lib/page-scroll.ts";
 import {
   JoinCircleScreen,
   JoinScreen,
@@ -39,13 +41,21 @@ function ToTvPairing() {
   return <Redirect to={`/tv/lier${search ? `?${search}` : ""}`} replace />;
 }
 
+/** Inside the router, so it hears each new page. */
+function TopOfNewPage() {
+  useTopOfNewPage();
+  return null;
+}
+
 /** Home ships with the app; every other screen is fetched the first time it opens (see routes.ts). */
 export function App() {
   const tv = useTv();
-  // A TV keeps its own home and profile, made for the remote, whichever interface is picked.
+  // A séance opens without an account, except on a TV, which is linked from a phone first.
+  const seance = (screen: ReactNode) => (tv ? gated(screen) : <SeanceGate>{screen}</SeanceGate>);
 
   return (
     <Router hook={tv ? useTvLocation : undefined}>
+      <TopOfNewPage />
       <Ambient />
       <Suspense fallback={<RouteFallback />}>
         <Switch>
@@ -63,10 +73,10 @@ export function App() {
           </Route>
           <Route path="/profil">{() => (tv ? gated(<ProfileScreen />) : <Redirect to="/nous" replace />)}</Route>
           <Route path="/cercle/:token">{(params) => gated(<JoinCircleScreen token={params.token} />)}</Route>
-          <Route path="/rejoindre">{() => gated(<JoinScreen />)}</Route>
+          <Route path="/rejoindre">{() => seance(<JoinScreen />)}</Route>
           <Route path="/tv">{() => gated(<TvLinkScreen />)}</Route>
-          <Route path="/s/:code/qualite">{(params) => gated(<ReportScreen code={params.code} />)}</Route>
-          <Route path="/s/:code">{(params) => gated(<SessionScreen code={params.code} />)}</Route>
+          <Route path="/s/:code/qualite">{(params) => seance(<ReportScreen code={params.code} />)}</Route>
+          <Route path="/s/:code">{(params) => seance(<SessionScreen code={params.code} />)}</Route>
           <Route>
             <NoticeScreen>
               <p className="text-md text-fg">Cette page n'existe pas.</p>

@@ -57,7 +57,7 @@ interface ItemBodyProps {
 function ItemBody({ item, me, onClose, onConfirmRemoval }: ItemBodyProps) {
   const [pickingEpisode, setPickingEpisode] = useState(false);
   const { launch, busy, error } = useLaunchTitle();
-  const ongoing = useSeanceOfTitle(item.title);
+  const ongoing = useSeanceOfTitle(item.title, item.circleId);
   const act = (work: Promise<void>, done?: string) =>
     work
       .then(() => (done ? toast({ message: done }) : undefined))
