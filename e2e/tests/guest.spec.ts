@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { createSession, onboard, person } from "./helpers.ts";
+import { expect } from "@playwright/test";
+import { createSession, onboard, person, test } from "./helpers.ts";
 
 test("rejoindre avec un prénom sans compte, puis voir la séance", async ({ browser }) => {
   const darius = await person(browser);

@@ -1,5 +1,5 @@
-import { expect, type Page, test } from "@playwright/test";
-import { createSession, onboard, person, videoPaused, videoTime } from "./helpers.ts";
+import { expect, type Page } from "@playwright/test";
+import { createSession, onboard, person, test, videoPaused, videoTime } from "./helpers.ts";
 
 const MAX_DRIFT_SECONDS = 1;
 

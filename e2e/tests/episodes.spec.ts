@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { createSession, HLS_URL, onboard, person, videoTime } from "./helpers.ts";
+import { expect } from "@playwright/test";
+import { createSession, HLS_URL, onboard, person, test, videoTime } from "./helpers.ts";
 
 test("à la fin d'un épisode, le suivant démarre chez tout le monde", async ({ browser }) => {
   const darius = await person(browser);
