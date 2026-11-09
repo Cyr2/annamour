@@ -119,6 +119,13 @@ describe("what the watchlist says", () => {
     expect(rules.watchedLine({ ...film, sharedWith: [darius] }, "darius", now)).toBe("Vu");
   });
 
+  it("names the people of the séance that watched it, not everyone the title is for", () => {
+    const now = Date.UTC(2026, 10, 7, 12);
+    const watched = { ...film, watchedAt: now, watchedWith: [darius, lea] };
+    expect(rules.watchedLine(watched, "darius", now)).toBe("Vu aujourd'hui avec Léa");
+    expect(rules.watchedLine({ ...watched, watchedWith: [darius] }, "darius", now)).toBe("Vu aujourd'hui");
+  });
+
   it("says how it became « vu »: in a séance, marked by someone, or just marked", () => {
     const now = Date.UTC(2026, 10, 7, 12);
     const day = 24 * 3600 * 1000;

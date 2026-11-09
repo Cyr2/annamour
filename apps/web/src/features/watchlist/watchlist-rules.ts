@@ -46,10 +46,12 @@ export function audienceLine(item: WatchlistItem, me: string): string {
   return `Pour ${joinNames(["toi", ...othersOf(item, me)])}`;
 }
 
-/** « Vu mardi avec Léo et Inès ». */
+/** « Vu mardi avec Léo et Inès »: the people of the séance that watched it, else everyone it is for. */
 export function watchedLine(item: WatchlistItem, me: string, now: number): string {
   const when = item.watchedAt === undefined ? "" : ` ${relativeDay(item.watchedAt, now).toLocaleLowerCase("fr")}`;
-  const others = othersOf(item, me);
+  const others = item.watchedWith
+    ? item.watchedWith.filter((person) => person.accountId !== me).map((person) => person.name)
+    : othersOf(item, me);
   return `Vu${when}${others.length ? ` avec ${joinNames(others)}` : ""}`;
 }
 
