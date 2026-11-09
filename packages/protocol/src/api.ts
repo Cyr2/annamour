@@ -63,6 +63,14 @@ export type Participant = z.infer<typeof Participant>;
 export const SessionParticipant = z.object({ ...Participant.shape, left: z.optional(z.boolean()) });
 export type SessionParticipant = z.infer<typeof SessionParticipant>;
 
+/** One film or episode of a séance: its name, and from the catalog its kind and poster. */
+export const SeanceItem = z.object({
+  title: z.string(),
+  type: z.optional(CatalogMediaType),
+  posterUrl: z.optional(z.url({ protocol: /^https$/ })),
+});
+export type SeanceItem = z.infer<typeof SeanceItem>;
+
 export const SessionSummary = z.object({
   code: RoomCode,
   title: z.string(),
@@ -74,6 +82,8 @@ export const SessionSummary = z.object({
   participants: z.array(SessionParticipant),
   /** Where the séance is among its episodes; `duration` and `position` are this episode's. */
   episode: z.object({ index: z.number(), count: z.number(), label: z.optional(z.string()) }),
+  /** Every film or episode of the séance in order (`episode.index` is the one playing); only when it has several. */
+  queue: z.optional(z.array(SeanceItem)),
   /** The circle the séance belongs to (see circles.ts); absent for a séance watched alone. */
   circleId: z.optional(z.string()),
   /** I created it: I may delete it for everyone (the others can only leave it). */

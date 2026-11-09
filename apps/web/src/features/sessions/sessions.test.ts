@@ -4,17 +4,21 @@ import { ApiRequestError } from "../../api/http.ts";
 import {
   byMostRecent,
   companionsLabel,
+  fanPosters,
   favoriteOf,
   isFinished,
   latestUnfinished,
   onePerTitle,
   progressNote,
   progressOf,
+  queuePlace,
   rankPeople,
   relativeDay,
   remainingLabel,
+  resumeKicker,
   resumeLine,
   seanceOfTitle,
+  sessionTitle,
   splitByStatus,
   stopLabel,
   whenAndWhoLabel,
@@ -50,6 +54,53 @@ const friday = session("YWEK", { lastUsedAt: 500, participants: [anna] });
 const thriller = session("RTNB", { lastUsedAt: 400, participants: [leo, ines] });
 const episode = session("QHMP", { lastUsedAt: 300, participants: [anna] });
 const comedy = session("BXFW", { lastUsedAt: 200, position: 6100, duration: 6100, participants: [anna, leo] });
+
+const DUNE = "https://image.tmdb.org/t/p/w342/dune.jpg";
+const ALIEN = "https://image.tmdb.org/t/p/w342/alien.jpg";
+/** Dune then Alien in one séance, Dune playing. */
+function films(overrides: Partial<SessionSummary> = {}): SessionSummary {
+  return session("FILM", {
+    title: "Dune",
+    episode: { index: 0, count: 2 },
+    queue: [
+      { title: "Dune", type: "movie", posterUrl: DUNE },
+      { title: "Alien", type: "movie", posterUrl: ALIEN },
+    ],
+    ...overrides,
+  });
+}
+
+describe("a séance of several films", () => {
+  it("is over only once its last film is, and says which film comes next", () => {
+    const duneOver = films({ position: 7800 });
+    expect(isFinished(duneOver)).toBe(false);
+    expect(stopLabel(duneOver)).toBe("Film suivant : Alien");
+    expect(resumeLine({ ...duneOver, lastUsedAt: 0 }, 0)).toBe("Aujourd'hui · Film suivant : Alien");
+    expect(isFinished(films({ episode: { index: 1, count: 2 }, position: 7800 }))).toBe(true);
+  });
+
+  it("is named after the film playing, its place counted in films", () => {
+    const alien = films({ episode: { index: 1, count: 2 } });
+    expect(sessionTitle(alien)).toBe("Alien");
+    expect(queuePlace(alien)).toBe("film 2 sur 2");
+    expect(resumeKicker(alien)).toBe("Reprendre · film 2");
+    expect(queuePlace(session("S", { episode: { index: 4, count: 8 } }))).toBe("épisode 5 sur 8");
+    expect(queuePlace(session("S"))).toBe("");
+  });
+
+  it("fans out the posters of its different titles, the one playing in front", () => {
+    expect(fanPosters(films({ episode: { index: 1, count: 2 } }))).toEqual([ALIEN, DUNE]);
+    const series = session("S", {
+      episode: { index: 0, count: 2 },
+      queue: [
+        { title: "The Bear", type: "tv", posterUrl: DUNE },
+        { title: "The Bear", type: "tv", posterUrl: DUNE },
+      ],
+    });
+    expect(fanPosters(series)).toEqual([]);
+    expect(fanPosters(session("A"))).toEqual([]);
+  });
+});
 
 describe("session progress", () => {
   it("counts a session stopped in its last minute as watched", () => {

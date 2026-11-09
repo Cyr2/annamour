@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import { sessionPath } from "../../sync/restart.ts";
 import { SeanceOptions } from "../sessions/SeanceOptions.tsx";
 import { SeancePoster } from "../sessions/SeancePoster.tsx";
-import { companionsLabel, remainingLabel, sessionTitle } from "../sessions/session-rules.ts";
+import { companionsLabel, queuePlace, remainingLabel, sessionTitle } from "../sessions/session-rules.ts";
 
 /** « Autres en cours »: the séances left unfinished besides the one offered first, as posters like the list's. */
 export function OngoingShelf({ sessions }: { sessions: SessionSummary[] }) {
@@ -39,10 +39,7 @@ export function OngoingShelf({ sessions }: { sessions: SessionSummary[] }) {
 }
 
 function OngoingTile({ session }: { session: SessionSummary }) {
-  const detail =
-    session.episode.count > 1
-      ? `épisode ${session.episode.index + 1} sur ${session.episode.count}`
-      : remainingLabel(session);
+  const detail = queuePlace(session) || remainingLabel(session);
   return (
     <Link href={sessionPath(session.code)} className="grid gap-2 rounded-control text-left">
       <SeancePoster session={session} className="w-full">

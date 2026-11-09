@@ -11,18 +11,55 @@ export const FAVORITE_MIN_SESSIONS = 2;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEKDAYS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"] as const;
 
-/** « The Bear · S2 · É5 »: the séance, and the episode it is on when it has a name. */
+const playing = (session: SessionSummary) => session.queue?.[session.episode.index];
+
+/** A séance of films one after the other (not the episodes of a series, nor links). */
+const isFilms = (session: SessionSummary) => session.queue?.every((item) => item.type === "movie") ?? false;
+
+/** « The Bear · S2 · É5 »: the séance, and the episode it is on when it has a name; for films, the one playing. */
 export function sessionTitle(session: SessionSummary): string {
-  return episodeTitle(session.title, session.episode.label);
+  const film = playing(session);
+  return film?.type === "movie" ? film.title : episodeTitle(session.title, session.episode.label);
 }
 
-/** The home card's kicker: « Reprendre », or « Reprendre · épisode 5 » for a séance of several episodes. */
+/** « film 2 sur 3 », « épisode 5 sur 8 », or nothing for a séance of one video. */
+export function queuePlace(session: SessionSummary): string {
+  const { index, count } = session.episode;
+  return count > 1 ? `${isFilms(session) ? "film" : "épisode"} ${index + 1} sur ${count}` : "";
+}
+
+/** The home card's kicker: « Reprendre », or « Reprendre · épisode 5 » (« · film 2 ») for a séance of several. */
 export function resumeKicker(session: SessionSummary): string {
-  return session.episode.count > 1 ? `Reprendre · épisode ${session.episode.index + 1}` : "Reprendre";
+  if (session.episode.count < 2) return "Reprendre";
+  return `Reprendre · ${isFilms(session) ? "film" : "épisode"} ${session.episode.index + 1}`;
 }
 
+/** The video playing reached its credits. */
+const atCredits = (session: SessionSummary) =>
+  session.duration !== undefined && session.position >= session.duration - FINISHED_MARGIN_SECONDS;
+
+/** Over once its last film or episode is: between two, a séance is still under way. */
 export function isFinished(session: SessionSummary): boolean {
-  return session.duration !== undefined && session.position >= session.duration - FINISHED_MARGIN_SECONDS;
+  return atCredits(session) && session.episode.index >= session.episode.count - 1;
+}
+
+/** Between two videos: « Film suivant : Alien », or « Épisode suivant »; empty otherwise. */
+function nextLabel(session: SessionSummary): string {
+  if (!atCredits(session) || isFinished(session)) return "";
+  const next = session.queue?.[session.episode.index + 1];
+  return next?.type === "movie" ? `Film suivant : ${next.title}` : "Épisode suivant";
+}
+
+/**
+ * The posters of a séance's different titles, the one playing in front, to fan them out;
+ * empty for one title (a film, or a series however many episodes).
+ */
+export function fanPosters(session: SessionSummary): (string | undefined)[] {
+  const current = playing(session);
+  const titles = new Map<string, string | undefined>();
+  if (current) titles.set(current.title, current.posterUrl);
+  for (const item of session.queue ?? []) if (!titles.has(item.title)) titles.set(item.title, item.posterUrl);
+  return titles.size > 1 ? [...titles.values()] : [];
 }
 
 /** 0 to 1, or null when the length of the video is unknown. */
@@ -31,15 +68,19 @@ export function progressOf(session: SessionSummary): number | null {
   return Math.min(1, Math.max(0, session.position / session.duration));
 }
 
-/** « Arrêtés à 1:12:40 · reste 58 min », or « Terminé ». */
+/** « Arrêtés à 1:12:40 · reste 58 min », « Film suivant : Alien » between two, or « Terminé ». */
 export function stopLabel(session: SessionSummary): string {
   if (isFinished(session)) return "Terminé";
+  const next = nextLabel(session);
+  if (next) return next;
   const stoppedAt = `Arrêtés à ${formatClock(session.position)}`;
   return session.duration === undefined ? stoppedAt : `${stoppedAt} · ${remainingLabel(session)}`;
 }
 
-/** « reste 58 min », or an empty string when the length is unknown. */
+/** « reste 58 min », « Film suivant : Alien » between two videos, or an empty string when the length is unknown. */
 export function remainingLabel(session: SessionSummary): string {
+  const next = nextLabel(session);
+  if (next) return next;
   if (session.duration === undefined) return "";
   return `reste ${formatDuration(Math.max(0, session.duration - session.position))}`;
 }
