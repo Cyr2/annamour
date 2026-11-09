@@ -73,13 +73,13 @@ export function circleTitle(circle: Pick<Circle, "name" | "members">, me: string
 }
 
 /**
- * What the salon says of its séance's circle: « Séance de Les potes du jeudi », « avec Léo et Inès »
- * for one of its people, « Séance de Darius et Annou » for a guest who is not in it. Nothing when
- * nobody else is left in an unnamed one.
+ * What the salon says of its séance's circle: « Cercle · Les potes du jeudi », « avec Léo et Inès »
+ * for one of its people, « Cercle · Darius et Annou » for a guest who is not in it. Nothing when
+ * nobody else is left in an unnamed one. « Cercle · » reads naturally whatever the name is.
  */
 export function seanceCircleLine(circle: Pick<Circle, "name" | "members">, me: string): string | null {
   const inIt = circle.members.some((person) => person.accountId === me);
-  if (circle.name || !inIt) return `Séance de ${circleTitle(circle, me)}`;
+  if (circle.name || !inIt) return `Cercle · ${circleTitle(circle, me)}`;
   const others = othersIn(circle, me);
   // Without me, the circle reads its people alone: « Léo et Inès ».
   return others.length ? `avec ${circleTitle({ members: others }, me)}` : null;

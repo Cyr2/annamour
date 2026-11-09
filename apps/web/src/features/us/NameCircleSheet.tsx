@@ -46,7 +46,7 @@ function NameForm({ circle, onDone }: { circle: Circle | undefined; onDone: () =
 
   return (
     <form className="grid gap-4" onSubmit={submit}>
-      {circle ? null : <Sheet.Lede>Un groupe avec qui regarder : les potes du jeudi, la famille…</Sheet.Lede>}
+      {circle ? null : <Sheet.Lede>Un cercle avec qui regarder : les potes du jeudi, la famille…</Sheet.Lede>}
       <Field label="Nom du cercle" htmlFor={nameId}>
         <Input id={nameId} value={name} onValueChange={setName} maxLength={40} placeholder="Les potes du jeudi" />
       </Field>
