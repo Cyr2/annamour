@@ -47,6 +47,7 @@ export class HistoryService {
       },
       ...(room.circleId === undefined ? {} : { circleId: room.circleId }),
       ...(room.posterUrl === undefined ? {} : { posterUrl: room.posterUrl }),
+      ...(room.catalog === undefined ? {} : { catalog: room.catalog }),
     }));
   }
 

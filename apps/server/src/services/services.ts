@@ -59,8 +59,14 @@ export interface Services {
 export function createServices(options: ServiceOptions): Services {
   const { db, pepper, relyingParty, now = Date.now, fetchText = safeFetchText } = options;
   const repositories = createRepositories(db);
-  const store = new RoomStore(repositories.rooms, { now, random: options.random });
+  const store = new RoomStore(repositories.rooms, {
+    now,
+    random: options.random,
+    // Read when a film ends, long after the services below exist.
+    onFilmWatched: (code, film) => watchlist.markWatchedBySeance(code, film),
+  });
   const circles = new CircleService({ repositories, now });
+  const watchlist = new WatchlistService({ repositories, now });
   // Séances made before circles existed find theirs.
   circles.backfill();
   const history = new HistoryService({ repositories, store, now, onParticipation: (code) => circles.syncRoom(code) });
@@ -92,7 +98,7 @@ export function createServices(options: ServiceOptions): Services {
     accounts,
     tvPairings: new TvPairingService({ repositories, accounts, now, randomInt: options.tvCodeRandomInt }),
     passkeys: new PasskeyService({ repositories, relyingParty, now, webAuthn: options.webAuthn }),
-    watchlist: new WatchlistService({ repositories, now }),
+    watchlist,
     circles,
     playbackStats: new PlaybackStatsService({ repositories, now }),
     lowQualities,

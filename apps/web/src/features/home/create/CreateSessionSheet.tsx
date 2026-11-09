@@ -1,7 +1,11 @@
+import type { PlayCatalogRequest, SessionSummary } from "@annamour/protocol";
 import { useState } from "react";
 import { Sheet } from "../../../ui/Sheet.tsx";
 import { ThreadSpinner } from "../../../ui/ThreadSpinner.tsx";
+import { seanceOfTitle } from "../../sessions/session-rules.ts";
+import { useSessions } from "../../sessions/sessions.ts";
 import { CatalogForm } from "./CatalogForm.tsx";
+import { ExistingSeanceStep } from "./ExistingSeanceStep.tsx";
 import { LinkForm } from "./LinkForm.tsx";
 import { useCreateSession } from "./useCreateSession.ts";
 
@@ -10,22 +14,35 @@ import { useCreateSession } from "./useCreateSession.ts";
 export function CreateSessionSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { state, prepare, prepareFromCatalog, reset } = useCreateSession();
   const [byLink, setByLink] = useState(false);
+  const [existing, setExisting] = useState<{ session: SessionSummary; play: PlayCatalogRequest } | null>(null);
 
   const close = () => {
     onClose();
     reset();
     setByLink(false);
+    setExisting(null);
+  };
+  // A title with a séance under way offers it first, rather than a second séance of the same film.
+  const play = (request: PlayCatalogRequest) => {
+    const session = seanceOfTitle(useSessions.getState().sessions, request);
+    if (session) setExisting({ session, play: request });
+    else prepareFromCatalog(request);
   };
 
   return (
     <Sheet open={open} onClose={close} title="Nouvelle séance">
-      {state.step === "link" && !byLink ? (
-        <CatalogForm
-          error={state.error}
-          onPlay={prepareFromCatalog}
-          onPasteLink={() => setByLink(true)}
-          onCancel={close}
+      {existing ? (
+        <ExistingSeanceStep
+          session={existing.session}
+          onBack={() => setExisting(null)}
+          onNew={() => {
+            setExisting(null);
+            prepareFromCatalog(existing.play);
+          }}
         />
+      ) : null}
+      {state.step === "link" && !byLink && !existing ? (
+        <CatalogForm error={state.error} onPlay={play} onPasteLink={() => setByLink(true)} onCancel={close} />
       ) : null}
       {state.step === "link" && byLink ? (
         <LinkForm error={state.error} onSubmit={prepare} onCancel={() => setByLink(false)} />

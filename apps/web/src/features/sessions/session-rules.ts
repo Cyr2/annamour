@@ -152,3 +152,31 @@ export function relativeDay(time: number, now: number): string {
   if (days < 365) return plural(Math.floor(days / 30), "mois");
   return plural(Math.floor(days / 365), "an");
 }
+
+type TitleRef = { id: number; type: "movie" | "tv" };
+
+const sameTitle = (session: SessionSummary, title: TitleRef) =>
+  session.catalog?.id === title.id && session.catalog.type === title.type;
+
+/** Two séances of the same catalog title (never two séances of pasted links). */
+export const isSameTitle = (a: SessionSummary, b: SessionSummary) => (a.catalog ? sameTitle(b, a.catalog) : false);
+
+/** The séance still under way for this catalog title (the latest), to go back to rather than start another. */
+export function seanceOfTitle(sessions: readonly SessionSummary[], title: TitleRef): SessionSummary | null {
+  return latestUnfinished(sessions.filter((session) => sameTitle(session, title)));
+}
+
+/**
+ * Each title once, by its most recent séance (give them most recent first):
+ * older séances of the same film stay in the history, not on « Ce soir ».
+ */
+export function onePerTitle(sessions: readonly SessionSummary[]): SessionSummary[] {
+  const seen = new Set<string>();
+  return sessions.filter((session) => {
+    if (!session.catalog) return true;
+    const key = `${session.catalog.type}:${session.catalog.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}

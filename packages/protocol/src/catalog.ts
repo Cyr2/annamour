@@ -9,7 +9,7 @@ import { z } from "zod/mini";
 export const CatalogMediaType = z.enum(["movie", "tv"]);
 export type CatalogMediaType = z.infer<typeof CatalogMediaType>;
 
-const CatalogId = z.number().check(z.int(), z.positive());
+export const CatalogId = z.number().check(z.int(), z.positive());
 const Positive = z.number().check(z.int(), z.positive());
 
 export const CatalogTitle = z.object({

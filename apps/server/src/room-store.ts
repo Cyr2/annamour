@@ -11,6 +11,8 @@ export const CHECKPOINT_INTERVAL_MS = 30 * 1000;
 export interface RoomStoreOptions {
   random?: () => number;
   now?: () => number;
+  /** A film of the catalog was watched to its end in this séance (it becomes « vu »). */
+  onFilmWatched?: (code: string, film: CatalogRef) => void;
 }
 
 /** What is known of a séance's first video beyond the stream: its label and the catalog title it came from. */
@@ -33,9 +35,14 @@ export class RoomStore {
   private readonly repository: RoomRepository;
   private readonly random: () => number;
   private readonly now: () => number;
+  private readonly onFilmWatched: RoomStoreOptions["onFilmWatched"];
 
-  constructor(repository: RoomRepository, { random = Math.random, now = Date.now }: RoomStoreOptions = {}) {
+  constructor(
+    repository: RoomRepository,
+    { random = Math.random, now = Date.now, onFilmWatched }: RoomStoreOptions = {},
+  ) {
     this.repository = repository;
+    this.onFilmWatched = onFilmWatched;
     this.random = random;
     this.now = now;
   }
@@ -125,6 +132,10 @@ export class RoomStore {
       savePosition: (position, now) => repository.savePosition(code, position, now),
       saveCurrentEpisode: (current, duration, now) => repository.saveCurrentEpisode(code, current, duration, now),
       removeEpisode: (id) => repository.removeEpisode(code, id),
+      // A series is not « vu » after one episode: only a film is.
+      episodeEnded: (catalog) => {
+        if (catalog?.type === "movie") this.onFilmWatched?.(code, catalog);
+      },
     };
   }
 
