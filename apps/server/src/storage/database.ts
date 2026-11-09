@@ -148,6 +148,12 @@ const MIGRATIONS: readonly string[] = [
   `
   ALTER TABLE circle_members ADD COLUMN position INTEGER;
   `,
+  // Who created each séance (they alone may delete it for everyone; older ones get theirs at start, see
+  // ParticipationRepository.fillCreators), and which séance marked a title « vu », so deleting it takes the mark back.
+  `
+  ALTER TABLE rooms ADD COLUMN created_by TEXT REFERENCES accounts (id) ON DELETE SET NULL;
+  ALTER TABLE watchlist_items ADD COLUMN watched_by_room TEXT;
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

@@ -131,7 +131,7 @@ describe("the shared watchlist", () => {
     const room = services.store.create("Film", media, 1000);
     services.history.recordParticipation(room.code, darius.id);
     services.history.recordParticipation(room.code, lea.id);
-    services.history.hide(room.code, darius.id);
+    services.history.leave(room.code, darius.id);
 
     expect((await add(darius.cookie, { title: film, shareWith: [lea.id], want: true })).status).toBe(400);
     await add(darius.cookie, { title: series, shareWith: "everyone", want: true });

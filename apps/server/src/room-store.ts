@@ -104,6 +104,12 @@ export class RoomStore {
     for (const room of this.live.values()) if (room.size > 0) room.saveNow(now);
   }
 
+  /** A séance deleted for everyone: whoever is still in it is let go, and it is gone from memory. */
+  forget(code: string): void {
+    this.live.get(code)?.closeAll();
+    this.live.delete(code);
+  }
+
   /** Forgets rooms unused for longer than the retention and frees memory from idle ones. */
   sweep(now: number): SweepResult {
     let evicted = 0;

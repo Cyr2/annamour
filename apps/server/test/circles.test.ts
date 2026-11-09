@@ -225,7 +225,7 @@ describe("circles", () => {
     const darius = await account("Darius");
     const annou = await account("Annou");
     const code = seance(darius.id, annou.id);
-    services.history.hide(code, darius.id);
+    services.history.leave(code, darius.id);
     expect((await circlesOf(darius.cookie))[0]?.members.map((m) => m.name)).toEqual(["Darius", "Annou"]);
   });
 

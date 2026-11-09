@@ -120,8 +120,18 @@ export class WatchlistRepository {
       .run(itemId, accountId, wants ? 1 : 0);
   }
 
-  setWatched(itemId: string, watchedAt: number | null): void {
-    this.db.prepare("UPDATE watchlist_items SET watched_at = ? WHERE id = ?").run(watchedAt, itemId);
+  /** `bySeance`: the séance that reached the end of the film, so deleting it can take the mark back. */
+  setWatched(itemId: string, watchedAt: number | null, bySeance: string | null = null): void {
+    this.db
+      .prepare("UPDATE watchlist_items SET watched_at = ?, watched_by_room = ? WHERE id = ?")
+      .run(watchedAt, watchedAt === null ? null : bySeance, itemId);
+  }
+
+  /** A séance is deleted: the titles it marked « vu » go back to watch. */
+  unwatchSeance(code: string): void {
+    this.db
+      .prepare("UPDATE watchlist_items SET watched_at = NULL, watched_by_room = NULL WHERE watched_by_room = ?")
+      .run(code);
   }
 
   /** Removes the item for everyone who sees it. Returns false when there was none. */

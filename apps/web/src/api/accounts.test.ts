@@ -3,9 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createAccount,
   createLinkToken,
+  deleteSessionForEveryone,
   fetchMe,
   fetchSessions,
-  hideSession,
+  leaveSession,
   linkWithToken,
   loginWithKey,
   logout,
@@ -104,7 +105,9 @@ describe("accounts API", () => {
   it("removes a session from my list", async () => {
     const fetch = vi.fn(async () => new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", fetch);
-    await hideSession("YWEK");
+    await leaveSession("YWEK");
     expect(fetch).toHaveBeenCalledWith(`${API.sessions}/YWEK`, expect.objectContaining({ method: "DELETE" }));
+    await deleteSessionForEveryone("YWEK");
+    expect(fetch).toHaveBeenCalledWith(`${API.sessions}/YWEK/everyone`, expect.objectContaining({ method: "DELETE" }));
   });
 });

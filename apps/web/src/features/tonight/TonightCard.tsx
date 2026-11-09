@@ -11,6 +11,7 @@ import { Surface } from "../../ui/Surface.tsx";
 import type { TonightPick } from "../circles/circle-rules.ts";
 import { describeTitle } from "../home/create/CatalogResults.tsx";
 import { ResumeSeanceAction } from "../sessions/ResumeSeanceAction.tsx";
+import { SeanceOptions } from "../sessions/SeanceOptions.tsx";
 import { resumeLine, sessionTitle } from "../sessions/session-rules.ts";
 import { useSeanceOfTitle } from "../sessions/useSeanceOfTitle.ts";
 import { useLaunchTitle } from "../watchlist/useLaunchTitle.ts";
@@ -48,7 +49,10 @@ function ResumeBody({ pick }: { pick: Extract<TonightPick, { kind: "resume" }> }
     <div className="flex items-center gap-4">
       <SeancePoster session={session} className="w-24 shrink-0" />
       <div className="grid min-w-0 flex-1 gap-1">
-        <span className="text-xs font-semibold text-accent">On reprend ?</span>
+        <span className="flex items-center justify-between gap-2">
+          <span className="text-xs font-semibold text-accent">On reprend ?</span>
+          <SeanceOptions session={session} className="-my-2 -mr-2" />
+        </span>
         <strong className="truncate font-rounded-tight text-lg font-extrabold text-fg">{sessionTitle(session)}</strong>
         <span className="text-sm text-fg-muted">{resumeLine(session, Date.now())}</span>
         <LinkButton

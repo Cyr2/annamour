@@ -1,10 +1,10 @@
 import type { SessionSummary } from "@annamour/protocol";
-import { NotFoundError } from "../errors.ts";
+import { NotFoundError, NotYoursToDeleteError } from "../errors.ts";
 import type { RoomStore } from "../room-store.ts";
 import type { Repositories } from "../storage/repositories.ts";
 
 export interface HistoryServiceOptions {
-  repositories: Pick<Repositories, "participations">;
+  repositories: Pick<Repositories, "participations" | "rooms" | "watchlist">;
   store: RoomStore;
   now: () => number;
   /** Someone with an account is now in this séance (its circle follows, see CircleService.syncRoom). */
@@ -48,12 +48,27 @@ export class HistoryService {
       ...(room.circleId === undefined ? {} : { circleId: room.circleId }),
       ...(room.posterUrl === undefined ? {} : { posterUrl: room.posterUrl }),
       ...(room.catalog === undefined ? {} : { catalog: room.catalog }),
+      ...(room.createdBy === accountId ? { createdByMe: true } : {}),
     }));
   }
 
-  /** Hides a session from this account's history only; the others keep it. */
-  hide(roomCode: string, accountId: string): void {
-    if (!this.repositories.participations.hide(roomCode, accountId))
-      throw new NotFoundError("Cette séance n'est pas dans ton historique.");
+  /** Leaves a séance: gone from my séances and my circles' counts; the others keep it. Joining again brings it back. */
+  leave(roomCode: string, accountId: string): void {
+    if (!this.repositories.participations.remove(roomCode, accountId))
+      throw new NotFoundError("Cette séance n'est pas dans tes séances.");
+  }
+
+  /**
+   * The person who created a séance deletes it for everyone: its séance,
+   * episodes and positions go, and the titles it marked « vu » go back to watch.
+   */
+  deleteForEveryone(roomCode: string, accountId: string): void {
+    const { rooms, watchlist } = this.repositories;
+    const creator = rooms.creatorOf(roomCode);
+    if (creator === undefined) throw new NotFoundError("Cette séance n'existe plus.");
+    if (creator !== accountId) throw new NotYoursToDeleteError();
+    watchlist.unwatchSeance(roomCode);
+    this.store.forget(roomCode);
+    rooms.delete(roomCode);
   }
 }

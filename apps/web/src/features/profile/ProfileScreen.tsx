@@ -5,7 +5,7 @@ import { cx } from "../../ui/cx.ts";
 import { toast } from "../../ui/toast.ts";
 import { useAccount } from "../account/account.ts";
 import { favoriteOf, rankPeople, withPerson } from "../sessions/session-rules.ts";
-import { hideSession, useSessions } from "../sessions/sessions.ts";
+import { leaveSession, useSessions } from "../sessions/sessions.ts";
 import { useLoadSessions } from "../sessions/useLoadSessions.ts";
 import { useTv } from "../tv/tv-context.ts";
 import { AccountCard } from "./AccountCard.tsx";
@@ -87,7 +87,7 @@ function Sessions({ account }: { account: Account }) {
 
   const remove = useCallback(async (session: SessionSummary) => {
     try {
-      await hideSession(session.code);
+      await leaveSession(session.code);
       toast({ message: `« ${session.title} » retirée de tes séances` });
     } catch (failure) {
       toast({ message: failure instanceof Error ? failure.message : "Ça n'a pas marché. Réessaie." });

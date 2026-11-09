@@ -19,9 +19,13 @@ import {
   withPerson,
 } from "./session-rules.ts";
 
-vi.mock("../../api/accounts.ts", () => ({ fetchSessions: vi.fn(), hideSession: vi.fn() }));
+vi.mock("../../api/accounts.ts", () => ({
+  fetchSessions: vi.fn(),
+  leaveSession: vi.fn(),
+  deleteSessionForEveryone: vi.fn(),
+}));
 const api = await import("../../api/accounts.ts");
-const { hideSession, loadSessions, resetSessions, useSessions } = await import("./sessions.ts");
+const { deleteSession, leaveSession, loadSessions, resetSessions, useSessions } = await import("./sessions.ts");
 
 const anna = { accountId: "anna", name: "Anna", color: "lilac" } as const;
 const leo = { accountId: "leo", name: "Léo", color: "butter" } as const;
@@ -139,7 +143,7 @@ describe("sessions store", () => {
   beforeEach(() => {
     resetSessions();
     vi.mocked(api.fetchSessions).mockReset();
-    vi.mocked(api.hideSession).mockReset();
+    vi.mocked(api.leaveSession).mockReset();
   });
 
   it("loads the history most recent first, sharing one request", async () => {
@@ -166,19 +170,31 @@ describe("sessions store", () => {
     vi.mocked(api.fetchSessions).mockResolvedValue([friday, thriller]);
     await loadSessions();
 
-    vi.mocked(api.hideSession).mockResolvedValueOnce();
-    await hideSession("YWEK");
+    vi.mocked(api.leaveSession).mockResolvedValueOnce();
+    await leaveSession("YWEK");
     expect(useSessions.getState().sessions.map((s) => s.code)).toEqual(["RTNB"]);
 
     await loadSessions();
-    vi.mocked(api.hideSession).mockRejectedValueOnce(new ApiRequestError(500, "Le serveur ne répond pas."));
-    const removal = hideSession("RTNB");
+    vi.mocked(api.leaveSession).mockRejectedValueOnce(new ApiRequestError(500, "Le serveur ne répond pas."));
+    const removal = leaveSession("RTNB");
     expect(useSessions.getState().sessions.map((s) => s.code)).toEqual(["YWEK"]);
     await expect(removal).rejects.toThrow("Le serveur ne répond pas.");
     expect(useSessions.getState().sessions.map((s) => s.code)).toEqual(["YWEK", "RTNB"]);
 
-    await hideSession("NOPE");
-    expect(api.hideSession).toHaveBeenCalledTimes(2);
+    await leaveSession("NOPE");
+    expect(api.leaveSession).toHaveBeenCalledTimes(2);
+  });
+
+  it("deletes a séance I created at once, for everyone, and puts it back if the server refuses", async () => {
+    vi.mocked(api.fetchSessions).mockResolvedValue([friday, thriller]);
+    await loadSessions();
+    vi.mocked(api.deleteSessionForEveryone).mockRejectedValueOnce(new ApiRequestError(403, "Tu peux la quitter."));
+    await expect(deleteSession("YWEK")).rejects.toThrow("Tu peux la quitter.");
+    expect(useSessions.getState().sessions.map((s) => s.code)).toEqual(["YWEK", "RTNB"]);
+
+    vi.mocked(api.deleteSessionForEveryone).mockResolvedValueOnce();
+    await deleteSession("YWEK");
+    expect(useSessions.getState().sessions.map((s) => s.code)).toEqual(["RTNB"]);
   });
 });
 

@@ -9,8 +9,13 @@ export function sessionRoutes({ services }: RouteDeps) {
 
   routes.get(API.sessions, signedIn, (c) => c.json({ sessions: history.list(c.var.account.id) } satisfies SessionList));
 
-  routes.delete(`${API.sessions}/:code`, signedIn, (c) => {
-    history.hide(c.req.param("code").toUpperCase(), c.var.account.id);
+  routes.delete(API.sessionForEveryone, signedIn, (c) => {
+    history.deleteForEveryone(c.req.param("code").toUpperCase(), c.var.account.id);
+    return c.body(null, 204);
+  });
+
+  routes.delete(API.session, signedIn, (c) => {
+    history.leave(c.req.param("code").toUpperCase(), c.var.account.id);
     return c.body(null, 204);
   });
 

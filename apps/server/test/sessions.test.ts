@@ -47,6 +47,7 @@ describe("my sessions", () => {
         lastUsedAt: clock.now,
         participants: [],
         episode: { index: 0, count: 1 },
+        createdByMe: true,
       },
     ]);
   });
@@ -87,26 +88,26 @@ describe("my sessions", () => {
     expect(list[0]?.position).toBe(70);
   });
 
-  it("can be hidden for me only, and come back if I join again", async () => {
+  it("can be left by me only, without me for the others, and come back if I join again", async () => {
     const { app, account, createRoom, sessions, services } = setup();
     const darius = await account("Darius");
     const anna = await account("Anna");
     const code = await createRoom(darius.cookie);
     services.history.recordParticipation(code, anna.id);
 
-    const hidden = await app.request(`${API.sessions}/${code.toLowerCase()}`, {
+    const left = await app.request(`${API.sessions}/${code.toLowerCase()}`, {
       method: "DELETE",
       headers: { cookie: darius.cookie },
     });
-    expect(hidden.status).toBe(204);
+    expect(left.status).toBe(204);
     expect(await sessions(darius.cookie)).toEqual([]);
-    expect(required((await sessions(anna.cookie))[0], "Anna's session").participants).toHaveLength(1);
+    expect(required((await sessions(anna.cookie))[0], "Anna's session").participants).toEqual([]);
 
     services.history.recordParticipation(code, darius.id);
     expect(await sessions(darius.cookie)).toHaveLength(1);
   });
 
-  it("cannot hide a session I was never in", async () => {
+  it("cannot leave a session I was never in", async () => {
     const { app, account } = setup();
     const darius = await account("Darius");
     const response = await app.request(`${API.sessions}/ZZZZ`, {

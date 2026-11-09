@@ -103,8 +103,10 @@ export class CircleRepository {
       this.db
         .prepare(
           `SELECT c.id, c.name,
-             (SELECT COUNT(*) FROM rooms r WHERE r.circle_id = c.id) AS evenings,
-             (SELECT MAX(r.last_used_at) FROM rooms r WHERE r.circle_id = c.id) AS last_used_at
+             (SELECT COUNT(*) FROM rooms r JOIN participations p ON p.room_code = r.code
+              WHERE r.circle_id = c.id AND p.account_id = me.account_id AND p.hidden = 0) AS evenings,
+             (SELECT MAX(r.last_used_at) FROM rooms r JOIN participations p ON p.room_code = r.code
+              WHERE r.circle_id = c.id AND p.account_id = me.account_id AND p.hidden = 0) AS last_used_at
            FROM circles c JOIN circle_members me ON me.circle_id = c.id AND me.account_id = ?
            ORDER BY me.position IS NULL, me.position, last_used_at IS NULL, last_used_at DESC, c.created_at DESC`,
         )
