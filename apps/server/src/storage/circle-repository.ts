@@ -14,6 +14,31 @@ const MemberRow = z.object({ circle_id: z.string(), account_id: z.string(), name
 const IdRow = z.object({ id: z.string() });
 const AccountRow = z.object({ account_id: z.string() });
 
+/** The same title in both lists, in the same state (to watch, or watched). */
+const TWIN_TITLE = `t.circle_id = :into AND t.catalog_key = s.catalog_key AND (t.watched_at IS NULL) = (s.watched_at IS NULL)`;
+
+const MERGE = [
+  "UPDATE circles SET name = COALESCE(name, (SELECT name FROM circles WHERE id = :from)) WHERE id = :into",
+  // Each person keeps the higher of the two places they gave these circles on « Nous ».
+  `UPDATE circle_members SET position = COALESCE(
+     MIN(position, (SELECT f.position FROM circle_members f WHERE f.circle_id = :from AND f.account_id = circle_members.account_id)),
+     position,
+     (SELECT f.position FROM circle_members f WHERE f.circle_id = :from AND f.account_id = circle_members.account_id))
+   WHERE circle_id = :into`,
+  `INSERT INTO watchlist_members (item_id, account_id, wants)
+     SELECT t.id, m.account_id, m.wants FROM watchlist_items s
+     JOIN watchlist_items t ON ${TWIN_TITLE}
+     JOIN watchlist_members m ON m.item_id = s.id
+     WHERE s.circle_id = :from
+   ON CONFLICT (item_id, account_id) DO UPDATE SET wants = MAX(watchlist_members.wants, excluded.wants)`,
+  `DELETE FROM watchlist_items AS s
+   WHERE s.circle_id = :from AND EXISTS (SELECT 1 FROM watchlist_items t WHERE ${TWIN_TITLE})`,
+  "UPDATE watchlist_items SET circle_id = :into WHERE circle_id = :from",
+  "UPDATE rooms SET circle_id = :into WHERE circle_id = :from",
+  "UPDATE circle_invites SET circle_id = :into WHERE circle_id = :from",
+  "DELETE FROM circles WHERE id = :from",
+];
+
 /** Circles, their members, the séances in them and their invitation links. */
 export class CircleRepository {
   private readonly db: DatabaseSync;
@@ -83,17 +108,37 @@ export class CircleRepository {
     return parseRows(AccountRow, rows).map((row) => row.account_id);
   }
 
-  /** The circle made of exactly these people, if there is one (the most recently created). */
-  findByMembers(accountIds: readonly string[]): string | undefined {
+  /** The circle made of exactly these people, if there is one (the most recently created), `except` aside. */
+  findByMembers(accountIds: readonly string[], except = ""): string | undefined {
     const row = this.db
       .prepare(
         `SELECT c.id FROM circles c JOIN circle_members m ON m.circle_id = c.id
+         WHERE c.id <> ?
          GROUP BY c.id
          HAVING COUNT(*) = ? AND SUM(m.account_id IN (SELECT value FROM json_each(?))) = ?
          ORDER BY c.created_at DESC LIMIT 1`,
       )
-      .get(accountIds.length, JSON.stringify(accountIds), accountIds.length);
+      .get(except, accountIds.length, JSON.stringify(accountIds), accountIds.length);
     return parseOptionalRow(IdRow, row)?.id;
+  }
+
+  /**
+   * Moves everything of `fromId` into `intoId`, then removes `fromId`: its séances, its invitations,
+   * its name when `intoId` has none, and its titles, a title both lists hold kept once with every wish.
+   */
+  merge(fromId: string, intoId: string): void {
+    this.db.exec("BEGIN");
+    try {
+      // node:sqlite refuses a parameter a statement does not name: each gets only its own.
+      for (const statement of MERGE) {
+        const named = { from: fromId, into: intoId };
+        this.db.prepare(statement).run(statement.includes(":into") ? named : { from: fromId });
+      }
+      this.db.exec("COMMIT");
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
   }
 
   /** The circles `accountId` is in, with their people, how many séances, and when last used. */
