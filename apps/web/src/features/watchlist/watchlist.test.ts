@@ -90,6 +90,21 @@ describe("what the watchlist says", () => {
     expect(rules.wantsLabel(3)).toBe("3 envies");
   });
 
+  it("beside my heart, names only the others who want it, never me", () => {
+    expect(rules.othersWantingLine(film, "darius")).toBe("Léa en a envie");
+    expect(rules.othersWantingLine({ ...film, wantedBy: ["darius", "lea", "ines"] }, "darius")).toBe(
+      "Léa et Inès en ont envie",
+    );
+    expect(rules.othersWantingLine({ ...film, wantedBy: ["darius"] }, "darius")).toBe(
+      "Personne d'autre pour l'instant",
+    );
+    expect(rules.othersWantingLine({ ...film, wantedBy: [] }, "darius")).toBe("Personne pour l'instant");
+  });
+
+  it("names the heart after the title, so a screen reader says what it does", () => {
+    expect(rules.wantToggleLabel(film)).toBe("J'ai envie de voir Interstellar");
+  });
+
   it("says when and with whom it was watched", () => {
     const now = Date.UTC(2026, 10, 7, 12);
     expect(rules.watchedLine({ ...film, watchedAt: now }, "darius", now)).toBe("Vu aujourd'hui avec Léa et Inès");

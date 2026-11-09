@@ -1,7 +1,6 @@
 import type { WatchlistItem } from "@annamour/protocol";
-import { Check, Heart, Play, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { Check, Play, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { BubbleStack } from "../../ui/BubbleStack.tsx";
 import { Button } from "../../ui/controls.tsx";
 import { Poster } from "../../ui/Poster.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
@@ -12,8 +11,9 @@ import { EpisodePicker } from "../home/create/EpisodePicker.tsx";
 import { ResumeSeanceAction } from "../sessions/ResumeSeanceAction.tsx";
 import { useSeanceOfTitle } from "../sessions/useSeanceOfTitle.ts";
 import { useLaunchTitle } from "./useLaunchTitle.ts";
+import { WantToggle } from "./WantToggle.tsx";
 import { markWatched, removeItem, toggleWant } from "./watchlist.ts";
-import { audienceLine, wantersLine } from "./watchlist-rules.ts";
+import { audienceLine } from "./watchlist-rules.ts";
 
 interface WatchlistItemSheetProps {
   item: WatchlistItem | null;
@@ -34,11 +34,7 @@ function ItemBody({ item, me, onClose }: { item: WatchlistItem; me: string; onCl
   const [pickingEpisode, setPickingEpisode] = useState(false);
   const { launch, busy, error } = useLaunchTitle();
   const ongoing = useSeanceOfTitle(item.title);
-  const wanting = item.wantedBy.includes(me);
   const watched = item.watchedAt !== undefined;
-  const wanters = item.sharedWith
-    .filter((person) => item.wantedBy.includes(person.accountId))
-    .map((person) => ({ id: person.accountId, name: person.name, color: person.color }));
   const act = (work: Promise<void>, done?: string) =>
     work
       .then(() => (done ? toast({ message: done }) : undefined))
@@ -61,17 +57,7 @@ function ItemBody({ item, me, onClose }: { item: WatchlistItem; me: string; onCl
         <div className="grid min-w-0 flex-1 content-start justify-items-start gap-2 text-sm text-fg-muted">
           <p>{describeTitle(item.title)}</p>
           <p>{audienceLine(item, me)}</p>
-          <p className="flex items-center gap-2">
-            <BubbleStack people={wanters} />
-            {wantersLine(item, me)}
-          </p>
-          <Button
-            icon={<Heart className={wanting ? "fill-current text-accent" : undefined} />}
-            aria-pressed={wanting}
-            onClick={() => void act(toggleWant(item.id, me, !wanting))}
-          >
-            {wanting ? "J'en ai envie" : "Moi aussi"}
-          </Button>
+          <WantToggle item={item} me={me} onToggle={(want) => void act(toggleWant(item.id, me, want))} />
         </div>
       </div>
       <p role="alert" className="min-h-5 text-sm text-danger">

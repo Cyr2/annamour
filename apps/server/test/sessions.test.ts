@@ -88,7 +88,7 @@ describe("my sessions", () => {
     expect(list[0]?.position).toBe(70);
   });
 
-  it("can be left by me only, without me for the others, and come back if I join again", async () => {
+  it("can be left by me only, still with me, faded, for the others, and come back if I join again", async () => {
     const { app, account, createRoom, sessions, services } = setup();
     const darius = await account("Darius");
     const anna = await account("Anna");
@@ -101,7 +101,9 @@ describe("my sessions", () => {
     });
     expect(left.status).toBe(204);
     expect(await sessions(darius.cookie)).toEqual([]);
-    expect(required((await sessions(anna.cookie))[0], "Anna's session").participants).toEqual([]);
+    expect(required((await sessions(anna.cookie))[0], "Anna's session").participants).toMatchObject([
+      { name: "Darius", left: true },
+    ]);
 
     services.history.recordParticipation(code, darius.id);
     expect(await sessions(darius.cookie)).toHaveLength(1);

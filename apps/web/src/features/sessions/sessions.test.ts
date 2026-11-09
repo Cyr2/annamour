@@ -150,6 +150,19 @@ describe("relativeDay", () => {
     expect(companionsLabel(thriller)).toBe("avec Léo et Inès");
     expect(companionsLabel(session("A"))).toBe("Rien que toi pour l'instant");
   });
+
+  it("still names who left the séance, saying so, and leaves them out of the resume card", () => {
+    const leoGone = { ...leo, left: true };
+    expect(companionsLabel({ ...thriller, participants: [leoGone, ines] })).toBe(
+      "avec Inès, et Léo, qui a quitté la séance",
+    );
+    expect(companionsLabel({ ...thriller, participants: [leoGone, { ...ines, left: true }] })).toBe(
+      "avec Léo et Inès, qui ont quitté la séance",
+    );
+    expect(resumeLine({ ...thriller, lastUsedAt: now, duration: undefined, participants: [leoGone, ines] }, now)).toBe(
+      "Aujourd'hui avec Inès",
+    );
+  });
 });
 
 describe("sessions store", () => {

@@ -187,6 +187,61 @@ describe("circles", () => {
     expect(await circlesOf(annou.cookie)).toEqual([]);
   });
 
+  it("become one when someone leaves and the people left already have their circle: séances, list and name", async () => {
+    const { account, seance, circlesOf, send, clock } = setup();
+    const darius = await account("Darius");
+    const annou = await account("Annou");
+    const leo = await account("Léo");
+    seance(darius.id, annou.id);
+    const duo = (await circlesOf(darius.cookie))[0]?.id ?? "";
+    await send(annou.cookie, "PATCH", apiPath(CIRCLES_API.item, { id: duo }), { name: "Nous deux" });
+    clock.now = 2000;
+    const withLeo = seance(darius.id, annou.id, leo.id);
+    const trio = (await circlesOf(darius.cookie)).find((c) => c.id !== duo)?.id ?? "";
+    const add = (cookie: string, circleId: string, id: number, title: string) =>
+      send(cookie, "POST", WATCHLIST_API.list, {
+        title: { id, type: "movie", title },
+        shareWith: "everyone",
+        want: true,
+        circleId,
+      });
+    await add(annou.cookie, duo, 1, "Dune");
+    await add(darius.cookie, trio, 1, "Dune");
+    await add(darius.cookie, trio, 2, "Alien");
+
+    expect((await send(leo.cookie, "DELETE", apiPath(CIRCLES_API.item, { id: trio }))).status).toBe(204);
+
+    const circles = await circlesOf(darius.cookie);
+    expect(circles).toHaveLength(1);
+    expect(circles[0]).toMatchObject({ id: duo, name: "Nous deux", evenings: 2 });
+    expect(await circlesOf(annou.cookie)).toEqual(circles);
+    const items = ((await (await send(darius.cookie, "GET", WATCHLIST_API.list)).json()) as WatchlistResponse).items;
+    expect(items.map((item) => [item.title.title, item.circleId, item.wantedBy.length]).sort()).toEqual([
+      ["Alien", duo, 1],
+      ["Dune", duo, 2],
+    ]);
+    // The séance keeps who was there that evening: Léo still on it.
+    const sessions = ((await (await send(darius.cookie, "GET", API.sessions)).json()) as SessionList).sessions;
+    expect(sessions.find((s) => s.code === withLeo)?.participants.map((p) => p.name)).toEqual(["Annou", "Léo"]);
+  });
+
+  it("become one when an invitation makes a circle the same people as another", async () => {
+    const { account, seance, circlesOf, send } = setup();
+    const darius = await account("Darius");
+    const annou = await account("Annou");
+    seance(darius.id, annou.id);
+    const duo = (await circlesOf(darius.cookie))[0]?.id ?? "";
+    const created = await send(darius.cookie, "POST", CIRCLES_API.list, { name: "Ciné" });
+    const { id } = (await created.json()) as { id: string };
+    const invite = (await (
+      await send(darius.cookie, "POST", apiPath(CIRCLES_API.invite, { id }))
+    ).json()) as CircleInvite;
+
+    const joined = await send(annou.cookie, "POST", CIRCLES_API.join, { token: invite.token });
+    expect(await joined.json()).toEqual({ id: duo });
+    expect(await circlesOf(darius.cookie)).toMatchObject([{ id: duo, name: "Ciné", evenings: 1 }]);
+  });
+
   it("let someone in with an invitation link, shown before saying yes", async () => {
     const { account, circlesOf, send, clock } = setup();
     const darius = await account("Darius");

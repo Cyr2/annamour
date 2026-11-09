@@ -31,10 +31,13 @@ interface SessionRowProps {
   onRemove: (session: SessionSummary) => void;
 }
 
-/** Everyone of the séance for its bubbles, me first. */
+/** Everyone of the séance for its bubbles, me first; who left is drawn faded. */
 function useSessionPeople(session: SessionSummary, me: StackedPerson): StackedPerson[] {
   return useMemo(
-    () => [me, ...session.participants.map((p) => ({ id: p.accountId, name: p.name, color: p.color }))],
+    () => [
+      me,
+      ...session.participants.map((p) => ({ id: p.accountId, name: p.name, color: p.color, left: p.left ?? false })),
+    ],
     [me, session.participants],
   );
 }
