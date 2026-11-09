@@ -43,10 +43,13 @@ describe("the watchlist store", () => {
 
   it("moves a title to « Vus » and back", async () => {
     vi.mocked(api.setWatched).mockResolvedValue();
-    await store.markWatched("w1", true, 42);
-    expect(store.useWatchlist.getState().items[0]?.watchedAt).toBe(42);
+    await store.markWatched("w1", true, darius, 42);
+    expect(store.useWatchlist.getState().items[0]).toMatchObject({ watchedAt: 42, watchedBy: darius });
     await store.markWatched("w1", false);
     expect(store.useWatchlist.getState().items[0]?.watchedAt).toBeUndefined();
+    expect(store.useWatchlist.getState().items[0]?.watchedBy).toBeUndefined();
+    await store.markWatched("w1", true, undefined, 43);
+    expect(store.useWatchlist.getState().items[0]?.watchedAt).toBe(43);
   });
 
   it("removes a title for everyone, and refreshes after adding one", async () => {
@@ -109,5 +112,47 @@ describe("what the watchlist says", () => {
     const now = Date.UTC(2026, 10, 7, 12);
     expect(rules.watchedLine({ ...film, watchedAt: now }, "darius", now)).toBe("Vu aujourd'hui avec Léa et Inès");
     expect(rules.watchedLine({ ...film, sharedWith: [darius] }, "darius", now)).toBe("Vu");
+  });
+
+  it("says how it became « vu »: in a séance, marked by someone, or just marked", () => {
+    const now = Date.UTC(2026, 10, 7, 12);
+    const day = 24 * 3600 * 1000;
+    expect(rules.watchedHowLine({ ...film, watchedAt: now, watchedInSeance: true }, "darius", now)).toBe(
+      "Vu en séance, aujourd'hui",
+    );
+    expect(rules.watchedHowLine({ ...film, watchedAt: now - day, watchedBy: lea }, "darius", now)).toBe(
+      "Marqué vu par Léa, hier",
+    );
+    expect(rules.watchedHowLine({ ...film, watchedAt: now, watchedBy: darius }, "darius", now)).toBe(
+      "Marqué vu par toi, aujourd'hui",
+    );
+    expect(rules.watchedHowLine({ ...film, watchedAt: now - 21 * day }, "darius", now)).toBe(
+      "Marqué vu, il y a 3 semaines",
+    );
+    expect(rules.watchedHowLine(film, "darius", now)).toBe("");
+  });
+
+  it("says for whom « C'est vu » and « Retirer » count, never supposing a duo", () => {
+    const crowd = [darius, lea, ines, { ...lea, accountId: "leo", name: "Léo" }, { ...ines, accountId: "zoe" }];
+    expect(rules.actionAudience({ ...film, sharedWith: [darius] }, "darius")).toBe("Rien que pour toi");
+    expect(rules.actionAudience({ ...film, sharedWith: [darius, lea] }, "darius")).toBe("Pour Léa et toi");
+    expect(rules.actionAudience(film, "darius")).toBe("Pour Léa, Inès et toi");
+    expect(rules.actionAudience({ ...film, sharedWith: crowd }, "darius")).toBe("Pour tout le monde");
+    expect(rules.actionAudience({ ...film, sharedWith: crowd, circleId: "c1" }, "darius")).toBe("Pour tout le cercle");
+  });
+
+  it("asks before removing a title others see, and tells them who loses it", () => {
+    expect(rules.removalNeedsConfirmation(film, "darius")).toBe(true);
+    expect(rules.removalNeedsConfirmation({ ...film, sharedWith: [darius] }, "darius")).toBe(false);
+    expect(rules.removalWarning(film, "darius")).toBe(
+      "« Interstellar » disparaîtra aussi de la liste de Léa et Inès, avec les envies de chacun.",
+    );
+  });
+
+  it("confirms for whom it was done, and stays short when it was only for me", () => {
+    expect(rules.watchedToast(film, "darius", true)).toBe("Rangé dans « Déjà vus » pour Léa, Inès et toi");
+    expect(rules.watchedToast({ ...film, sharedWith: [darius] }, "darius", false)).toBe("Remis dans « À voir »");
+    expect(rules.removedToast(film, "darius")).toBe("« Interstellar » retiré de la liste pour Léa, Inès et toi");
+    expect(rules.removedToast({ ...film, sharedWith: [darius] }, "darius")).toBe("« Interstellar » retiré de la liste");
   });
 });

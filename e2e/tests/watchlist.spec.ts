@@ -34,7 +34,17 @@ test("« Notre liste » est commune : un titre ajouté et une envie se voient ch
 
   // Marked as watched by Léa, it moves to « Déjà vus ensemble » for Darius too.
   await lea.getByRole("button", { name: /^Interstellar/ }).click();
-  await lea.getByRole("button", { name: "C'est vu" }).click();
+  // The button says for whom it counts: everyone who sees the title.
+  await lea.getByRole("button", { name: "C'est vu Pour Darius et toi" }).click();
   await darius.goto("/liste?vus");
   await expect(darius.getByRole("list", { name: "Titres vus" })).toContainText("Interstellar");
+  // And Darius learns who marked it.
+  await darius.getByRole("button", { name: /^Interstellar/ }).click();
+  await expect(darius.getByText(/^Marqué vu par Léa, aujourd'hui$/)).toBeVisible();
+
+  // Removing it would take it from Léa too: that asks first, and says so.
+  await darius.getByRole("button", { name: /^Retirer de la liste/ }).click();
+  await expect(darius.getByText(/disparaîtra aussi de la liste de Léa/)).toBeVisible();
+  await darius.getByRole("button", { name: "Garder" }).click();
+  await expect(darius.getByRole("button", { name: /^Pas encore vu/ })).toBeVisible();
 });

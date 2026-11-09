@@ -1,4 +1,4 @@
-import type { AddToWatchlistRequest, WatchlistItem } from "@annamour/protocol";
+import type { AddToWatchlistRequest, Participant, WatchlistItem } from "@annamour/protocol";
 import { create } from "zustand";
 import { errorMessage } from "../../api/http.ts";
 import * as api from "../../api/watchlist.ts";
@@ -81,11 +81,13 @@ export function toggleWant(id: string, me: string, want: boolean): Promise<void>
   );
 }
 
-export function markWatched(id: string, watched: boolean, now = Date.now()): Promise<void> {
+/** « C'est vu » (by `by`, so the sheet says who at once) or « Pas encore vu ». */
+export function markWatched(id: string, watched: boolean, by?: Participant, now = Date.now()): Promise<void> {
   return optimistic(
     updateItem(id, (item) => {
-      const { watchedAt: _previous, ...rest } = item;
-      return watched ? { ...rest, watchedAt: now } : rest;
+      const { watchedAt: _at, watchedBy: _by, watchedInSeance: _inSeance, ...rest } = item;
+      if (!watched) return rest;
+      return by ? { ...rest, watchedAt: now, watchedBy: by } : { ...rest, watchedAt: now };
     }),
     () => api.setWatched(id, watched),
   );
