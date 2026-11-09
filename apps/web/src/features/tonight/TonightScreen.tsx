@@ -59,7 +59,6 @@ export function TonightScreen() {
         <CircleFilter centered />
         <TonightCard pick={pick} me={me} onOpenItem={setOpenItem} onAdd={() => setAdding(true)} />
         <OngoingShelf sessions={ongoing} />
-        <WatchlistShelf circle={circle} title="Notre liste" />
         <div className="grid grid-cols-2 gap-3">
           <Button variant="filled" icon={<Plus />} onClick={() => setCreating(true)}>
             Créer une séance
@@ -68,6 +67,7 @@ export function TonightScreen() {
             J'ai un code
           </LinkButton>
         </div>
+        <WatchlistShelf circle={circle} title="Notre liste" />
       </main>
       <BrandFooter />
       <CreateSessionSheet open={creating} onClose={() => setCreating(false)} />
