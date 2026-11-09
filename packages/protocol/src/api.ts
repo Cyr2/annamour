@@ -175,7 +175,10 @@ export const API = {
   checkKey: "/api/me/key",
   newKey: "/api/me/key/new",
   sessions: "/api/me/sessions",
-  /** DELETE: leave a séance (it leaves my séances and my circles' counts; the others keep it). */
+  /**
+   * POST: keep a séance watched as a guest, once the account exists.
+   * DELETE: leave a séance (it leaves my séances and my circles' counts; the others keep it).
+   */
   session: "/api/me/sessions/:code",
   /** DELETE: the person who created a séance removes it for everyone. */
   sessionForEveryone: "/api/me/sessions/:code/everyone",

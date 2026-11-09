@@ -7,6 +7,7 @@ import type { SyncClient } from "../../sync/SyncClient.ts";
 import { BubbleStack } from "../../ui/BubbleStack.tsx";
 import { Button } from "../../ui/controls.tsx";
 import { LinkButton } from "../../ui/LinkButton.tsx";
+import { KeepSeanceLink } from "../account/KeepSeanceLink.tsx";
 import { primaryIn } from "../tv/focus-engine.ts";
 import { useTv } from "../tv/tv-context.ts";
 import { EpisodeCountdown } from "./EpisodeCountdown.tsx";
@@ -82,6 +83,7 @@ export function EpisodeEndScreen({ end, room, client, onWatchAgain, onAddNext }:
           />
         )}
       </div>
+      <KeepSeanceLink code={room.code} />
     </m.div>
   );
 }

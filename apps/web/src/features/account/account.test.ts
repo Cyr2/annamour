@@ -13,6 +13,7 @@ vi.mock("../../api/accounts.ts", () => ({
   logout: vi.fn(async () => undefined),
   checkKey: vi.fn(async () => true),
   newKey: vi.fn(async () => ["miel", "orage", "tulipe", "zebre"]),
+  keepSession: vi.fn(async () => undefined),
 }));
 vi.mock("../../api/passkeys.ts", () => ({
   loginWithPasskey: vi.fn(async () => anna),
@@ -146,5 +147,39 @@ describe("account store", () => {
     await logout();
     expect(api.logout).toHaveBeenCalled();
     expect(useAccount.getState()).toMatchObject({ status: "guest", account: null, key: null });
+  });
+});
+
+describe("guest without an account", () => {
+  it("comes in with a prénom alone, and is remembered on this device", async () => {
+    const { enterAsGuest, useGuest } = await import("./guest.ts");
+    useGuest.setState({ entered: false, keep: null });
+    enterAsGuest();
+    expect(useGuest.getState().entered).toBe(true);
+    expect(localStorage.getItem("annamour:guest:v1")).toContain('"entered":true');
+  });
+
+  it("keeps the séance they asked for once their account exists, then is no guest any more", async () => {
+    const { enterAsGuest, keepSeanceLater, useGuest } = await import("./guest.ts");
+    enterAsGuest();
+    keepSeanceLater("ABCD");
+    await createAccount("Léa", "mint");
+    await vi.waitFor(() => expect(api.keepSession).toHaveBeenCalledWith("ABCD"));
+    expect(useGuest.getState()).toEqual({ entered: false, keep: null });
+  });
+
+  it("keeps nothing when they only signed in", async () => {
+    vi.mocked(api.keepSession).mockClear();
+    await loginWithKey(key);
+    expect(api.keepSession).not.toHaveBeenCalled();
+  });
+
+  it("still becomes a member when the séance to keep is gone", async () => {
+    const { keepSeanceLater, useGuest } = await import("./guest.ts");
+    vi.mocked(api.keepSession).mockRejectedValueOnce(new Error("Cette séance n'existe plus."));
+    keepSeanceLater("ZZZZ");
+    await createAccount("Léa", "mint");
+    expect(useAccount.getState().status).toBe("member");
+    expect(useGuest.getState().keep).toBeNull();
   });
 });
