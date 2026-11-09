@@ -62,7 +62,12 @@ export function SessionDetails({ session, me, now }: Omit<SessionRowProps, "onRe
           className="mt-1"
         />
       ) : progress === null ? null : (
-        <Progress.Bar value={progress} label={`${Math.round(progress * 100)} % regardé`} className="mt-1" />
+        <Progress.Bar
+          value={progress}
+          label={`${Math.round(progress * 100)} % regardé`}
+          done={isFinished(session)}
+          className="mt-1"
+        />
       )}
       <p className="text-xs text-fg-muted">{stopLabel(session)}</p>
     </div>
