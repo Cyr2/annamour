@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cx } from "./cx.ts";
+import { progressFill } from "./progress-fill.ts";
 
 /*
  * How far into a video, in the thread colour. `value` goes from 0 to 1.
@@ -18,7 +19,7 @@ function percentOf(value: number): number {
   return Math.round(Math.min(1, Math.max(0, value)) * 100);
 }
 
-function Bar({ value, label, className }: ProgressProps) {
+function Bar({ value, label, className, done = false }: ProgressProps & { done?: boolean }) {
   const percent = percentOf(value);
   return (
     <div
@@ -29,7 +30,7 @@ function Bar({ value, label, className }: ProgressProps) {
       aria-valuenow={percent}
       className={cx("h-1 overflow-hidden rounded-full bg-fill-strong", className)}
     >
-      <div className="h-full rounded-full bg-thread" style={{ width: `${percent}%` }} />
+      <div className={cx("h-full rounded-full", progressFill(done))} style={{ width: `${percent}%` }} />
     </div>
   );
 }

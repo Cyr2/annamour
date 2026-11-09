@@ -1,7 +1,8 @@
 import type { SessionSummary } from "@annamour/protocol";
 import type { ReactNode } from "react";
 import { cx } from "../../ui/cx.ts";
-import { progressOf } from "./session-rules.ts";
+import { progressFill } from "../../ui/progress-fill.ts";
+import { isFinished, progressOf } from "./session-rules.ts";
 
 /**
  * A séance as a portrait poster with how far it went along the bottom: the
@@ -36,7 +37,7 @@ export function SeancePoster({
       ) : null}
       {children}
       <span className="absolute inset-x-0 bottom-0 h-1 bg-fill-strong">
-        <span className="block h-full bg-accent" style={{ width: `${percent}%` }} />
+        <span className={cx("block h-full", progressFill(isFinished(session)))} style={{ width: `${percent}%` }} />
       </span>
     </span>
   );
