@@ -1,4 +1,4 @@
-import type { Circle, SessionSummary, WatchlistItem } from "@annamour/protocol";
+import type { Circle, Participant, SessionSummary, WatchlistItem } from "@annamour/protocol";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../api/circles.ts", () => ({
@@ -7,10 +7,21 @@ vi.mock("../../api/circles.ts", () => ({
   renameCircle: vi.fn(),
   leaveCircle: vi.fn(),
   reorderCircles: vi.fn(),
+  mergeCircles: vi.fn(),
 }));
 const api = await import("../../api/circles.ts");
 const store = await import("./circles.ts");
-const { circleShortName, isCloseCircle, moveId, ofCircle, tonightPick } = await import("./circle-rules.ts");
+const {
+  circleShortName,
+  isCloseCircle,
+  moveId,
+  offeredReunion,
+  ofCircle,
+  pairKey,
+  tonightPick,
+  twinOf,
+  untoldReunions,
+} = await import("./circle-rules.ts");
 
 const darius = { accountId: "darius", name: "Darius", color: "peach" } as const;
 const annou = { accountId: "annou", name: "Annou", color: "rose" } as const;
@@ -166,5 +177,53 @@ describe("the order of my circles", () => {
     vi.mocked(api.fetchCircles).mockResolvedValue([duo, potes]);
     await expect(store.reorderCircles(["potes", "duo"])).rejects.toThrow();
     expect(store.useCircles.getState().circles.map((c) => c.id)).toEqual(["duo", "potes"]);
+  });
+});
+
+describe("two circles of the same people", () => {
+  const exTrio: Circle = { id: "ex-trio", name: "Les potes du jeudi", members: [annou, darius], evenings: 1 };
+  const reunited = (at: number, by: Participant = annou): Circle => ({ ...duo, reunitedBy: { ...by, at } });
+
+  it("are offered to be reunited, until I choose to keep both", () => {
+    expect(offeredReunion([duo, potes, exTrio], [])).toEqual([duo, exTrio]);
+    expect(offeredReunion([duo, potes, exTrio], [pairKey("ex-trio", "duo")])).toBeNull();
+    expect(offeredReunion([duo, potes], [])).toBeNull();
+  });
+
+  it("each find the other for « Réunir avec… », and a circle of other people finds none", () => {
+    expect(twinOf(duo, [duo, potes, exTrio])?.id).toBe("ex-trio");
+    expect(twinOf(exTrio, [duo, potes, exTrio])?.id).toBe("duo");
+    expect(twinOf(potes, [duo, potes, exTrio])).toBeNull();
+  });
+
+  it("are told to the others when someone reunited them lately, once per device, never to who did it", () => {
+    const day = 24 * 60 * 60 * 1000;
+    expect(untoldReunions([reunited(0), potes], "darius", [], day).map((c) => c.id)).toEqual(["duo"]);
+    expect(untoldReunions([reunited(0)], "darius", ["duo@0"], day)).toEqual([]);
+    expect(untoldReunions([reunited(0)], "darius", [], 30 * day)).toEqual([]);
+    expect(untoldReunions([reunited(0, darius)], "darius", [], day)).toEqual([]);
+  });
+
+  it("tells a reunion only the first time « Nous » opens after it", () => {
+    store.useCircles.setState({ status: "ready", circles: [reunited(5)] });
+    expect(store.takeUntoldReunions("darius", 10).map((c) => c.id)).toEqual(["duo"]);
+    expect(store.takeUntoldReunions("darius", 10)).toEqual([]);
+  });
+
+  it("stay offered on this device until kept apart, and remember it", () => {
+    store.useCircles.setState({ circles: [duo, exTrio], keptApart: [] });
+    store.keepApart("duo", "ex-trio");
+    expect(store.useCircles.getState().keptApart).toEqual(["duo+ex-trio"]);
+    expect(JSON.parse(localStorage.getItem("annamour.cercles-separes") ?? "[]")).toEqual(["duo+ex-trio"]);
+  });
+
+  it("become one under the name kept, and the one on screen follows", async () => {
+    store.useCircles.setState({ status: "ready", circles: [duo, exTrio] });
+    store.selectCircle("duo");
+    vi.mocked(api.mergeCircles).mockResolvedValue();
+    vi.mocked(api.fetchCircles).mockResolvedValue([{ ...exTrio, evenings: 4 }]);
+    await store.reuniteCircles("duo", "ex-trio");
+    expect(api.mergeCircles).toHaveBeenCalledWith("duo", "ex-trio", "ex-trio");
+    expect(store.useCircles.getState().selected).toBe("ex-trio");
   });
 });

@@ -22,6 +22,8 @@ import { useSessions } from "../sessions/sessions.ts";
 import { useLoadSessions } from "../sessions/useLoadSessions.ts";
 import { CircleCard } from "./CircleCard.tsx";
 import { NameCircleSheet } from "./NameCircleSheet.tsx";
+import { ReuniteOffer } from "./ReuniteCard.tsx";
+import { useReunionNews } from "./useReunionNews.ts";
 
 /**
  * « Nous »: my circles, each tied by the red thread; then me, like a profile,
@@ -60,6 +62,7 @@ export function UsScreen() {
 function Circles({ me, onCreate }: { me: string; onCreate: () => void }) {
   const circles = useCircles((s) => s.circles);
   const status = useCircles((s) => s.status);
+  useReunionNews(me);
 
   return (
     <section className="grid gap-2" aria-labelledby="circles-title">
@@ -76,6 +79,7 @@ function Circles({ me, onCreate }: { me: string; onCreate: () => void }) {
         </div>
       ) : null}
       {status === "ready" && circles.length === 0 ? <NoCircleYet onCreate={onCreate} /> : null}
+      <ReuniteOffer me={me} />
       <CircleList circles={circles} me={me} />
       <AllSeancesLink />
     </section>

@@ -6,6 +6,7 @@ import {
   CircleInvitePreview,
   CircleList,
   CreateCircleResponse,
+  type MergeCirclesRequest,
 } from "@annamour/protocol";
 import { z } from "zod/mini";
 import { request } from "./http.ts";
@@ -41,6 +42,14 @@ export async function reorderCircles(ids: string[]): Promise<void> {
 
 export async function leaveCircle(id: string): Promise<void> {
   await request(Ignored, apiPath(CIRCLES_API.item, { id }), { method: "DELETE", messages: GONE });
+}
+
+/** Reunites `fromId` into `intoId`, two circles of the same people, keeping the name of `keepNameOf`. */
+export async function mergeCircles(fromId: string, intoId: string, keepNameOf: string): Promise<void> {
+  await request(Ignored, apiPath(CIRCLES_API.merge, { id: fromId }), {
+    body: { into: intoId, keepNameOf } satisfies MergeCirclesRequest,
+    messages: GONE,
+  });
 }
 
 export async function inviteToCircle(id: string): Promise<CircleInvite> {

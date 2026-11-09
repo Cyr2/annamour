@@ -4,6 +4,7 @@ import {
   type SessionSummary,
   sortWatchlist,
   splitWatchlist,
+  twinCircles,
   type WatchlistItem,
 } from "@annamour/protocol";
 import { joinNames } from "../../lib/format.ts";
@@ -74,4 +75,38 @@ export function moveId(ids: readonly string[], id: string, delta: -1 | 1): strin
   next.splice(from, 1);
   next.splice(to, 0, id);
   return next;
+}
+
+/** One pair of circles, whichever comes first: what « Garder les deux » remembers. */
+export function pairKey(a: string, b: string): string {
+  return [a, b].sort().join("+");
+}
+
+/** The two circles of the same people « Nous » offers to reunite, unless I chose to keep them apart. */
+export function offeredReunion(circles: readonly Circle[], keptApart: readonly string[]): [Circle, Circle] | null {
+  return twinCircles(circles).find(([a, b]) => !keptApart.includes(pairKey(a.id, b.id))) ?? null;
+}
+
+/** Another circle of exactly the same people, for « Réunir avec… »; null when there is none. */
+export function twinOf(circle: Circle, circles: readonly Circle[]): Circle | null {
+  const pair = twinCircles(circles).find(([a, b]) => a.id === circle.id || b.id === circle.id);
+  if (!pair) return null;
+  return pair[0].id === circle.id ? pair[1] : pair[0];
+}
+
+/** A reunion is told for two weeks: a device signed in later is not greeted with old news. */
+const REUNION_NEWS_MS = 14 * 24 * 60 * 60 * 1000;
+
+/** What marks a reunion as told on this device. */
+export const reunionKey = (circle: Pick<Circle, "id" | "reunitedBy">) => `${circle.id}@${circle.reunitedBy?.at ?? 0}`;
+
+/** The circles someone else recently reunited, not told yet on this device (« Darius a réuni vos deux cercles »). */
+export function untoldReunions(circles: readonly Circle[], me: string, told: readonly string[], now: number): Circle[] {
+  return circles.filter(
+    (circle) =>
+      circle.reunitedBy !== undefined &&
+      circle.reunitedBy.accountId !== me &&
+      now - circle.reunitedBy.at <= REUNION_NEWS_MS &&
+      !told.includes(reunionKey(circle)),
+  );
 }

@@ -154,6 +154,11 @@ const MIGRATIONS: readonly string[] = [
   ALTER TABLE rooms ADD COLUMN created_by TEXT REFERENCES accounts (id) ON DELETE SET NULL;
   ALTER TABLE watchlist_items ADD COLUMN watched_by_room TEXT;
   `,
+  // Who last reunited two circles of the same people into this one, and when: the others hear of it on « Nous ».
+  `
+  ALTER TABLE circles ADD COLUMN reunited_by TEXT REFERENCES accounts (id) ON DELETE SET NULL;
+  ALTER TABLE circles ADD COLUMN reunited_at INTEGER;
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

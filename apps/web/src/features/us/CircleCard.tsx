@@ -10,10 +10,12 @@ import { plural } from "../../lib/format.ts";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import { toast } from "../../ui/toast.ts";
-import { leaveCircle } from "../circles/circles.ts";
+import { twinOf } from "../circles/circle-rules.ts";
+import { leaveCircle, useCircles } from "../circles/circles.ts";
 import { CircleOptionsSheet } from "./CircleOptionsSheet.tsx";
 import { CircleThread } from "./CircleThread.tsx";
 import { NameCircleSheet } from "./NameCircleSheet.tsx";
+import { ReuniteSheet } from "./ReuniteSheet.tsx";
 
 /** Shares an invitation link: the phone's share sheet where there is one, else the clipboard. */
 async function shareInvite(circle: Circle, me: string): Promise<void> {
@@ -46,6 +48,8 @@ interface CircleCardProps {
 export function CircleCard({ circle, me, onMove, canMoveUp, canMoveDown, onDrop }: CircleCardProps) {
   const [renaming, setRenaming] = useState(false);
   const [options, setOptions] = useState(false);
+  const [reuniting, setReuniting] = useState(false);
+  const twin = useCircles((s) => twinOf(circle, s.circles));
   const drag = useDragControls();
   const title = circleTitle(circle, me);
   const invite = () =>
@@ -92,8 +96,10 @@ export function CircleCard({ circle, me, onMove, canMoveUp, canMoveDown, onDrop 
         onLeave={leave}
         onMoveUp={canMoveUp ? () => onMove(-1) : undefined}
         onMoveDown={canMoveDown ? () => onMove(1) : undefined}
+        onReunite={twin ? () => setReuniting(true) : undefined}
       />
       <NameCircleSheet open={renaming} onClose={() => setRenaming(false)} circle={circle} />
+      <ReuniteSheet pair={reuniting && twin ? [circle, twin] : null} me={me} onClose={() => setReuniting(false)} />
     </Reorder.Item>
   );
 }

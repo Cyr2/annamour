@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { byRecentUse, type Circle, CircleName, circleTitle, othersIn } from "../src/index.ts";
+import {
+  byRecentUse,
+  type Circle,
+  CircleName,
+  circleTitle,
+  MergeCirclesRequest,
+  othersIn,
+  sameMembers,
+  twinCircles,
+} from "../src/index.ts";
 
 const me = { accountId: "darius", name: "Darius", color: "peach" } as const;
 const annou = { accountId: "annou", name: "Annou", color: "rose" } as const;
@@ -42,5 +51,33 @@ describe("circles", () => {
   it("come the most recently used first, never-used ones last", () => {
     const list = [circle("old", { lastUsedAt: 1 }), circle("new"), circle("recent", { lastUsedAt: 9 })];
     expect(byRecentUse(list).map((c) => c.id)).toEqual(["recent", "old", "new"]);
+  });
+});
+
+describe("circles of the same people", () => {
+  it("are the same people whatever the order, and never with someone more or less", () => {
+    expect(sameMembers(["darius", "annou"], ["annou", "darius"])).toBe(true);
+    expect(sameMembers(["darius", "annou"], ["darius", "annou", "leo"])).toBe(false);
+    expect(sameMembers(["darius", "annou"], ["darius", "leo"])).toBe(false);
+  });
+
+  it("are offered in pairs, each pair once, in the order of the list", () => {
+    const list = [
+      circle("duo"),
+      circle("trio", { members: [me, leo, ines] }),
+      circle("ex-trio", { members: [annou, me] }),
+      circle("solo", { members: [me] }),
+    ];
+    expect(twinCircles(list).map(([a, b]) => [a.id, b.id])).toEqual([["duo", "ex-trio"]]);
+    expect(twinCircles([circle("a"), circle("b"), circle("c")]).map(([a, b]) => `${a.id}+${b.id}`)).toEqual([
+      "a+b",
+      "a+c",
+      "b+c",
+    ]);
+  });
+
+  it("are reunited by naming the circle whose name stays", () => {
+    expect(MergeCirclesRequest.safeParse({ into: "duo", keepNameOf: "duo" }).success).toBe(true);
+    expect(MergeCirclesRequest.safeParse({ into: "duo" }).success).toBe(false);
   });
 });

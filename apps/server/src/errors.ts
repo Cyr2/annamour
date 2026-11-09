@@ -119,3 +119,18 @@ export class InvalidCircleInviteError extends UserFacingError {
     super("Ce lien d'invitation a expiré. Demande-en un nouveau à quelqu'un du cercle.", 410);
   }
 }
+
+export class NotTwinCirclesError extends UserFacingError {
+  constructor() {
+    super(
+      "Ces deux cercles n'ont pas exactement les mêmes personnes : on ne peut réunir que deux cercles identiques.",
+      409,
+    );
+  }
+}
+
+export class NameNotFromCirclesError extends UserFacingError {
+  constructor() {
+    super("Garde le nom de l'un des deux cercles.", 400);
+  }
+}
