@@ -12,7 +12,10 @@ interface CircleFilterProps {
   /** A pick of its own (« Séances »), rather than the one « Ce soir » and « Notre liste » share. */
   value?: string | null;
   onChange?: (circleId: string | null) => void;
-  /** Picks whom a new séance is for: no circle reads « Personne » (nobody in particular), not « Tout ». */
+  /**
+   * Picks whom a new séance is for: no circle reads « Quelqu'un d'autre », not « Tout »: the séance
+   * then goes to the circle of whoever joins it.
+   */
   forNewSeance?: boolean;
 }
 
@@ -39,12 +42,7 @@ export function CircleFilter({ centered = false, value, onChange, forNewSeance =
       )}
     >
       <legend className="sr-only">{forNewSeance ? "Pour qui est cette séance ?" : "Avec qui ?"}</legend>
-      <Choice
-        label={forNewSeance ? "Personne" : "Tout"}
-        fullLabel={forNewSeance ? "Personne en particulier" : undefined}
-        pressed={shown === null}
-        onPress={() => pick(null)}
-      >
+      <Choice label={forNewSeance ? "Quelqu'un d'autre" : "Tout"} pressed={shown === null} onPress={() => pick(null)}>
         <span className="grid size-14 place-items-center rounded-full bg-fill-strong text-fg">
           {forNewSeance ? <User aria-hidden className="size-5" /> : <Users aria-hidden className="size-5" />}
         </span>
@@ -94,13 +92,17 @@ function Choice(props: {
       aria-pressed={props.pressed}
       aria-label={props.fullLabel}
       onClick={props.onPress}
-      className="grid w-17 shrink-0 cursor-pointer justify-items-center gap-1.5 rounded-control py-1"
+      className="grid w-20 shrink-0 cursor-pointer content-start justify-items-center gap-1.5 rounded-control py-1"
     >
       <span aria-hidden className={cx("rounded-full p-0.5", props.pressed && "ring-2 ring-accent")}>
         {props.children}
       </span>
+      {/* A circle's name wraps on two lines rather than being cut after a few letters. */}
       <span
-        className={cx("w-full truncate text-center text-xs", props.pressed ? "font-bold text-fg" : "text-fg-muted")}
+        className={cx(
+          "line-clamp-2 w-full text-center text-xs text-balance wrap-break-word",
+          props.pressed ? "font-bold text-fg" : "text-fg-muted",
+        )}
       >
         {props.label}
       </span>

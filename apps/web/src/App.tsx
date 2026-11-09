@@ -8,6 +8,7 @@ import { TabNav } from "./features/nav/TabNav.tsx";
 import { TonightScreen } from "./features/tonight/TonightScreen.tsx";
 import { useTv } from "./features/tv/tv-context.ts";
 import { useTvLocation } from "./features/tv/tv-location.ts";
+import { useTopOfNewPage } from "./lib/page-scroll.ts";
 import {
   JoinCircleScreen,
   JoinScreen,
@@ -40,6 +41,12 @@ function ToTvPairing() {
   return <Redirect to={`/tv/lier${search ? `?${search}` : ""}`} replace />;
 }
 
+/** Inside the router, so it hears each new page. */
+function TopOfNewPage() {
+  useTopOfNewPage();
+  return null;
+}
+
 /** Home ships with the app; every other screen is fetched the first time it opens (see routes.ts). */
 export function App() {
   const tv = useTv();
@@ -48,6 +55,7 @@ export function App() {
 
   return (
     <Router hook={tv ? useTvLocation : undefined}>
+      <TopOfNewPage />
       <Ambient />
       <Suspense fallback={<RouteFallback />}>
         <Switch>

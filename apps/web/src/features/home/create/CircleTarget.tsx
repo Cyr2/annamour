@@ -10,7 +10,8 @@ interface CircleTargetProps {
 
 /**
  * « Pour : Les potes du jeudi »: the circle the new séance goes to, the one on
- * screen at first, with the others (or nobody in particular) a tap away.
+ * screen at first, with the others a tap away. « Quelqu'un d'autre » reads
+ * « Pour : qui la rejoindra »: the séance goes to the circle of whoever joins it.
  * Without any circle there is nothing to choose: it stays hidden.
  */
 export function CircleTarget({ circleId, onChange }: CircleTargetProps) {
@@ -23,9 +24,7 @@ export function CircleTarget({ circleId, onChange }: CircleTargetProps) {
     <div className="grid min-w-0 gap-1">
       <p className="truncate px-1 text-sm text-fg-muted">
         Pour :{" "}
-        <strong className="font-semibold text-fg">
-          {circle ? circleTitle(circle, me) : "Personne en particulier"}
-        </strong>
+        <strong className="font-semibold text-fg">{circle ? circleTitle(circle, me) : "qui la rejoindra"}</strong>
       </p>
       <CircleFilter value={circleId} onChange={onChange} forNewSeance />
     </div>

@@ -34,7 +34,7 @@ export function ReportScreen({ code }: { code: string }) {
       <ScreenTopBar back={`/s/${code}`} title="Qualité de la séance" />
       <p className="text-sm text-pretty text-fg-muted">
         Chaque appareil mesure ses coupures et la qualité qu'il a pu afficher pendant le film. Les objectifs sont ceux
-        d'une soirée sans gêne, même avec peu de réseau.
+        d'une séance sans gêne, même avec peu de réseau.
       </p>
       <ReportBody loaded={loaded} />
       <div>

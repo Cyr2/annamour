@@ -87,10 +87,9 @@ describe("what the watchlist says", () => {
     expect(rules.posterLine({ id: 2, type: "tv", title: "The Bear", year: 2022, seasons: 3 })).toBe("2022 · 3 saisons");
   });
 
-  it("says who added it, who sees it and who wants it", () => {
+  it("says who added it and who wants it", () => {
     expect(rules.itemLine(film, "darius")).toBe("Film · 2014 · ajouté par Léa");
     expect(rules.itemLine(film, "lea")).toBe("Film · 2014 · ajouté par toi");
-    expect(rules.audienceLine(film, "darius")).toBe("Pour toi, Léa et Inès");
     expect(rules.wantersLine(film, "darius")).toBe("Léa en a envie");
     expect(rules.wantersLine({ ...film, wantedBy: ["darius"] }, "darius")).toBe("Tu en as envie");
     expect(rules.wantersLine({ ...film, wantedBy: ["darius", "lea"] }, "darius")).toBe("Léa et toi en avez envie");
@@ -144,13 +143,13 @@ describe("what the watchlist says", () => {
     expect(rules.watchedHowLine(film, "darius", now)).toBe("");
   });
 
-  it("says for whom « C'est vu » and « Retirer » count, never supposing a duo", () => {
+  it("says once who sees the title, others first, never supposing a duo", () => {
     const crowd = [darius, lea, ines, { ...lea, accountId: "leo", name: "Léo" }, { ...ines, accountId: "zoe" }];
-    expect(rules.actionAudience({ ...film, sharedWith: [darius] }, "darius")).toBe("Rien que pour toi");
-    expect(rules.actionAudience({ ...film, sharedWith: [darius, lea] }, "darius")).toBe("Pour Léa et toi");
-    expect(rules.actionAudience(film, "darius")).toBe("Pour Léa, Inès et toi");
-    expect(rules.actionAudience({ ...film, sharedWith: crowd }, "darius")).toBe("Pour tout le monde");
-    expect(rules.actionAudience({ ...film, sharedWith: crowd, circleId: "c1" }, "darius")).toBe("Pour tout le cercle");
+    expect(rules.audienceLine({ ...film, sharedWith: [darius] }, "darius")).toBe("Rien que pour toi");
+    expect(rules.audienceLine({ ...film, sharedWith: [darius, lea] }, "darius")).toBe("Pour Léa et toi");
+    expect(rules.audienceLine(film, "darius")).toBe("Pour Léa, Inès et toi");
+    expect(rules.audienceLine({ ...film, sharedWith: crowd }, "darius")).toBe("Pour tout le monde");
+    expect(rules.audienceLine({ ...film, sharedWith: crowd, circleId: "c1" }, "darius")).toBe("Pour tout le cercle");
   });
 
   it("asks before removing a title others see, and tells them who loses it", () => {

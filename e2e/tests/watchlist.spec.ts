@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { createSession, onboard, person } from "./helpers.ts";
+import { expect } from "@playwright/test";
+import { createSession, onboard, person, test } from "./helpers.ts";
 
 test("« Notre liste » est commune : un titre ajouté et une envie se voient chez l'autre", async ({ browser }) => {
   const darius = await person(browser);
@@ -32,10 +32,11 @@ test("« Notre liste » est commune : un titre ajouté et une envie se voient ch
   await darius.goto("/liste");
   await expect(darius.getByRole("button", { name: /2 en ont envie/ })).toBeVisible();
 
-  // Marked as watched by Léa, it moves to « Déjà vus ensemble » for Darius too.
+  // Marked as watched by Léa, it moves to « Déjà vus » for Darius too.
   await lea.getByRole("button", { name: /^Interstellar/ }).click();
-  // The button says for whom it counts: everyone who sees the title.
-  await lea.getByRole("button", { name: "C'est vu Pour Darius et toi" }).click();
+  // The sheet says once, at the top, for whom it counts: everyone who sees the title.
+  await expect(lea.getByText("Pour Darius et toi", { exact: true })).toBeVisible();
+  await lea.getByRole("button", { name: "C'est vu", exact: true }).click();
   await darius.goto("/liste?vus");
   await expect(darius.getByRole("list", { name: "Titres vus" })).toContainText("Interstellar");
   // And Darius learns who marked it.

@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { createSession, onboard, person } from "./helpers.ts";
+import { expect } from "@playwright/test";
+import { createSession, onboard, person, test } from "./helpers.ts";
 
 test("les séances se rangent par cercle : Ce soir, Notre liste et Nous", async ({ browser }) => {
   const darius = await person(browser, { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });

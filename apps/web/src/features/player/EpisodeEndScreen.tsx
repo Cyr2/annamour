@@ -25,7 +25,7 @@ interface EpisodeEndScreenProps {
 }
 
 /**
- * Over the last image of an episode, for everyone at once: the countdown to
+ * Once an episode ends, for everyone at once: the countdown to
  * the next one, the next one waiting (« Pas ce soir »), or nothing queued yet.
  * What one person picks for all is kept apart from leaving, which is only theirs.
  */
@@ -47,7 +47,8 @@ export function EpisodeEndScreen({ end, room, client, onWatchAgain, onAddNext }:
       role="dialog"
       aria-modal="true"
       aria-labelledby={TITLE_ID}
-      className="safe-area absolute inset-0 z-30 flex flex-col items-center justify-center gap-8 overflow-y-auto bg-scrim text-center"
+      // Opaque: a see-through scrim let the video's frame show through as a darker band across the screen.
+      className="safe-area absolute inset-0 z-30 flex flex-col items-center justify-center gap-8 overflow-y-auto bg-screen text-center"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1, transition: spring.ui }}
     >
