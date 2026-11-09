@@ -7,15 +7,26 @@ import { useAccount } from "../account/account.ts";
 import { circleShortName } from "../circles/circle-rules.ts";
 import { selectCircle, shownCircle, useCircles } from "../circles/circles.ts";
 
+interface CircleFilterProps {
+  centered?: boolean;
+  /** A pick of its own (« Séances »), rather than the one « Ce soir » and « Notre liste » share. */
+  value?: string | null;
+  onChange?: (circleId: string | null) => void;
+}
+
 /**
- * « Avec qui ? » on « Notre liste » and « Ce soir »: « Tout », then each circle as its bubbles.
- * The pick is the same as on « Ce soir ». With one circle, nothing to pick.
+ * « Avec qui ? »: « Tout », then each circle as its bubbles. On « Ce soir » and
+ * « Notre liste » the pick is shared, and with one circle there is nothing to
+ * pick. With a pick of its own, « Tout » stays offered beside a single circle.
  */
-export function CircleFilter({ centered = false }: { centered?: boolean }) {
+export function CircleFilter({ centered = false, value, onChange }: CircleFilterProps) {
   const me = useAccount((s) => s.account?.id ?? "");
   const circles = useCircles((s) => s.circles);
-  const shown = useCircles((s) => shownCircle(s));
-  if (circles.length < 2) return null;
+  const shared = useCircles((s) => shownCircle(s));
+  const own = onChange !== undefined;
+  const shown = own ? (value ?? null) : shared;
+  const pick = onChange ?? selectCircle;
+  if (circles.length < (own ? 1 : 2)) return null;
 
   return (
     <fieldset
@@ -26,7 +37,7 @@ export function CircleFilter({ centered = false }: { centered?: boolean }) {
       )}
     >
       <legend className="sr-only">Avec qui ?</legend>
-      <Choice label="Tout" pressed={shown === null} onPress={() => selectCircle(null)}>
+      <Choice label="Tout" pressed={shown === null} onPress={() => pick(null)}>
         <span className="grid size-14 place-items-center rounded-full bg-fill-strong text-fg">
           <Users aria-hidden className="size-5" />
         </span>
@@ -40,7 +51,7 @@ export function CircleFilter({ centered = false }: { centered?: boolean }) {
             label={circleShortName(circle, me)}
             fullLabel={circleTitle(circle, me)}
             pressed={shown === circle.id}
-            onPress={() => selectCircle(circle.id)}
+            onPress={() => pick(circle.id)}
           >
             <span className="relative grid size-14 place-items-center">
               {others.length === 1 && others[0] ? (

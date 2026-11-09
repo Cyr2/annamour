@@ -1,6 +1,6 @@
 import { circleTitle, type SessionSummary } from "@annamour/protocol";
 import { Plus } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearch } from "wouter";
 import { BrandFooter } from "../../ui/BrandFooter.tsx";
 import { LinkButton } from "../../ui/LinkButton.tsx";
@@ -9,7 +9,7 @@ import { ThreadSpinner } from "../../ui/ThreadSpinner.tsx";
 import { toast } from "../../ui/toast.ts";
 import { useAccount } from "../account/account.ts";
 import { ofCircle } from "../circles/circle-rules.ts";
-import { loadCircles, selectCircle, useShownCircle } from "../circles/circles.ts";
+import { loadCircles, useCircles } from "../circles/circles.ts";
 import { CREATE_PATH } from "../home/create/create-link.ts";
 import { CircleFilter } from "../list/CircleFilter.tsx";
 import { SessionRow } from "../profile/SessionRow.tsx";
@@ -27,13 +27,12 @@ export function SeancesScreen() {
   useEffect(() => void loadCircles(), []);
   const params = new URLSearchParams(useSearch());
   const asked = params.get("cercle");
-  // « 7 séances » on a circle opens its séances: that circle becomes the one on screen.
-  useEffect(() => {
-    if (asked) selectCircle(asked);
-  }, [asked]);
+  // Everything unless a circle's « 7 séances » asked for its own: a pick of this page's, so « Toutes mes
+  // séances » shows them all, those of a circle left too.
+  const [circleId, setCircleId] = useState<string | null>(asked);
   const account = useAccount((s) => s.account);
   const me = account?.id ?? "";
-  const circle = useShownCircle();
+  const circle = useCircles((s) => s.circles.find((c) => c.id === circleId) ?? null);
   const sessions = useSessions((s) => s.sessions);
   const status = useSessions((s) => s.status);
   const { ongoing, finished } = useMemo(() => splitByStatus(ofCircle(sessions, circle, me)), [sessions, circle, me]);
@@ -43,7 +42,7 @@ export function SeancesScreen() {
     <div className="safe-area mx-auto flex min-h-dvh w-full max-w-[1240px] flex-col">
       <main className="mx-auto grid w-full max-w-[760px] content-start gap-6 py-4">
         <ScreenTopBar back={params.get("depuis") === "soir" ? "/" : "/nous"} title={<h1>Séances</h1>} />
-        <CircleFilter centered />
+        <CircleFilter centered value={circleId} onChange={setCircleId} />
         {status === "loading" || status === "idle" ? (
           <div className="grid place-items-center py-10">
             <ThreadSpinner />
