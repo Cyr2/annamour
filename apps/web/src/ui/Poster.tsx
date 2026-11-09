@@ -9,8 +9,19 @@ const SIZES = {
   large: "h-[9.75rem] w-[6.5rem] rounded-control",
 } as const;
 
+interface PosterProps {
+  title: CatalogTitle;
+  size?: keyof typeof SIZES;
+  /**
+   * On screen as the page opens: fetched at once and first. A lazy image is
+   * only asked for once laid out, which kept the first row of posters, the
+   * page's largest paint, waiting.
+   */
+  priority?: boolean;
+}
+
 /** A title's poster, or a soft glow in its place when the catalog has none. Decorative: the title is said next to it. */
-export function Poster({ title, size = "regular" }: { title: CatalogTitle; size?: keyof typeof SIZES }) {
+export function Poster({ title, size = "regular", priority = false }: PosterProps) {
   return (
     <div
       aria-hidden
@@ -18,7 +29,14 @@ export function Poster({ title, size = "regular" }: { title: CatalogTitle; size?
       style={{ background: "var(--am-poster-glow), var(--am-poster)" }}
     >
       {title.posterUrl ? (
-        <img src={title.posterUrl} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
+        <img
+          src={title.posterUrl}
+          alt=""
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
+          decoding="async"
+          className="size-full object-cover"
+        />
       ) : null}
     </div>
   );

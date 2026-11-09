@@ -41,7 +41,7 @@ export function OngoingShelf({ sessions }: { sessions: SessionSummary[] }) {
 function OngoingTile({ session }: { session: SessionSummary }) {
   const detail = queuePlace(session) || remainingLabel(session);
   return (
-    <Link href={sessionPath(session.code)} className="grid gap-2 rounded-control text-left">
+    <Link href={sessionPath(session.code)} className="am-press grid gap-2 rounded-control text-left">
       <SeancePoster session={session} className="w-full">
         <span className="absolute inset-0 m-auto grid size-11 place-items-center rounded-full bg-scrim text-fg">
           <Play className="ml-0.5 size-4 fill-current" />

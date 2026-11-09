@@ -11,7 +11,8 @@ import { ofCircle, seanceToResume } from "../circles/circle-rules.ts";
 import { circleForTitle, useCircles } from "../circles/circles.ts";
 import { useSessions } from "../sessions/sessions.ts";
 import { useTv } from "../tv/tv-context.ts";
-import { PosterCard } from "./PosterCard.tsx";
+import { FIRST_ROW, PosterCard } from "./PosterCard.tsx";
+import { ShelfPlaceholder } from "./ShelfPlaceholder.tsx";
 import { useLaunchTitle } from "./useLaunchTitle.ts";
 import { useLoadWatchlist } from "./useLoadWatchlist.ts";
 import { WatchlistItemSheet } from "./WatchlistItemSheet.tsx";
@@ -47,7 +48,9 @@ export function WatchlistShelf({
   const [openId, setOpenId] = useState<string | null>(null);
   const { launch } = useLaunchTitle();
   const [, navigate] = useLocation();
-  if (toWatch.length === 0) return null;
+  const loading = useWatchlist((s) => s.status === "idle" || s.status === "loading");
+  // Its room is kept while the list is on its way: arriving, it pushed the rest of the page down.
+  if (toWatch.length === 0) return loading ? <ShelfPlaceholder title={title} /> : null;
 
   const want = (item: WatchlistItem, value: boolean) =>
     void toggleWant(item.id, me, value).catch((failure: Error) => toast({ message: failure.message }));
@@ -83,9 +86,16 @@ export function WatchlistShelf({
       </div>
       {/* Room around the cards for the TV's focus ring: a scroller clips what overflows it. */}
       <ul className={cx("flex gap-3 overflow-x-auto py-3 [scrollbar-width:none]", tv && "-mx-6 gap-5 px-6 py-5")}>
-        {toWatch.slice(0, SHELF_SIZE).map((item) => (
+        {toWatch.slice(0, SHELF_SIZE).map((item, index) => (
           <li key={item.id} className="w-[7.5rem] shrink-0">
-            <PosterCard item={item} me={me} onPick={pick} onWant={tv ? undefined : want} hint={tvHint(item)} />
+            <PosterCard
+              item={item}
+              me={me}
+              onPick={pick}
+              onWant={tv ? undefined : want}
+              hint={tvHint(item)}
+              priority={index < FIRST_ROW}
+            />
           </li>
         ))}
         {tv ? null : (

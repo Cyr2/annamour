@@ -617,6 +617,18 @@
   scale: 0.96;
 }
 
+/*
+ * A poster sinks the same way under the finger: the sheet it opens takes a
+ * moment to rise, and until then the tap had no answer.
+ */
+.am-press {
+  transition: scale var(--am-duration-fast) var(--am-ease-out);
+}
+
+.am-press:active {
+  scale: 0.97;
+}
+
 /* glisse paints filled labels white: on peach that's 2.3:1. Night is 8.5:1. */
 .am-button.lg-button[data-variant="filled"] {
   color: var(--am-on-accent);

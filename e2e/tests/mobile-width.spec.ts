@@ -1,5 +1,5 @@
-import { expect, type Page, test } from "@playwright/test";
-import { createSession, onboard, person } from "./helpers.ts";
+import { expect, type Page } from "@playwright/test";
+import { createSession, onboard, person, test } from "./helpers.ts";
 
 /** Nothing on screen runs past a small phone's width, and no bottom sheet scrolls sideways. */
 async function expectFitsWidth(page: Page, where: string) {
