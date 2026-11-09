@@ -30,6 +30,22 @@ describe("red thread geometry", () => {
     expect(d.startsWith("M104.0 42.0")).toBe(true);
     expect(d.endsWith("L256.0 42.0")).toBe(true);
   });
+
+  it("hangs a gentle thread in a single soft curve between two bubbles, whatever the moment", () => {
+    const ends = [
+      { x: 28, y: 28, r: 28 },
+      { x: 152, y: 28, r: 28 },
+    ];
+    for (const time of [0, 900, 2600]) {
+      const heights = [...threadPath(ends, 10, 3, time, "gentle").matchAll(/[ML][\d.]+ ([\d.]+)/g)].map((match) =>
+        Number(match[1]),
+      );
+      const lowest = heights.indexOf(Math.max(...heights));
+      // Down to one lowest point, then back up: no second dip.
+      expect(heights.slice(0, lowest + 1).every((y, i, all) => i === 0 || y >= (all[i - 1] ?? y))).toBe(true);
+      expect(heights.slice(lowest).every((y, i, all) => i === 0 || y <= (all[i - 1] ?? y))).toBe(true);
+    }
+  });
 });
 
 describe("starry sky", () => {

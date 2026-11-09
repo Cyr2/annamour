@@ -3,7 +3,7 @@ import { createContext, type ReactNode, use, useCallback, useEffect, useLayoutEf
 import { spring } from "../lib/motion.ts";
 import { useCalmMotion } from "./calm-motion.ts";
 import { cx } from "./cx.ts";
-import { KNOT_ATTRIBUTE, knotPoint, type Point, threadPath } from "./thread-path.ts";
+import { KNOT_ATTRIBUTE, knotPoint, type Point, type ThreadSway, threadPath } from "./thread-path.ts";
 
 /*
  * The red thread: drawn from bubble to bubble, in the order of their `index`.
@@ -123,9 +123,11 @@ function Anchor({ index, className, children }: AnchorProps) {
 
 /* ---------- Line ---------- */
 
-/** Peak wave height while slack, and how far the thread droops, in px. */
-const SLACK_AMPLITUDE = 7;
-const SLACK_SAG = 16;
+/** Peak sway while slack, and how far the thread droops, in px: a gentle thread barely breathes. */
+const SLACK: Record<ThreadSway, { amplitude: number; sag: number }> = {
+  wave: { amplitude: 7, sag: 16 },
+  gentle: { amplitude: 3, sag: 10 },
+};
 
 /**
  * Draws the thread frame by frame while it moves, written straight onto the
@@ -134,7 +136,13 @@ const SLACK_SAG = 16;
  * has settled asks for no more frames: on a TV each one is a full-screen
  * redraw. Its springs moving wake it up.
  */
-function useThreadDrawing(points: Point[], sag: MotionValue<number>, amplitude: MotionValue<number>, still: boolean) {
+function useThreadDrawing(
+  points: Point[],
+  sag: MotionValue<number>,
+  amplitude: MotionValue<number>,
+  still: boolean,
+  sway: ThreadSway,
+) {
   const lineRef = useRef<SVGPathElement>(null);
   const haloRef = useRef<SVGPathElement>(null);
 
@@ -145,7 +153,7 @@ function useThreadDrawing(points: Point[], sag: MotionValue<number>, amplitude: 
       frame = 0;
       const line = lineRef.current;
       if (!line) return;
-      const next = threadPath(points, sag.get(), amplitude.get(), still ? 0 : time);
+      const next = threadPath(points, sag.get(), amplitude.get(), still ? 0 : time, sway);
       if (line.getAttribute("d") !== next) {
         line.setAttribute("d", next);
         haloRef.current?.setAttribute("d", next);
@@ -164,12 +172,13 @@ function useThreadDrawing(points: Point[], sag: MotionValue<number>, amplitude: 
       stopSag();
       stopAmplitude();
     };
-  }, [points, sag, amplitude, still]);
+  }, [points, sag, amplitude, still, sway]);
 
   return { lineRef, haloRef };
 }
 
-function Line({ className }: { className?: string }) {
+/** `sway="gentle"` for a thread that only waits (an empty state), not one where someone is loading. */
+function Line({ className, sway = "wave" }: { className?: string; sway?: ThreadSway }) {
   const {
     state: { synced, points },
   } = useThread();
@@ -177,14 +186,15 @@ function Line({ className }: { className?: string }) {
   const calm = useCalmMotion();
   // On a TV the wave would repaint the thread on every frame for as long as a seat is empty: it droops, still.
   const stillWave = reduceMotion || calm;
+  const slack = SLACK[sway];
 
-  const amplitude = useSpring(synced ? 0 : SLACK_AMPLITUDE, spring.thread);
-  const sag = useSpring(synced ? 0 : SLACK_SAG, spring.thread);
-  const { lineRef, haloRef } = useThreadDrawing(points, sag, amplitude, stillWave);
+  const amplitude = useSpring(synced ? 0 : slack.amplitude, spring.thread);
+  const sag = useSpring(synced ? 0 : slack.sag, spring.thread);
+  const { lineRef, haloRef } = useThreadDrawing(points, sag, amplitude, stillWave, sway);
 
   useLayoutEffect(() => {
-    const amp = synced ? 0 : SLACK_AMPLITUDE;
-    const droop = synced ? 0 : SLACK_SAG;
+    const amp = synced ? 0 : slack.amplitude;
+    const droop = synced ? 0 : slack.sag;
     if (reduceMotion) {
       amplitude.jump(amp);
       sag.jump(droop);
@@ -192,7 +202,7 @@ function Line({ className }: { className?: string }) {
       amplitude.set(amp);
       sag.set(droop);
     }
-  }, [synced, reduceMotion, amplitude, sag]);
+  }, [synced, reduceMotion, amplitude, sag, slack]);
 
   if (points.length < 2) return null;
 

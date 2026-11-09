@@ -8,8 +8,6 @@ import { Button } from "../../ui/controls.tsx";
 import { LinkButton } from "../../ui/LinkButton.tsx";
 import { Poster } from "../../ui/Poster.tsx";
 import { Surface } from "../../ui/Surface.tsx";
-import { WaitingThread } from "../../ui/WaitingThread.tsx";
-import { useAccount } from "../account/account.ts";
 import type { TonightPick } from "../circles/circle-rules.ts";
 import { describeTitle } from "../home/create/CatalogResults.tsx";
 import { ResumeSeanceAction } from "../sessions/ResumeSeanceAction.tsx";
@@ -121,20 +119,16 @@ function TitleBody({
   );
 }
 
-/** Nothing wanted yet: the thread waits, slack, for the circle's first title. */
 function NothingBody({ onAdd }: { onAdd: () => void }) {
-  const account = useAccount((s) => s.account);
   return (
-    <WaitingThread
-      me={{ name: account?.name ?? "Toi", color: account?.color ?? "peach" }}
-      title="Rien de prévu pour l'instant"
-      action={
-        <Button variant="filled" icon={<Plus />} onClick={onAdd}>
-          Ajouter un titre
-        </Button>
-      }
-    >
-      Ajoutez des films et des séries à votre liste : le plus voulu vous attendra ici.
-    </WaitingThread>
+    <div className="grid justify-items-start gap-3">
+      <strong className="font-rounded-tight text-lg font-extrabold text-fg">Rien de prévu pour l'instant</strong>
+      <p className="text-sm text-fg-muted">
+        Ajoutez des films et des séries à votre liste : le plus voulu vous attendra ici.
+      </p>
+      <Button variant="filled" icon={<Plus />} onClick={onAdd}>
+        Ajouter un titre
+      </Button>
+    </div>
   );
 }

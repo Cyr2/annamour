@@ -24,7 +24,7 @@ export function WaitingThread({ me, title, children, action }: WaitingThreadProp
   return (
     <div className="grid justify-items-center gap-4 py-2 text-center">
       <RedThread.Root synced={false} className="w-[min(19rem,100%)]">
-        <RedThread.Line />
+        <RedThread.Line sway="gentle" />
         <div className="flex items-center justify-between">
           <RedThread.Anchor index={0}>
             <PresenceBubble name={me.name} color={me.color} status="alone" size="md" />
