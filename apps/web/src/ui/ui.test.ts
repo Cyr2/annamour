@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { progressFill } from "./progress-fill.ts";
 import { makeStars, STAR_COUNT, starMask, TWINKLE_LAYERS } from "./sky-stars.ts";
 import { knotPoint, threadPath } from "./thread-path.ts";
 
@@ -53,5 +54,12 @@ describe("starry sky", () => {
     expect(decode(starMask(stars)).match(/<circle /g)).toHaveLength(stars.length);
     expect(decode(starMask(stars, true)).match(/<circle /g)).toHaveLength(stars.filter((s) => s.bright).length);
     expect(decode(starMask(stars, true))).toContain("radialGradient");
+  });
+});
+
+describe("a progress bar", () => {
+  it("fills in the thread colour while under way, in mint once watched to the end, like the episode bars", () => {
+    expect(progressFill(false)).toBe("bg-thread");
+    expect(progressFill(true)).toBe("bg-success");
   });
 });
