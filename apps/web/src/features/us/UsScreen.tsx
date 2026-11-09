@@ -5,10 +5,13 @@ import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { offersPlayerChoice } from "../../sync/player-choice.ts";
 import { BrandFooter } from "../../ui/BrandFooter.tsx";
+import { Button } from "../../ui/controls.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { LayoutMotion } from "../../ui/LayoutMotion.tsx";
+import { Surface } from "../../ui/Surface.tsx";
 import { ThreadSpinner } from "../../ui/ThreadSpinner.tsx";
 import { toast } from "../../ui/toast.ts";
+import { WaitingThread } from "../../ui/WaitingThread.tsx";
 import { useAccount } from "../account/account.ts";
 import { moveId } from "../circles/circle-rules.ts";
 import { loadCircles, previewCircleOrder, reorderCircles, useCircles } from "../circles/circles.ts";
@@ -72,15 +75,30 @@ function Circles({ me, onCreate }: { me: string; onCreate: () => void }) {
           <ThreadSpinner />
         </div>
       ) : null}
-      {status === "ready" && circles.length === 0 ? (
-        <p className="px-1 text-sm text-fg-muted">
-          Un cercle se forme tout seul quand tu regardes une séance avec quelqu'un. Tu peux aussi en créer un et y
-          inviter qui tu veux.
-        </p>
-      ) : null}
+      {status === "ready" && circles.length === 0 ? <NoCircleYet onCreate={onCreate} /> : null}
       <CircleList circles={circles} me={me} />
       <AllSeancesLink />
     </section>
+  );
+}
+
+/** No circle yet: the thread waits for the people of a first one, and creating it is one tap away. */
+function NoCircleYet({ onCreate }: { onCreate: () => void }) {
+  const account = useAccount((s) => s.account);
+  return (
+    <Surface className="surface-panel p-5">
+      <WaitingThread
+        me={{ name: account?.name ?? "Toi", color: account?.color ?? "peach" }}
+        title="Pas encore de cercle"
+        action={
+          <Button variant="filled" icon={<Plus />} onClick={onCreate}>
+            Créer un cercle
+          </Button>
+        }
+      >
+        Un cercle se forme tout seul dès une séance à plusieurs. Tu peux aussi en créer un et y inviter qui tu veux.
+      </WaitingThread>
+    </Surface>
   );
 }
 
