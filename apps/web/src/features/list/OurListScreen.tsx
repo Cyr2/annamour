@@ -11,7 +11,7 @@ import { ofCircle } from "../circles/circle-rules.ts";
 import { loadCircles, useShownCircle } from "../circles/circles.ts";
 import { SessionRow } from "../profile/SessionRow.tsx";
 import { splitByStatus } from "../sessions/session-rules.ts";
-import { hideSession, useSessions } from "../sessions/sessions.ts";
+import { leaveSession, useSessions } from "../sessions/sessions.ts";
 import { useLoadSessions } from "../sessions/useLoadSessions.ts";
 import { AddToWatchlistSheet } from "../watchlist/AddToWatchlistSheet.tsx";
 import { useLoadWatchlist } from "../watchlist/useLoadWatchlist.ts";
@@ -132,7 +132,7 @@ function Watched({
               session={session}
               me={me}
               now={now}
-              onRemove={(s) => void hideSession(s.code).catch((failure: Error) => toast({ message: failure.message }))}
+              onRemove={(s) => void leaveSession(s.code).catch((failure: Error) => toast({ message: failure.message }))}
             />
           ))}
         </ul>

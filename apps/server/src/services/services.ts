@@ -69,6 +69,7 @@ export function createServices(options: ServiceOptions): Services {
   const watchlist = new WatchlistService({ repositories, now });
   // Séances made before circles existed find theirs.
   circles.backfill();
+  repositories.participations.fillCreators();
   const history = new HistoryService({ repositories, store, now, onParticipation: (code) => circles.syncRoom(code) });
   const accounts = new AccountService({ repositories, pepper, now, randomInt: options.randomInt });
   const lowQualities = new LowQualityService({

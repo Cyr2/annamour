@@ -1,17 +1,17 @@
 import type { SessionSummary } from "@annamour/protocol";
-import { Link2, Play, RotateCcw, Trash2 } from "lucide-react";
+import { Play, RotateCcw, Trash2 } from "lucide-react";
 import { m } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import { exit, spring } from "../../lib/motion.ts";
 import { sessionPath } from "../../sync/restart.ts";
 import { BubbleStack, type StackedPerson } from "../../ui/BubbleStack.tsx";
-import { Button, Menu } from "../../ui/controls.tsx";
+import { Button } from "../../ui/controls.tsx";
 import { cx } from "../../ui/cx.ts";
 import { EpisodeBars } from "../../ui/EpisodeBars.tsx";
 import { LinkButton } from "../../ui/LinkButton.tsx";
 import { Progress } from "../../ui/Progress.tsx";
 import { Surface } from "../../ui/Surface.tsx";
-import { toast } from "../../ui/toast.ts";
+import { SeanceOptions } from "../sessions/SeanceOptions.tsx";
 import {
   companionsLabel,
   isFinished,
@@ -28,15 +28,6 @@ interface SessionRowProps {
   me: StackedPerson;
   now: number;
   onRemove: (session: SessionSummary) => void;
-}
-
-async function copyLink(code: string) {
-  try {
-    await navigator.clipboard.writeText(`${window.location.origin}/s/${code}`);
-    toast({ message: "Lien copié", icon: <Link2 /> });
-  } catch {
-    toast({ message: `Le code de la séance : ${code}` });
-  }
 }
 
 /**
@@ -84,8 +75,8 @@ interface SessionRowItemProps extends SessionRowProps {
 
 /**
  * One session of « Mes séances »: what, when, with whom, how far, the way
- * back in, and the rest. A phone tucks the rest in a menu; a TV shows it as
- * buttons, since a pop-up menu is awkward with a remote.
+ * back in, and the rest. A phone tucks the rest behind « ⋯ » (leave, delete);
+ * a TV shows « Quitter » as a button, since a sheet is awkward with a remote.
  */
 export function SessionRow({ session, me, now, onRemove, primary = false }: SessionRowItemProps) {
   const tv = useTv();
@@ -112,11 +103,7 @@ export function SessionRow({ session, me, now, onRemove, primary = false }: Sess
           data-tv-primary={primary ? "" : undefined}
         >
           <OpenSessionLink session={session} size={tv ? "large" : "regular"} />
-          {tv ? (
-            <RemoveButton session={session} onRemove={onRemove} />
-          ) : (
-            <SessionMenu session={session} onRemove={onRemove} />
-          )}
+          {tv ? <RemoveButton session={session} onRemove={onRemove} /> : <SeanceOptions session={session} />}
         </div>
       </Surface>
     </m.li>
@@ -140,30 +127,12 @@ function OpenSessionLink({ session, size }: { session: SessionSummary; size: "re
 
 type SessionActionProps = Pick<SessionRowProps, "session" | "onRemove">;
 
-function SessionMenu({ session, onRemove }: SessionActionProps) {
-  return (
-    <Menu
-      aria-label={`Plus d'options pour « ${session.title} »`}
-      items={[
-        { label: "Copier le lien", icon: <Link2 />, onSelect: () => void copyLink(session.code) },
-        "separator",
-        {
-          label: "Retirer de mes séances",
-          icon: <Trash2 />,
-          destructive: true,
-          onSelect: () => onRemove(session),
-        },
-      ]}
-    />
-  );
-}
-
-/** How long « Retirer ? » waits for the second press before standing down. */
+/** How long « Quitter ? » waits for the second press before standing down. */
 const CONFIRM_MS = 4000;
 
 /**
- * « Retirer » on a TV: a remote press is easy to make by mistake, so the
- * first press asks (« Vraiment retirer ? ») and only a second one removes.
+ * « Quitter » on a TV: a remote press is easy to make by mistake, so the
+ * first press asks (« Vraiment quitter ? ») and only a second one leaves.
  * Moving the focus away, or waiting, stands it down.
  */
 function RemoveButton({ session, onRemove }: SessionActionProps) {
@@ -180,13 +149,13 @@ function RemoveButton({ session, onRemove }: SessionActionProps) {
       size="large"
       tone={asking ? "destructive" : "default"}
       icon={<Trash2 />}
-      // As wide as « Vraiment retirer ? », so asking never reflows the row.
+      // As wide as « Vraiment quitter ? », so asking never reflows the row.
       className="min-w-[14rem]"
-      aria-label={asking ? `Confirmer : retirer « ${session.title} »` : `Retirer « ${session.title} » de mes séances`}
+      aria-label={asking ? `Confirmer : quitter « ${session.title} »` : `Quitter « ${session.title} »`}
       onBlur={() => setAsking(false)}
       onClick={() => (asking ? onRemove(session) : setAsking(true))}
     >
-      {asking ? "Vraiment retirer ?" : "Retirer"}
+      {asking ? "Vraiment quitter ?" : "Quitter"}
     </Button>
   );
 }

@@ -110,7 +110,7 @@ export class WatchlistService {
     const items = new Set(
       circles.roomAccounts(code).flatMap((accountId) => watchlist.findToWatch(accountId, key) ?? []),
     );
-    for (const itemId of items) watchlist.setWatched(itemId, this.now());
+    for (const itemId of items) watchlist.setWatched(itemId, this.now(), code);
   }
 
   setWatched(accountId: string, itemId: string, watched: boolean): void {

@@ -12,6 +12,8 @@ export interface JoinedRoom {
   lastUsedAt: number;
   episode: { index: number; count: number; label: string | undefined };
   circleId: string | undefined;
+  /** The account that created it (it alone may delete it for everyone). */
+  createdBy: string | undefined;
   /** The current episode's poster, when it came from the catalog. */
   posterUrl: string | undefined;
   /** The catalog title the current episode comes from (the series, for an episode). */
@@ -29,6 +31,7 @@ const JoinedRoomRow = z.object({
   episode_label: z.string().nullable(),
   episode_catalog: z.string().nullable(),
   circle_id: z.string().nullable(),
+  created_by: z.string().nullable(),
 });
 
 const CompanionRow = z.object({
@@ -59,6 +62,27 @@ export class ParticipationRepository {
          ON CONFLICT (room_code, account_id) DO UPDATE SET last_seen_at = excluded.last_seen_at, hidden = 0`,
       )
       .run(roomCode, accountId, now);
+    // The first account in a séance created it.
+    this.db.prepare("UPDATE rooms SET created_by = ? WHERE code = ? AND created_by IS NULL").run(accountId, roomCode);
+  }
+
+  /** Séances saved before their creator was: the first account that entered them created them. */
+  fillCreators(): void {
+    this.db
+      .prepare(
+        `UPDATE rooms SET created_by = (
+           SELECT p.account_id FROM participations p WHERE p.room_code = rooms.code ORDER BY p.rowid LIMIT 1
+         ) WHERE created_by IS NULL`,
+      )
+      .run();
+  }
+
+  /** Takes this account out of a séance (no longer in its séances nor its circles' counts). False when it was not in. */
+  remove(roomCode: string, accountId: string): boolean {
+    const result = this.db
+      .prepare("DELETE FROM participations WHERE room_code = ? AND account_id = ?")
+      .run(roomCode, accountId);
+    return changedRows(result) > 0;
   }
 
   /** Returns false when this account never was in that room. */
@@ -73,7 +97,7 @@ export class ParticipationRepository {
   visibleRooms(accountId: string): JoinedRoom[] {
     const rows = this.db
       .prepare(
-        `SELECT r.code, r.title, r.duration, r.position, r.last_used_at, r.current_episode, r.circle_id,
+        `SELECT r.code, r.title, r.duration, r.position, r.last_used_at, r.current_episode, r.circle_id, r.created_by,
            (SELECT COUNT(*) FROM room_episodes e WHERE e.room_code = r.code) AS episode_count,
            (SELECT e.label FROM room_episodes e
             WHERE e.room_code = r.code
@@ -96,6 +120,7 @@ export class ParticipationRepository {
       lastUsedAt: row.last_used_at,
       episode: { index: row.current_episode, count: row.episode_count, label: row.episode_label ?? undefined },
       circleId: row.circle_id ?? undefined,
+      createdBy: row.created_by ?? undefined,
       ...catalogOf(parseCatalog(row.episode_catalog)),
     }));
   }

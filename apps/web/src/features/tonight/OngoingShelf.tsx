@@ -2,6 +2,7 @@ import type { SessionSummary } from "@annamour/protocol";
 import { Play } from "lucide-react";
 import { Link } from "wouter";
 import { sessionPath } from "../../sync/restart.ts";
+import { SeanceOptions } from "../sessions/SeanceOptions.tsx";
 import { companionsLabel, remainingLabel, sessionTitle } from "../sessions/session-rules.ts";
 import { SeancePoster } from "./SeancePoster.tsx";
 
@@ -15,8 +16,12 @@ export function OngoingShelf({ sessions }: { sessions: SessionSummary[] }) {
       </h2>
       <ul className="-mx-1 flex gap-3 overflow-x-auto px-1 py-2 [scrollbar-width:none]">
         {sessions.map((session) => (
-          <li key={session.code} className="w-[7.5rem] shrink-0">
+          <li key={session.code} className="relative w-[7.5rem] shrink-0">
             <OngoingTile session={session} />
+            {/* Beside the link, not inside it: a button never nests in a link. */}
+            <span className="absolute top-1 right-1">
+              <SeanceOptions session={session} variant="glass" />
+            </span>
           </li>
         ))}
       </ul>

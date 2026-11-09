@@ -3,7 +3,7 @@
  * so it is in French and says what to do next.
  */
 export class UserFacingError extends Error {
-  readonly status: 400 | 401 | 404 | 409 | 410 | 422 | 429 | 502 | 503;
+  readonly status: 400 | 401 | 403 | 404 | 409 | 410 | 422 | 429 | 502 | 503;
 
   constructor(message: string, status: UserFacingError["status"]) {
     super(message);
@@ -45,6 +45,12 @@ export class InvalidLinkTokenError extends UserFacingError {
 export class PasskeyError extends UserFacingError {
   constructor() {
     super("Cette passkey n'a pas été reconnue. Réessaie, ou connecte-toi avec tes 4 mots.", 401);
+  }
+}
+
+export class NotYoursToDeleteError extends UserFacingError {
+  constructor() {
+    super("Seule la personne qui a créé cette séance peut la supprimer pour tout le monde. Tu peux la quitter.", 403);
   }
 }
 

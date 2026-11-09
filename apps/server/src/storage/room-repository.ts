@@ -156,6 +156,17 @@ export class RoomRepository {
       .run(current, duration ?? null, now, code);
   }
 
+  /** The account that created a séance; undefined for none (or a séance that does not exist). */
+  creatorOf(code: string): string | undefined {
+    const row = this.db.prepare("SELECT created_by FROM rooms WHERE code = ?").get(code);
+    return parseOptionalRow(z.object({ created_by: z.string().nullable() }), row)?.created_by ?? undefined;
+  }
+
+  /** Deletes a séance for everyone (and, by cascade, its episodes and participations). */
+  delete(code: string): void {
+    this.db.prepare("DELETE FROM rooms WHERE code = ?").run(code);
+  }
+
   /** Deletes rooms (and, by cascade, their episodes and participations) unused since `cutoff`. */
   deleteUnusedSince(cutoff: number): string[] {
     const rows = this.db.prepare("DELETE FROM rooms WHERE last_used_at < ? RETURNING code").all(cutoff);

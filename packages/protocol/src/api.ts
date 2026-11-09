@@ -73,6 +73,8 @@ export const SessionSummary = z.object({
   episode: z.object({ index: z.number(), count: z.number(), label: z.optional(z.string()) }),
   /** The circle the séance belongs to (see circles.ts); absent for a séance watched alone. */
   circleId: z.optional(z.string()),
+  /** I created it: I may delete it for everyone (the others can only leave it). */
+  createdByMe: z.optional(z.boolean()),
   /** The catalog title it plays (the series, for an episode): a title in « Notre liste » leads back to its séance. */
   catalog: z.optional(z.object({ id: CatalogId, type: CatalogMediaType })),
   /** The current episode's poster, for a séance started from the catalog; absent for a pasted link. */
@@ -160,6 +162,10 @@ export const API = {
   checkKey: "/api/me/key",
   newKey: "/api/me/key/new",
   sessions: "/api/me/sessions",
+  /** DELETE: leave a séance (it leaves my séances and my circles' counts; the others keep it). */
+  session: "/api/me/sessions/:code",
+  /** DELETE: the person who created a séance removes it for everyone. */
+  sessionForEveryone: "/api/me/sessions/:code/everyone",
   logout: "/api/logout",
   passkeyRegisterOptions: "/api/passkey/register/options",
   passkeyRegisterVerify: "/api/passkey/register/verify",

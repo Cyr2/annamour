@@ -44,21 +44,24 @@ export function loadSessions(): Promise<void> {
   return inFlight;
 }
 
-/**
- * Removes a session from my list right away, and puts it back if the server
- * refuses. Throws the French message to show in that case.
- */
-export async function hideSession(code: string): Promise<void> {
+/** Takes a séance out of the list at once, and puts it back if the server refuses (throwing the message to show). */
+async function removeAtOnce(code: string, work: (code: string) => Promise<void>): Promise<void> {
   const removed = useSessions.getState().sessions.find((session) => session.code === code);
   if (!removed) return;
   useSessions.setState((state) => ({ sessions: state.sessions.filter((session) => session.code !== code) }));
   try {
-    await accounts.hideSession(code);
+    await work(code);
   } catch (error) {
     useSessions.setState((state) => ({ sessions: byMostRecent([...state.sessions, removed]) }));
     throw new Error(errorMessage(error));
   }
 }
+
+/** Leaves a séance: gone from my séances at once; the others keep it. */
+export const leaveSession = (code: string) => removeAtOnce(code, accounts.leaveSession);
+
+/** Deletes a séance for everyone (I created it): gone at once, for me and the others. */
+export const deleteSession = (code: string) => removeAtOnce(code, accounts.deleteSessionForEveryone);
 
 /** Another account signs in on this device: never show the previous one's history. */
 export function resetSessions(): void {

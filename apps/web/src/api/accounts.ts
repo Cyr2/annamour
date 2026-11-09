@@ -3,6 +3,7 @@ import {
   type AccountKey,
   AccountResponse,
   API,
+  apiPath,
   type BubbleColor,
   CreateAccountResponse,
   KeyCheckResponse,
@@ -99,7 +100,12 @@ export async function updateAccount(changes: UpdateAccountRequest): Promise<Acco
   return account;
 }
 
-/** Removes a session from my list only: the others keep it. */
-export async function hideSession(code: string): Promise<void> {
-  await request(Ignored, `${API.sessions}/${encodeURIComponent(code)}`, { method: "DELETE" });
+/** Leaves a séance: gone from my séances and my circles; the others keep it. */
+export async function leaveSession(code: string): Promise<void> {
+  await request(Ignored, apiPath(API.session, { code }), { method: "DELETE" });
+}
+
+/** Deletes a séance for everyone (only the person who created it may). */
+export async function deleteSessionForEveryone(code: string): Promise<void> {
+  await request(Ignored, apiPath(API.sessionForEveryone, { code }), { method: "DELETE" });
 }
