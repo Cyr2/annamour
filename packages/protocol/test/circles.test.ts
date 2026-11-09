@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { byRecentUse, type Circle, CircleName, circleTitle, othersIn } from "../src/index.ts";
+import { byRecentUse, type Circle, CircleName, circleTitle, othersIn, seanceCircleLine } from "../src/index.ts";
 
 const me = { accountId: "darius", name: "Darius", color: "peach" } as const;
 const annou = { accountId: "annou", name: "Annou", color: "rose" } as const;
@@ -42,5 +42,22 @@ describe("circles", () => {
   it("come the most recently used first, never-used ones last", () => {
     const list = [circle("old", { lastUsedAt: 1 }), circle("new"), circle("recent", { lastUsedAt: 9 })];
     expect(byRecentUse(list).map((c) => c.id)).toEqual(["recent", "old", "new"]);
+  });
+});
+
+describe("the salon's line about its séance's circle", () => {
+  it("names a named circle, for its people and for a guest alike", () => {
+    const potes = { name: "Les potes du jeudi", members: [me, annou] };
+    expect(seanceCircleLine(potes, "darius")).toBe("Séance de Les potes du jeudi");
+    expect(seanceCircleLine(potes, "zoe")).toBe("Séance de Les potes du jeudi");
+  });
+
+  it("says with whom for one of its people, whose séance it is for a guest", () => {
+    expect(seanceCircleLine({ members: [me, leo, ines] }, "darius")).toBe("avec Léo et Inès");
+    expect(seanceCircleLine({ members: [me, leo] }, "zoe")).toBe("Séance de Darius et Léo");
+  });
+
+  it("says nothing of an unnamed circle with nobody else left in it", () => {
+    expect(seanceCircleLine({ members: [me] }, "darius")).toBeNull();
   });
 });

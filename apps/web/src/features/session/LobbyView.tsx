@@ -16,6 +16,7 @@ import { useTv } from "../tv/tv-context.ts";
 import { PrepLine } from "./PrepLine.tsx";
 import { SalonPresence } from "./Presence.tsx";
 import { usePrep } from "./prep.ts";
+import { SeanceCircleLine } from "./SeanceCircleLine.tsx";
 
 function headline(otherNames: string[]): string {
   if (otherNames.length === 0) return "En attente des autres…";
@@ -68,6 +69,7 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
         <div className="grid justify-items-center gap-6 text-center md:order-2">
           <SalonPresence members={members} you={you} className="w-[min(22.5rem,100%)]" />
           <div className="grid justify-items-center gap-3">
+            <SeanceCircleLine seance={seance} />
             <h1 className="type-title" aria-live="polite">
               {headline(others)}
             </h1>

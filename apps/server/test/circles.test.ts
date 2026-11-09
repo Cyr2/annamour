@@ -89,8 +89,8 @@ describe("circles", () => {
     expect(circles[0]?.evenings).toBe(1);
   });
 
-  it("keep a circle that already has its own séances, and move a séance someone from outside joins", async () => {
-    const { account, seance, circlesOf, services } = setup();
+  it("keep a séance in its circle when someone from outside joins it: a guest, who sees it in their séances", async () => {
+    const { account, seance, circlesOf, services, send } = setup();
     const darius = await account("Darius");
     const annou = await account("Annou");
     const leo = await account("Léo");
@@ -99,9 +99,35 @@ describe("circles", () => {
     services.history.recordParticipation(code, leo.id);
 
     const circles = await circlesOf(darius.cookie);
-    expect(circles.map((c) => c.members.length).sort()).toEqual([2, 3]);
-    expect(circles.find((c) => c.members.length === 3)?.evenings).toBe(1);
-    expect(circles.find((c) => c.members.length === 2)?.evenings).toBe(1);
+    expect(circles).toHaveLength(1);
+    expect(circles[0]?.members.map((m) => m.name)).toEqual(["Darius", "Annou"]);
+    expect(circles[0]?.evenings).toBe(2);
+    expect(await circlesOf(leo.cookie)).toEqual([]);
+    const guest = ((await (await send(leo.cookie, "GET", API.sessions)).json()) as SessionList).sessions;
+    expect(guest.map((s) => [s.code, s.circleId])).toEqual([[code, circles[0]?.id]]);
+  });
+
+  it("keep a séance started from a named circle in it, and its people as they are, when a friend drops by", async () => {
+    const { account, circlesOf, services, send } = setup();
+    const darius = await account("Darius");
+    const annou = await account("Annou");
+    const leo = await account("Léo");
+    const created = await send(darius.cookie, "POST", CIRCLES_API.list, { name: "Les potes du jeudi" });
+    const { id: potes } = (await created.json()) as { id: string };
+    const invite = (await (
+      await send(darius.cookie, "POST", apiPath(CIRCLES_API.invite, { id: potes }))
+    ).json()) as CircleInvite;
+    await send(annou.cookie, "POST", CIRCLES_API.join, { token: invite.token });
+
+    const room = services.store.create("Soirée", media, 2000);
+    services.circles.assignRoom(darius.id, room.code, potes);
+    for (const id of [darius.id, annou.id, leo.id]) services.history.recordParticipation(room.code, id);
+
+    const circles = await circlesOf(darius.cookie);
+    expect(circles).toHaveLength(1);
+    expect(circles[0]).toMatchObject({ id: potes, name: "Les potes du jeudi", evenings: 1 });
+    expect(circles[0]?.members.map((m) => m.name)).toEqual(["Darius", "Annou"]);
+    expect(await circlesOf(leo.cookie)).toEqual([]);
   });
 
   it("send a séance to the circle of exactly its people when there is one, dropping the one it was forming", async () => {
@@ -118,7 +144,7 @@ describe("circles", () => {
     expect(circles[0]?.evenings).toBe(2);
   });
 
-  it("keep a circle someone named, even when it was forming", async () => {
+  it("stop growing once someone named the circle a séance was forming: who comes next is a guest", async () => {
     const { account, seance, circlesOf, services, send } = setup();
     const darius = await account("Darius");
     const annou = await account("Annou");
@@ -128,7 +154,7 @@ describe("circles", () => {
     await send(darius.cookie, "PATCH", apiPath(CIRCLES_API.item, { id: duo }), { name: "Nous deux" });
     services.history.recordParticipation(code, leo.id);
 
-    expect((await circlesOf(darius.cookie)).map((c) => c.members.length).sort()).toEqual([2, 3]);
+    expect((await circlesOf(darius.cookie)).map((c) => [c.id, c.members.length])).toEqual([[duo, 2]]);
   });
 
   it("keep a séance started from a circle in it while only its people come", async () => {
@@ -196,7 +222,8 @@ describe("circles", () => {
     const duo = (await circlesOf(darius.cookie))[0]?.id ?? "";
     await send(annou.cookie, "PATCH", apiPath(CIRCLES_API.item, { id: duo }), { name: "Nous deux" });
     clock.now = 2000;
-    const withLeo = seance(darius.id, annou.id, leo.id);
+    // Léo comes second: the séance forms the trio's circle (had Annou come second, it would be the duo's).
+    const withLeo = seance(darius.id, leo.id, annou.id);
     const trio = (await circlesOf(darius.cookie)).find((c) => c.id !== duo)?.id ?? "";
     const add = (cookie: string, circleId: string, id: number, title: string) =>
       send(cookie, "POST", WATCHLIST_API.list, {
@@ -222,7 +249,7 @@ describe("circles", () => {
     ]);
     // The séance keeps who was there that evening: Léo still on it.
     const sessions = ((await (await send(darius.cookie, "GET", API.sessions)).json()) as SessionList).sessions;
-    expect(sessions.find((s) => s.code === withLeo)?.participants.map((p) => p.name)).toEqual(["Annou", "Léo"]);
+    expect(sessions.find((s) => s.code === withLeo)?.participants.map((p) => p.name)).toEqual(["Léo", "Annou"]);
   });
 
   it("become one when an invitation makes a circle the same people as another", async () => {
@@ -292,6 +319,25 @@ describe("circles", () => {
     const id = (await circlesOf(darius.cookie))[0]?.id;
     const response = await app.request(API.sessions, { headers: { cookie: darius.cookie } });
     expect(((await response.json()) as SessionList).sessions[0]?.circleId).toBe(id);
+  });
+
+  it("tell each séance's people, a guest included, the name and people of its circle", async () => {
+    const { account, seance, circlesOf, services, send } = setup();
+    const darius = await account("Darius");
+    const annou = await account("Annou");
+    const leo = await account("Léo");
+    const code = seance(darius.id, annou.id);
+    const id = (await circlesOf(darius.cookie))[0]?.id ?? "";
+    await send(annou.cookie, "PATCH", apiPath(CIRCLES_API.item, { id }), { name: "Nous deux" });
+    services.history.recordParticipation(code, leo.id);
+
+    for (const cookie of [darius.cookie, leo.cookie]) {
+      const sessions = ((await (await send(cookie, "GET", API.sessions)).json()) as SessionList).sessions;
+      expect(sessions[0]?.circle?.name).toBe("Nous deux");
+      expect(sessions[0]?.circle?.members.map((m) => m.name)).toEqual(["Darius", "Annou"]);
+    }
+    const alone = seance(darius.id);
+    expect(services.history.list(darius.id).find((s) => s.code === alone)?.circle).toBeUndefined();
   });
 
   it("find theirs for séances made before circles existed", () => {

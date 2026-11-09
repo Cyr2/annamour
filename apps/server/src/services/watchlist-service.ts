@@ -101,14 +101,16 @@ export class WatchlistService {
   }
 
   /**
-   * A séance watched a film to its end: it becomes « vu » for everyone in it,
-   * in each list it was waiting in.
+   * A séance watched a film to its end: it becomes « vu » in the list of the séance's circle, and in
+   * the older lists without a circle of its people. Never in another circle: Dune seen with Léo stays
+   * to watch with Inès. A séance watched alone has no circle: only its person's lists without one.
    */
   markWatchedBySeance(code: string, film: CatalogRef): void {
     const { circles, watchlist } = this.repositories;
     const key = catalogKey(film);
+    const circleId = circles.roomCircle(code) ?? null;
     const items = new Set(
-      circles.roomAccounts(code).flatMap((accountId) => watchlist.findToWatch(accountId, key) ?? []),
+      circles.roomAccounts(code).flatMap((accountId) => watchlist.toWatchForSeance(accountId, key, circleId)),
     );
     for (const itemId of items) watchlist.setWatched(itemId, this.now(), code);
   }
