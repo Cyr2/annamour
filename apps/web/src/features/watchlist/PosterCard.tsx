@@ -1,5 +1,7 @@
 import type { WatchlistItem } from "@annamour/protocol";
 import { Heart } from "lucide-react";
+import { m } from "motion/react";
+import { spring } from "../../lib/motion.ts";
 import { BubbleStack } from "../../ui/BubbleStack.tsx";
 import { cx } from "../../ui/cx.ts";
 import { Poster } from "../../ui/Poster.tsx";
@@ -51,7 +53,15 @@ export function PosterCard({ item, me, onPick, onWant, hint }: PosterCardProps) 
           className="absolute top-0 right-0 grid size-11 cursor-pointer place-items-center"
         >
           <span className="flex h-7 items-center gap-1 rounded-pill bg-scrim px-2 text-xs font-bold text-fg">
-            <Heart aria-hidden className={cx("size-3.5", wanted && "fill-accent text-accent")} />
+            {/* Keyed on the wish: the heart springs in again each time it is given or taken back. */}
+            <m.span
+              key={wanted ? "wanted" : "not"}
+              className="grid"
+              initial={{ scale: wanted ? 0.4 : 0.8 }}
+              animate={{ scale: 1, transition: spring.bubble }}
+            >
+              <Heart aria-hidden className={cx("size-3.5", wanted && "fill-accent text-accent")} />
+            </m.span>
             {count > 0 ? count : null}
           </span>
         </button>
