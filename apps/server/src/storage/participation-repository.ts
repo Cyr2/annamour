@@ -42,6 +42,24 @@ const CompanionRow = z.object({
   hidden: z.number(),
 });
 
+const QueueRow = z.object({ room_code: z.string(), label: z.string().nullable(), catalog: z.string().nullable() });
+
+/** A film or episode of a room as its history tells it; no title when neither the catalog nor a label names it. */
+export interface QueuedItem {
+  title?: string;
+  type?: "movie" | "tv";
+  posterUrl?: string;
+}
+
+function queuedItem(label: string | null, ref: CatalogRef | undefined): QueuedItem {
+  const title = ref?.title ?? label ?? undefined;
+  return {
+    ...(title === undefined ? {} : { title }),
+    ...(ref ? { type: ref.type } : {}),
+    ...(ref?.posterUrl === undefined ? {} : { posterUrl: ref.posterUrl }),
+  };
+}
+
 /** What the history tells of the catalog title a room plays. */
 function catalogOf(ref: CatalogRef | undefined): Pick<JoinedRoom, "posterUrl" | "catalog"> {
   return { posterUrl: ref?.posterUrl, catalog: ref ? { id: ref.id, type: ref.type } : undefined };
@@ -132,6 +150,24 @@ export class ParticipationRepository {
       )
       .all(accountId, accountId);
     return parseRows(z.object({ account_id: z.string() }), rows).map((row) => row.account_id);
+  }
+
+  /** The films or episodes of each visible room of this account, by room code, in playing order. */
+  queues(accountId: string): Map<string, QueuedItem[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT e.room_code, e.label, e.catalog FROM room_episodes e
+         WHERE e.room_code IN (SELECT room_code FROM participations WHERE account_id = ? AND hidden = 0)
+         ORDER BY e.room_code, e.id`,
+      )
+      .all(accountId);
+    const byRoom = new Map<string, QueuedItem[]>();
+    for (const row of parseRows(QueueRow, rows)) {
+      const list = byRoom.get(row.room_code) ?? [];
+      list.push(queuedItem(row.label, parseCatalog(row.catalog)));
+      byRoom.set(row.room_code, list);
+    }
+    return byRoom;
   }
 
   companions(accountId: string): Map<string, SessionParticipant[]> {

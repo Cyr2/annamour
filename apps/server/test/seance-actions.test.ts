@@ -71,6 +71,31 @@ describe("leaving a séance", () => {
   });
 });
 
+describe("a séance of several films", () => {
+  it("lists each of them in order, with its poster, and a séance of one film none", async () => {
+    const { account, seance, get, services } = setup();
+    const darius = await account("Darius");
+    const room = seance(darius.id);
+    const alone = seance(darius.id);
+    const dune = {
+      id: 7,
+      type: "movie",
+      title: "Dune",
+      posterUrl: "https://image.tmdb.org/t/p/w342/dune.jpg",
+    } as const;
+    services.store.addEpisode(room, undefined, media, dune);
+    services.store.addEpisode(room, "Lien collé", media);
+
+    const sessions = (await get<SessionList>(API.sessions, darius.cookie)).sessions;
+    expect(sessions.find((s) => s.code === room.code)?.queue).toEqual([
+      { title: "Interstellar", type: "movie" },
+      { title: "Dune", type: "movie", posterUrl: dune.posterUrl },
+      { title: "Lien collé" },
+    ]);
+    expect(sessions.find((s) => s.code === alone.code)?.queue).toBeUndefined();
+  });
+});
+
 describe("deleting a séance for everyone", () => {
   it("is offered only to the person who created it", async () => {
     const { account, seance, get } = setup();

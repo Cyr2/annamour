@@ -1,6 +1,7 @@
 import type { SessionSummary } from "@annamour/protocol";
 import { NotFoundError, NotYoursToDeleteError } from "../errors.ts";
 import type { RoomStore } from "../room-store.ts";
+import type { QueuedItem } from "../storage/participation-repository.ts";
 import type { Repositories } from "../storage/repositories.ts";
 
 export interface HistoryServiceOptions {
@@ -9,6 +10,12 @@ export interface HistoryServiceOptions {
   now: () => number;
   /** Someone with an account is now in this séance (its circle follows, see CircleService.syncRoom). */
   onParticipation?: (roomCode: string) => void;
+}
+
+/** A séance's films or episodes, sent only when it has several; one without a name of its own takes the séance's. */
+function queueOf(items: readonly QueuedItem[] | undefined, seanceTitle: string): Pick<SessionSummary, "queue"> {
+  if (!items || items.length < 2) return {};
+  return { queue: items.map(({ title, ...rest }) => ({ title: title ?? seanceTitle, ...rest })) };
 }
 
 /** The sessions each account took part in: the same session shows up for everyone in it. */
@@ -32,6 +39,7 @@ export class HistoryService {
 
   list(accountId: string): SessionSummary[] {
     const companions = this.repositories.participations.companions(accountId);
+    const queues = this.repositories.participations.queues(accountId);
     const now = this.now();
     return this.repositories.participations.visibleRooms(accountId).map((room) => ({
       code: room.code,
@@ -45,6 +53,7 @@ export class HistoryService {
         count: room.episode.count,
         ...(room.episode.label === undefined ? {} : { label: room.episode.label }),
       },
+      ...queueOf(queues.get(room.code), room.title),
       ...(room.circleId === undefined ? {} : { circleId: room.circleId }),
       ...(room.posterUrl === undefined ? {} : { posterUrl: room.posterUrl }),
       ...(room.catalog === undefined ? {} : { catalog: room.catalog }),
