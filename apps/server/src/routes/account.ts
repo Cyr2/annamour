@@ -47,6 +47,11 @@ export function accountRoutes({ services, http }: RouteDeps) {
     return c.json({ account } satisfies AccountResponse);
   });
 
+  routes.post(API.linkTokenAccount, async (c) => {
+    const { token } = await readBody(c, LinkWithTokenRequest, "Scanne à nouveau le QR code de ton autre appareil.");
+    return c.json({ account: accounts.linkTokenAccount(token) } satisfies AccountResponse);
+  });
+
   routes.post(API.logout, (c) => {
     accounts.logout(sessionToken(c));
     clearSessionCookie(c);
