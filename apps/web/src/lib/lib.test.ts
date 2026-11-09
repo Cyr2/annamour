@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod/mini";
 import { formatBytes, formatClock, formatDuration, joinNames, plural } from "./format.ts";
+import { isNewPage } from "./page-scroll.ts";
 import { canReloadNow } from "./reload-policy.ts";
 import { readStored, removeStored, writeStored } from "./storage.ts";
 import { visibleArea } from "./visible-area.ts";
@@ -85,5 +86,12 @@ describe("a sheet over the on-screen keyboard", () => {
     expect(visibleArea(844, { height: 844, offsetTop: 0 })).toBeNull();
     expect(visibleArea(844, { height: 843, offsetTop: 0 })).toBeNull();
     expect(visibleArea(844, null)).toBeNull();
+  });
+});
+
+describe("isNewPage", () => {
+  it("starts another page at its top, but not another tab of the same page", () => {
+    expect(isNewPage("/nous", "/liste")).toBe(true);
+    expect(isNewPage("/liste", "/liste")).toBe(false);
   });
 });
