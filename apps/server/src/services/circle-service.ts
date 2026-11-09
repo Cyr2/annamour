@@ -16,7 +16,8 @@ const NOT_IN_CIRCLE = "Ce cercle n'existe plus, ou tu n'en fais plus partie.";
  * Circles form by themselves: a séance of several people belongs to the circle
  * made of exactly them (created when needed). A séance started from a circle
  * stays in it as long as only its members join. Leaving a séance's history
- * never takes anyone out of a circle.
+ * never takes anyone out of a circle. Two circles of the same people (after
+ * someone leaves, or joins by invitation) become one.
  */
 export class CircleService {
   private readonly repositories: CircleServiceOptions["repositories"];
@@ -53,6 +54,7 @@ export class CircleService {
   leave(accountId: string, circleId: string): void {
     this.requireMember(accountId, circleId);
     this.repositories.circles.removeMember(circleId, accountId);
+    this.mergeIntoTwin(circleId);
   }
 
   invite(accountId: string, circleId: string): CircleInvite {
@@ -72,7 +74,7 @@ export class CircleService {
   join(accountId: string, token: string): string {
     const circleId = this.circleOf(token);
     this.repositories.circles.addMember(circleId, accountId, this.now());
-    return circleId;
+    return this.mergeIntoTwin(circleId);
   }
 
   /** Puts a séance just created from a circle in it. */
@@ -97,6 +99,19 @@ export class CircleService {
     }
     circles.setRoomCircle(code, existing ?? this.newCircle(people));
     if (forming) circles.remove(forming);
+  }
+
+  /**
+   * A circle that became the same people as another one joins it, so nobody sees two « Annou et toi »;
+   * returns the circle left. Its séances keep who was there, people since gone included.
+   */
+  private mergeIntoTwin(circleId: string): string {
+    const { circles } = this.repositories;
+    const people = circles.memberIds(circleId);
+    const twin = people.length >= 2 ? circles.findByMembers(people, circleId) : undefined;
+    if (!twin) return circleId;
+    circles.merge(circleId, twin);
+    return twin;
   }
 
   private grow(circleId: string, people: readonly string[]): void {
