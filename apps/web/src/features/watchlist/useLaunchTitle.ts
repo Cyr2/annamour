@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { playCatalog } from "../../api/catalog.ts";
 import { errorMessage } from "../../api/http.ts";
-import { circleForNewSeance } from "../circles/circles.ts";
+import { circleForTitle } from "../circles/circles.ts";
 
 /**
  * « Lancer une séance » from the list: creates the séance and opens its salon.
@@ -22,7 +22,7 @@ export function useLaunchTitle() {
     setBusy(true);
     setError(null);
     try {
-      const code = await playCatalog(play, item.circleId ?? circleForNewSeance());
+      const code = await playCatalog(play, circleForTitle(item));
       navigate(`/s/${code}`);
     } catch (failure) {
       setError(errorMessage(failure));

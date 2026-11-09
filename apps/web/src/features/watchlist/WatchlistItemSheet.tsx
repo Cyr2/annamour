@@ -33,7 +33,7 @@ export function WatchlistItemSheet({ item, me, onClose }: WatchlistItemSheetProp
 function ItemBody({ item, me, onClose }: { item: WatchlistItem; me: string; onClose: () => void }) {
   const [pickingEpisode, setPickingEpisode] = useState(false);
   const { launch, busy, error } = useLaunchTitle();
-  const ongoing = useSeanceOfTitle(item.title);
+  const ongoing = useSeanceOfTitle(item.title, item.circleId);
   const watched = item.watchedAt !== undefined;
   const act = (work: Promise<void>, done?: string) =>
     work

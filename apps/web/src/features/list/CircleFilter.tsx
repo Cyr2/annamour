@@ -1,5 +1,5 @@
 import { circleTitle, othersIn } from "@annamour/protocol";
-import { Users } from "lucide-react";
+import { User, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { cx } from "../../ui/cx.ts";
 import { PresenceBubble } from "../../ui/PresenceBubble.tsx";
@@ -12,6 +12,8 @@ interface CircleFilterProps {
   /** A pick of its own (« Séances »), rather than the one « Ce soir » and « Notre liste » share. */
   value?: string | null;
   onChange?: (circleId: string | null) => void;
+  /** Picks whom a new séance is for: no circle reads « Personne » (nobody in particular), not « Tout ». */
+  forNewSeance?: boolean;
 }
 
 /**
@@ -19,7 +21,7 @@ interface CircleFilterProps {
  * « Notre liste » the pick is shared, and with one circle there is nothing to
  * pick. With a pick of its own, « Tout » stays offered beside a single circle.
  */
-export function CircleFilter({ centered = false, value, onChange }: CircleFilterProps) {
+export function CircleFilter({ centered = false, value, onChange, forNewSeance = false }: CircleFilterProps) {
   const me = useAccount((s) => s.account?.id ?? "");
   const circles = useCircles((s) => s.circles);
   const shared = useCircles((s) => shownCircle(s));
@@ -36,10 +38,15 @@ export function CircleFilter({ centered = false, value, onChange }: CircleFilter
         centered ? "flex-wrap justify-center" : "overflow-x-auto [scrollbar-width:none]",
       )}
     >
-      <legend className="sr-only">Avec qui ?</legend>
-      <Choice label="Tout" pressed={shown === null} onPress={() => pick(null)}>
+      <legend className="sr-only">{forNewSeance ? "Pour qui est cette séance ?" : "Avec qui ?"}</legend>
+      <Choice
+        label={forNewSeance ? "Personne" : "Tout"}
+        fullLabel={forNewSeance ? "Personne en particulier" : undefined}
+        pressed={shown === null}
+        onPress={() => pick(null)}
+      >
         <span className="grid size-14 place-items-center rounded-full bg-fill-strong text-fg">
-          <Users aria-hidden className="size-5" />
+          {forNewSeance ? <User aria-hidden className="size-5" /> : <Users aria-hidden className="size-5" />}
         </span>
       </Choice>
       {/* In the order set on « Nous » (drag and drop), the most recently used after. */}

@@ -10,7 +10,8 @@ vi.mock("../../api/circles.ts", () => ({
 }));
 const api = await import("../../api/circles.ts");
 const store = await import("./circles.ts");
-const { circleShortName, isCloseCircle, moveId, ofCircle, tonightPick } = await import("./circle-rules.ts");
+const { circleShortName, isCloseCircle, moveId, ofCircle, seanceCount, seancesFor, seanceToResume, tonightPick } =
+  await import("./circle-rules.ts");
 
 const darius = { accountId: "darius", name: "Darius", color: "peach" } as const;
 const annou = { accountId: "annou", name: "Annou", color: "rose" } as const;
@@ -46,6 +47,15 @@ beforeEach(() => {
   vi.resetAllMocks();
   store.resetCircles();
   store.selectCircle(null);
+});
+
+describe("the circle a séance of a title goes to", () => {
+  it("is the title's own, else the one on screen", () => {
+    store.useCircles.setState({ circles: [duo, potes] });
+    store.selectCircle("potes");
+    expect(store.circleForTitle({ circleId: "duo" })).toBe("duo");
+    expect(store.circleForTitle({})).toBe("potes");
+  });
 });
 
 describe("the circle shown", () => {
@@ -121,11 +131,63 @@ describe("« Ce soir » for a circle", () => {
     expect(ofCircle([withAnnou, withLeo, elsewhere], duo, "darius").map((i) => i.id)).toEqual(["Avant"]);
   });
 
-  it("keeps an older séance watched with someone of the circle, and one I watched alone", () => {
+  it("keeps an older séance watched with someone of the circle, but one watched alone shows on « Tout » only", () => {
     const together = session("Ensemble", { participants: [darius, annou] });
     const alone = session("Seul", { participants: [darius] });
     const others = session("Autres", { participants: [darius, { accountId: "leo", name: "Léo", color: "mint" }] });
-    expect(ofCircle([together, alone, others], duo, "darius").map((s) => s.code)).toEqual(["Ensemble", "Seul"]);
+    expect(ofCircle([together, alone, others], duo, "darius").map((s) => s.code)).toEqual(["Ensemble"]);
+    expect(ofCircle([together, alone, others], potes, "darius")).toEqual([]);
+    expect(ofCircle([together, alone, others], null, "darius")).toHaveLength(3);
+  });
+
+  it("still shows a title of mine alone, from before circles, in every circle", () => {
+    const mine = item("Pour moi", { sharedWith: [darius] });
+    expect(ofCircle([mine], duo, "darius")).toHaveLength(1);
+    expect(ofCircle([mine], potes, "darius")).toHaveLength(1);
+  });
+
+  it("counts on « Nous » the very séances « Séances » lists for the circle", () => {
+    const sessions = [
+      session("Duo", { circleId: "duo", participants: [annou] }),
+      session("Ancienne", { participants: [annou] }),
+      session("Seul"),
+      session("Potes", { circleId: "potes" }),
+    ];
+    expect(seanceCount(duo, sessions, "darius")).toBe(ofCircle(sessions, duo, "darius").length);
+    expect(seanceCount(duo, sessions, "darius")).toBe(2);
+    expect(seanceCount(potes, sessions, "darius")).toBe(1);
+  });
+
+  it("counts what the server said until my séances are loaded", () => {
+    expect(seanceCount(duo, null, "darius")).toBe(3);
+  });
+});
+
+describe("resuming rather than creating, in the circle aimed at", () => {
+  const dune = { id: 11, type: "movie" } as const;
+  const sessions = [
+    session("DUO", { catalog: dune, circleId: "duo", participants: [annou], lastUsedAt: 5 }),
+    session("POTES", { catalog: dune, circleId: "potes", lastUsedAt: 9 }),
+    session("SEUL", { catalog: dune, lastUsedAt: 7 }),
+  ];
+  const circles = [duo, potes];
+
+  it("offers the séance of the circle picked, not a later one of another circle", () => {
+    expect(seanceToResume(dune, { sessions, circleId: "duo", circles, me: "darius" })?.code).toBe("DUO");
+    expect(seanceToResume(dune, { sessions, circleId: "potes", circles, me: "darius" })?.code).toBe("POTES");
+  });
+
+  it("offers for nobody in particular only a séance of no circle", () => {
+    expect(seanceToResume(dune, { sessions, circleId: null, circles, me: "darius" })?.code).toBe("SEUL");
+    expect(seancesFor(sessions, null, circles, "darius").map((s) => s.code)).toEqual(["SEUL"]);
+  });
+
+  it("matches a circle not loaded yet by its id", () => {
+    expect(seanceToResume(dune, { sessions, circleId: "potes", circles: [], me: "darius" })?.code).toBe("POTES");
+  });
+
+  it("offers nothing when the circle has no séance of this title", () => {
+    expect(seanceToResume(dune, { sessions, circleId: "autre", circles, me: "darius" })).toBeNull();
   });
 });
 
