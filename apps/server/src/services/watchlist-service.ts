@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { type AddToWatchlistRequest, catalogKey, type WatchlistItem } from "@annamour/protocol";
+import { type AddToWatchlistRequest, type CatalogRef, catalogKey, type WatchlistItem } from "@annamour/protocol";
 import { BadRequestError, NotFoundError } from "../errors.ts";
 import type { Repositories } from "../storage/repositories.ts";
 
@@ -98,6 +98,19 @@ export class WatchlistService {
   setWant(accountId: string, itemId: string, want: boolean): void {
     this.requireMember(accountId, itemId);
     this.repositories.watchlist.setWant(itemId, accountId, want);
+  }
+
+  /**
+   * A séance watched a film to its end: it becomes « vu » for everyone in it,
+   * in each list it was waiting in.
+   */
+  markWatchedBySeance(code: string, film: CatalogRef): void {
+    const { circles, watchlist } = this.repositories;
+    const key = catalogKey(film);
+    const items = new Set(
+      circles.roomAccounts(code).flatMap((accountId) => watchlist.findToWatch(accountId, key) ?? []),
+    );
+    for (const itemId of items) watchlist.setWatched(itemId, this.now());
   }
 
   setWatched(accountId: string, itemId: string, watched: boolean): void {

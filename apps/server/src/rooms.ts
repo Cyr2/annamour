@@ -55,12 +55,15 @@ export interface RoomPersistence {
   /** Everyone moved to another episode, from its start. */
   saveCurrentEpisode(current: number, duration: number | undefined, now: number): void;
   removeEpisode(id: number): void;
+  /** An episode was watched to its end: the catalog title it came from, if any. */
+  episodeEnded(catalog: CatalogRef | undefined): void;
 }
 
 const noPersistence: RoomPersistence = {
   savePosition: () => {},
   saveCurrentEpisode: () => {},
   removeEpisode: () => {},
+  episodeEnded: () => {},
 };
 
 export interface RoomOptions {
@@ -476,6 +479,7 @@ export class Room {
   private onEnded(episode: number, now: number): void {
     const next = episodeEnded(this.progress, episode, now);
     if (next === this.progress) return;
+    this.persistence.episodeEnded(this.episodes[episode]?.catalog);
     this.resumeAfterBuffer = false;
     this.readying = null;
     this.playback = pause(this.playback, now);

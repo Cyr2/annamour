@@ -10,7 +10,9 @@ import { Poster } from "../../ui/Poster.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import type { TonightPick } from "../circles/circle-rules.ts";
 import { describeTitle } from "../home/create/CatalogResults.tsx";
+import { ResumeSeanceAction } from "../sessions/ResumeSeanceAction.tsx";
 import { resumeLine, sessionTitle } from "../sessions/session-rules.ts";
+import { useSeanceOfTitle } from "../sessions/useSeanceOfTitle.ts";
 import { useLaunchTitle } from "../watchlist/useLaunchTitle.ts";
 import { wantersLine } from "../watchlist/watchlist-rules.ts";
 import { SeancePoster } from "./SeancePoster.tsx";
@@ -72,6 +74,8 @@ function TitleBody({
   onOpenItem: (i: WatchlistItem) => void;
 }) {
   const { launch, busy, error } = useLaunchTitle();
+  // Under way in another circle already: go back to it rather than start it twice.
+  const ongoing = useSeanceOfTitle(item.title);
   const wanters = item.sharedWith
     .filter((person) => item.wantedBy.includes(person.accountId))
     .map((person) => ({ id: person.accountId, name: person.name, color: person.color }));
@@ -89,15 +93,19 @@ function TitleBody({
           </span>
         </div>
       </div>
-      <Button
-        variant="filled"
-        size="large"
-        icon={<Play />}
-        disabled={busy}
-        onClick={() => (item.title.type === "tv" ? onOpenItem(item) : void launch(item))}
-      >
-        {busy ? "On prépare la séance…" : "On regarde ?"}
-      </Button>
+      {ongoing ? (
+        <ResumeSeanceAction session={ongoing} />
+      ) : (
+        <Button
+          variant="filled"
+          size="large"
+          icon={<Play />}
+          disabled={busy}
+          onClick={() => (item.title.type === "tv" ? onOpenItem(item) : void launch(item))}
+        >
+          {busy ? "On prépare la séance…" : "On regarde ?"}
+        </Button>
+      )}
       {error ? (
         <p role="alert" className="text-sm text-danger">
           {error}

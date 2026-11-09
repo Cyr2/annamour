@@ -1,5 +1,5 @@
 import type { WatchlistItem } from "@annamour/protocol";
-import { Check, Heart, Play, RotateCcw, Trash2 } from "lucide-react";
+import { Check, Heart, Play, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { BubbleStack } from "../../ui/BubbleStack.tsx";
 import { Button } from "../../ui/controls.tsx";
@@ -9,6 +9,8 @@ import { ThreadSpinner } from "../../ui/ThreadSpinner.tsx";
 import { toast } from "../../ui/toast.ts";
 import { describeTitle } from "../home/create/CatalogResults.tsx";
 import { EpisodePicker } from "../home/create/EpisodePicker.tsx";
+import { ResumeSeanceAction } from "../sessions/ResumeSeanceAction.tsx";
+import { useSeanceOfTitle } from "../sessions/useSeanceOfTitle.ts";
 import { useLaunchTitle } from "./useLaunchTitle.ts";
 import { markWatched, removeItem, toggleWant } from "./watchlist.ts";
 import { audienceLine, wantersLine } from "./watchlist-rules.ts";
@@ -31,6 +33,7 @@ export function WatchlistItemSheet({ item, me, onClose }: WatchlistItemSheetProp
 function ItemBody({ item, me, onClose }: { item: WatchlistItem; me: string; onClose: () => void }) {
   const [pickingEpisode, setPickingEpisode] = useState(false);
   const { launch, busy, error } = useLaunchTitle();
+  const ongoing = useSeanceOfTitle(item.title);
   const wanting = item.wantedBy.includes(me);
   const watched = item.watchedAt !== undefined;
   const wanters = item.sharedWith
@@ -81,21 +84,23 @@ function ItemBody({ item, me, onClose }: { item: WatchlistItem; me: string; onCl
         )}
       </p>
       <div className="grid gap-3">
+        {/* A séance already under way comes first: starting a second one is rarely what was meant. */}
+        {ongoing ? <ResumeSeanceAction session={ongoing} /> : null}
         <Button
-          variant="filled"
-          size="large"
-          icon={<Play />}
+          variant={ongoing ? undefined : "filled"}
+          size={ongoing ? undefined : "large"}
+          icon={ongoing ? <Plus /> : <Play />}
           disabled={busy}
           onClick={() => (item.title.type === "tv" ? setPickingEpisode(true) : void launch(item))}
-          data-tv-primary
+          data-tv-primary={ongoing ? undefined : true}
         >
-          Lancer une séance
+          {ongoing ? "Nouvelle séance" : "Lancer une séance"}
         </Button>
         <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0">
           <Button
             icon={watched ? <RotateCcw /> : <Check />}
             onClick={() =>
-              void act(markWatched(item.id, !watched), watched ? "Remis dans « À regarder »" : "Rangé dans « Vus »")
+              void act(markWatched(item.id, !watched), watched ? "Remis dans « À voir »" : "Rangé dans « Déjà vus »")
             }
           >
             {watched ? "Pas encore vu" : "C'est vu"}

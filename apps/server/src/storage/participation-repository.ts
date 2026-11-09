@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import { BubbleColor, type Participant } from "@annamour/protocol";
+import { BubbleColor, type CatalogRef, type Participant } from "@annamour/protocol";
 import { z } from "zod";
 import { parseCatalog } from "./room-repository.ts";
 import { changedRows, parseRows } from "./rows.ts";
@@ -14,6 +14,8 @@ export interface JoinedRoom {
   circleId: string | undefined;
   /** The current episode's poster, when it came from the catalog. */
   posterUrl: string | undefined;
+  /** The catalog title the current episode comes from (the series, for an episode). */
+  catalog: { id: number; type: "movie" | "tv" } | undefined;
 }
 
 const JoinedRoomRow = z.object({
@@ -35,6 +37,11 @@ const CompanionRow = z.object({
   name: z.string(),
   color: BubbleColor,
 });
+
+/** What the history tells of the catalog title a room plays. */
+function catalogOf(ref: CatalogRef | undefined): Pick<JoinedRoom, "posterUrl" | "catalog"> {
+  return { posterUrl: ref?.posterUrl, catalog: ref ? { id: ref.id, type: ref.type } : undefined };
+}
 
 /** Who took part in which room: the sessions history of each account. */
 export class ParticipationRepository {
@@ -89,7 +96,7 @@ export class ParticipationRepository {
       lastUsedAt: row.last_used_at,
       episode: { index: row.current_episode, count: row.episode_count, label: row.episode_label ?? undefined },
       circleId: row.circle_id ?? undefined,
-      posterUrl: parseCatalog(row.episode_catalog)?.posterUrl,
+      ...catalogOf(parseCatalog(row.episode_catalog)),
     }));
   }
 

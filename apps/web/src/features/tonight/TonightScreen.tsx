@@ -11,7 +11,7 @@ import { loadCircles, useShownCircle } from "../circles/circles.ts";
 import { CreateSessionSheet } from "../home/create/CreateSessionSheet.tsx";
 import { asksToCreate } from "../home/create/create-link.ts";
 import { CircleFilter } from "../list/CircleFilter.tsx";
-import { isFinished } from "../sessions/session-rules.ts";
+import { isFinished, isSameTitle, onePerTitle } from "../sessions/session-rules.ts";
 import { useSessions } from "../sessions/sessions.ts";
 import { useLoadSessions } from "../sessions/useLoadSessions.ts";
 import { AddToWatchlistSheet } from "../watchlist/AddToWatchlistSheet.tsx";
@@ -40,8 +40,11 @@ export function TonightScreen() {
   const pick = useMemo(() => tonightPick(sessions, items, circle, me), [sessions, items, circle, me]);
   const ongoing = useMemo(
     () =>
-      ofCircle(sessions, circle, me).filter(
-        (session) => !isFinished(session) && !(pick.kind === "resume" && pick.session.code === session.code),
+      // A film started twice shows once, by its latest séance: the others stay in « Séances ».
+      onePerTitle(ofCircle(sessions, circle, me)).filter(
+        (session) =>
+          !isFinished(session) &&
+          !(pick.kind === "resume" && (pick.session.code === session.code || isSameTitle(pick.session, session))),
       ),
     [sessions, circle, me, pick],
   );

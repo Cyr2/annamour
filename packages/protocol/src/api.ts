@@ -1,4 +1,5 @@
 import { z } from "zod/mini";
+import { CatalogId, CatalogMediaType } from "./catalog.ts";
 import { BubbleColor, Name, RoomCode } from "./messages.ts";
 import { isTvPairingCode, normalizeTvPairingCode } from "./tv-pairing-code.ts";
 
@@ -72,6 +73,8 @@ export const SessionSummary = z.object({
   episode: z.object({ index: z.number(), count: z.number(), label: z.optional(z.string()) }),
   /** The circle the séance belongs to (see circles.ts); absent for a séance watched alone. */
   circleId: z.optional(z.string()),
+  /** The catalog title it plays (the series, for an episode): a title in « Notre liste » leads back to its séance. */
+  catalog: z.optional(z.object({ id: CatalogId, type: CatalogMediaType })),
   /** The current episode's poster, for a séance started from the catalog; absent for a pasted link. */
   posterUrl: z.optional(z.url({ protocol: /^https$/ })),
 });
