@@ -9,6 +9,7 @@ import {
   isFinished,
   latestUnfinished,
   onePerTitle,
+  progressNote,
   progressOf,
   queuePlace,
   rankPeople,
@@ -20,6 +21,7 @@ import {
   sessionTitle,
   splitByStatus,
   stopLabel,
+  whenAndWhoLabel,
   withPerson,
 } from "./session-rules.ts";
 
@@ -113,6 +115,17 @@ describe("session progress", () => {
     expect(stopLabel(session("A", { duration: undefined }))).toBe("Arrêtés à 1:12:40");
     expect(remainingLabel(session("A", { duration: undefined }))).toBe("");
     expect(remainingLabel(session("A", { position: 0 }))).toBe("reste 2 h 10");
+  });
+
+  it("sums up a card's progress in a few words next to its bar", () => {
+    expect(progressNote(friday)).toBe("reste 58 min");
+    expect(progressNote(comedy)).toBe("Terminée");
+    expect(progressNote(session("A", { duration: undefined }))).toBe("Arrêtés à 1:12:40");
+  });
+
+  it("says when and with whom on one line, without assuming a duo", () => {
+    expect(whenAndWhoLabel(thriller, 400)).toBe("Aujourd'hui · avec Léo et Inès");
+    expect(whenAndWhoLabel(session("A"), 1000)).toBe("Aujourd'hui · Rien que toi pour l'instant");
   });
 
   it("measures progress between 0 and 1, or not at all without a length", () => {

@@ -61,7 +61,8 @@ export function SeanceOptions({ session, variant = "plain", className, onGone }:
           />
         ) : (
           <div className="grid gap-1">
-            {row(<Link2 />, "Copier le lien", "Pour inviter quelqu'un à la rejoindre", () => {
+            {/* The cards leave the code out to stay short: it is read here, to give it out loud. */}
+            {row(<Link2 />, "Copier le lien", `Code : ${session.code} · pour inviter quelqu'un`, () => {
               close();
               void copySeanceLink(session.code);
             })}
