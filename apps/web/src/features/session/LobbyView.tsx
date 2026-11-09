@@ -10,6 +10,7 @@ import { Surface } from "../../ui/Surface.tsx";
 import { useAccount } from "../account/account.ts";
 import { KeepSeanceLink } from "../account/KeepSeanceLink.tsx";
 import { DownloadCard } from "../download/DownloadCard.tsx";
+import { onSeries } from "../player/episode-rules.ts";
 import { SeanceOptions } from "../sessions/SeanceOptions.tsx";
 import { useSessions } from "../sessions/sessions.ts";
 import { useLoadSessions } from "../sessions/useLoadSessions.ts";
@@ -45,6 +46,7 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
   const joinUrl = `${window.location.origin}/s/${code}`;
   const others = members.filter((m) => m.id !== you).map((m) => m.name);
   const resumeAt = playback && playback.position > 1 ? playback.position : null;
+  const what = room && onSeries(room) ? "l'épisode" : "le film";
 
   return (
     <div className="safe-area mx-auto flex min-h-dvh max-w-[1100px] flex-col">
@@ -76,7 +78,7 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
           {/* The salon starts here on a TV: OK launches the film for everyone. */}
           <div data-tv-primary>
             <Button variant="filled" size="large" icon={<Play />} onClick={onStart} disabled={!room}>
-              {resumeAt ? "Reprendre le film" : "Lancer le film"}
+              {`${resumeAt ? "Reprendre" : "Lancer"} ${what}`}
             </Button>
           </div>
           <PrepLine status={prep} />

@@ -118,7 +118,7 @@ export function usePlaybackNotices(): void {
   );
 }
 
-/** « Anna a rejoint la séance » / « Léo a quitté la séance », but not for the list received on arrival. */
+/** « Anna a rejoint la séance » / « Léo est sorti du salon », but not for the list received on arrival. */
 export function useMemberNotices(): void {
   useEffect(
     () =>
@@ -126,7 +126,7 @@ export function useMemberNotices(): void {
         if (!before.you || state.members === before.members) return;
         const { joined, left } = memberChanges(before.members, state.members, state.you);
         for (const m of joined) toast({ message: `${m.name} a rejoint la séance`, color: m.color, name: m.name });
-        for (const m of left) toast({ message: `${m.name} a quitté la séance`, color: m.color, name: m.name });
+        for (const m of left) toast({ message: `${m.name} est sorti du salon`, color: m.color, name: m.name });
       }),
     [],
   );

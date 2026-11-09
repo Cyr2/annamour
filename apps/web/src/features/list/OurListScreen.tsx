@@ -17,7 +17,7 @@ import { PosterGrid, type PosterHandlers } from "./PosterGrid.tsx";
 
 /**
  * « Notre liste »: « Avec qui ? » as a row of bubbles, then the titles to
- * watch as posters, the most wanted first; « Déjà vus ensemble » on its own page.
+ * watch as posters, the most wanted first; « Déjà vus » on its own page.
  */
 export function OurListScreen() {
   useLoadWatchlist();
@@ -82,7 +82,7 @@ export function OurListScreen() {
   );
 }
 
-/** « Déjà vus ensemble »: the titles watched. The séances themselves, over or not, live in « Séances ». */
+/** « Déjà vus »: the titles watched. The séances themselves, over or not, live in « Séances ». */
 function Watched({
   handlers,
   items,

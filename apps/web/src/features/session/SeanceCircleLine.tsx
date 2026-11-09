@@ -5,7 +5,7 @@ import { useAccount } from "../account/account.ts";
 import { loadSessions } from "../sessions/sessions.ts";
 
 /**
- * Whose séance this is, said quietly in the salon: « Séance de Les potes du jeudi », « avec Léo et Inès ».
+ * Whose séance this is, said quietly in the salon: « Cercle · Les potes du jeudi », « avec Léo et Inès ».
  * A guest reads the circle's people, without « toi ». Nothing for a séance outside any circle.
  */
 export function SeanceCircleLine({ seance }: { seance: SessionSummary | undefined }) {

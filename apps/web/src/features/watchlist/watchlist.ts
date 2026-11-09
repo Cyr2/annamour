@@ -4,7 +4,7 @@ import { errorMessage } from "../../api/http.ts";
 import * as api from "../../api/watchlist.ts";
 
 /*
- * « À regarder ensemble » (GET /api/me/watchlist), shared by the tab, the
+ * « Notre liste » (GET /api/me/watchlist), shared by the tab, the
  * home row and the TV. Votes, « Vu » and removals show at once and are put
  * back if the server refuses.
  */

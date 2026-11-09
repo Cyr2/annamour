@@ -9,7 +9,7 @@ import {
 import { Hono } from "hono";
 import { type AppEnv, type RouteDeps, readBody, requireAccount } from "../http/context.ts";
 
-/** « À regarder ensemble »: the signed-in person's shared watchlist. */
+/** « Notre liste »: the signed-in person's shared watchlist. */
 export function watchlistRoutes({ services }: RouteDeps) {
   const { accounts, watchlist } = services;
   const routes = new Hono<AppEnv>();

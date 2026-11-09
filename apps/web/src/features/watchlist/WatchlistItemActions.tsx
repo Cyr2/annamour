@@ -5,13 +5,7 @@ import { Sheet } from "../../ui/Sheet.tsx";
 import { toast } from "../../ui/toast.ts";
 import { AccountRow } from "../profile/AccountRow.tsx";
 import { markWatched, removeItem } from "./watchlist.ts";
-import {
-  actionAudience,
-  removalNeedsConfirmation,
-  removalWarning,
-  removedToast,
-  watchedToast,
-} from "./watchlist-rules.ts";
+import { removalNeedsConfirmation, removalWarning, removedToast, watchedToast } from "./watchlist-rules.ts";
 
 interface WatchlistItemActionsProps {
   item: WatchlistItem;
@@ -32,24 +26,21 @@ export function removeForEveryone(item: WatchlistItem, me: string, onClose: () =
 
 /**
  * « C'est vu » and « Retirer de la liste »: both count for everyone who sees the title,
- * so each says for whom.
+ * which the line at the top of the sheet already says, so they do not repeat it.
  */
 export function WatchlistItemActions({ item, me, onConfirmRemoval, onClose }: WatchlistItemActionsProps) {
   const watched = item.watchedAt !== undefined;
-  const audience = actionAudience(item, me);
   const myself = item.sharedWith.find((person) => person.accountId === me);
   return (
     <div className="grid gap-1">
       <AccountRow
         icon={watched ? <RotateCcw /> : <Check />}
         title={watched ? "Pas encore vu" : "C'est vu"}
-        detail={audience}
         onClick={() => report(markWatched(item.id, !watched, myself), watchedToast(item, me, !watched))}
       />
       <AccountRow
         icon={<Trash2 />}
         title="Retirer de la liste"
-        detail={audience}
         tone="destructive"
         onClick={() => (removalNeedsConfirmation(item, me) ? onConfirmRemoval() : removeForEveryone(item, me, onClose))}
       />

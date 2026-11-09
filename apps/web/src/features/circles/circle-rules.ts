@@ -37,7 +37,7 @@ export function ofCircle<T extends Entry>(list: readonly T[], circle: Circle | n
 
 /**
  * The séances a new one for `circleId` would sit beside: that circle's, or for
- * « Personne en particulier » (null) those of no circle. A circle not loaded yet
+ * « Quelqu'un d'autre » (null) those of no circle. A circle not loaded yet
  * is matched by its id alone.
  */
 export function seancesFor(
