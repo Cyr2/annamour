@@ -1,5 +1,5 @@
 import type { WatchlistItem } from "@annamour/protocol";
-import { Check, Play, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { Play, Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../ui/controls.tsx";
 import { Poster } from "../../ui/Poster.tsx";
@@ -12,8 +12,9 @@ import { ResumeSeanceAction } from "../sessions/ResumeSeanceAction.tsx";
 import { useSeanceOfTitle } from "../sessions/useSeanceOfTitle.ts";
 import { useLaunchTitle } from "./useLaunchTitle.ts";
 import { WantToggle } from "./WantToggle.tsx";
-import { markWatched, removeItem, toggleWant } from "./watchlist.ts";
-import { audienceLine } from "./watchlist-rules.ts";
+import { ConfirmRemoval, removeForEveryone, WatchlistItemActions } from "./WatchlistItemActions.tsx";
+import { toggleWant } from "./watchlist.ts";
+import { audienceLine, watchedHowLine } from "./watchlist-rules.ts";
 
 interface WatchlistItemSheetProps {
   item: WatchlistItem | null;
@@ -23,18 +24,40 @@ interface WatchlistItemSheetProps {
 
 /** A title's sheet: who added it and for whom, who wants it, and the ways forward. */
 export function WatchlistItemSheet({ item, me, onClose }: WatchlistItemSheetProps) {
+  const [confirmingRemoval, setConfirmingRemoval] = useState(false);
+  const close = () => {
+    setConfirmingRemoval(false);
+    onClose();
+  };
+  const confirming = confirmingRemoval && item !== null;
   return (
-    <Sheet open={item !== null} onClose={onClose} title={item?.title.title ?? ""}>
-      {item ? <ItemBody item={item} me={me} onClose={onClose} /> : null}
+    <Sheet open={item !== null} onClose={close} title={confirming ? "Retirer pour tous ?" : (item?.title.title ?? "")}>
+      {item && confirmingRemoval ? (
+        <ConfirmRemoval
+          item={item}
+          me={me}
+          onCancel={() => setConfirmingRemoval(false)}
+          onConfirm={() => removeForEveryone(item, me, close)}
+        />
+      ) : null}
+      {item && !confirmingRemoval ? (
+        <ItemBody item={item} me={me} onClose={close} onConfirmRemoval={() => setConfirmingRemoval(true)} />
+      ) : null}
     </Sheet>
   );
 }
 
-function ItemBody({ item, me, onClose }: { item: WatchlistItem; me: string; onClose: () => void }) {
+interface ItemBodyProps {
+  item: WatchlistItem;
+  me: string;
+  onClose: () => void;
+  onConfirmRemoval: () => void;
+}
+
+function ItemBody({ item, me, onClose, onConfirmRemoval }: ItemBodyProps) {
   const [pickingEpisode, setPickingEpisode] = useState(false);
   const { launch, busy, error } = useLaunchTitle();
   const ongoing = useSeanceOfTitle(item.title, item.circleId);
-  const watched = item.watchedAt !== undefined;
   const act = (work: Promise<void>, done?: string) =>
     work
       .then(() => (done ? toast({ message: done }) : undefined))
@@ -57,6 +80,7 @@ function ItemBody({ item, me, onClose }: { item: WatchlistItem; me: string; onCl
         <div className="grid min-w-0 flex-1 content-start justify-items-start gap-2 text-sm text-fg-muted">
           <p>{describeTitle(item.title)}</p>
           <p>{audienceLine(item, me)}</p>
+          {item.watchedAt === undefined ? null : <p>{watchedHowLine(item, me, Date.now())}</p>}
           <WantToggle item={item} me={me} onToggle={(want) => void act(toggleWant(item.id, me, want))} />
         </div>
       </div>
@@ -82,27 +106,8 @@ function ItemBody({ item, me, onClose }: { item: WatchlistItem; me: string; onCl
         >
           {ongoing ? "Nouvelle séance" : "Lancer une séance"}
         </Button>
-        <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0">
-          <Button
-            icon={watched ? <RotateCcw /> : <Check />}
-            onClick={() =>
-              void act(markWatched(item.id, !watched), watched ? "Remis dans « À voir »" : "Rangé dans « Déjà vus »")
-            }
-          >
-            {watched ? "Pas encore vu" : "C'est vu"}
-          </Button>
-          <Button
-            tone="destructive"
-            icon={<Trash2 />}
-            onClick={() => {
-              onClose();
-              void act(removeItem(item.id), `« ${item.title.title} » retiré de la liste`);
-            }}
-          >
-            Retirer
-          </Button>
-        </div>
       </div>
+      <WatchlistItemActions item={item} me={me} onConfirmRemoval={onConfirmRemoval} onClose={onClose} />
     </div>
   );
 }
