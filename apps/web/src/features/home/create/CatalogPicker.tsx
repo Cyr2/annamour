@@ -54,6 +54,7 @@ export function CatalogPicker({ onPick, error, label = "Titre" }: CatalogPickerP
           placeholder="Interstellar, Euphoria…"
           autoComplete="off"
           maxLength={80}
+          data-autofocus
         />
       </Field>
       {search.status === "searching" ? (

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiRequestError } from "../../api/http.ts";
 import {
   byMostRecent,
+  chosenEpisodeNote,
   companionsLabel,
   fanPosters,
   favoriteOf,
@@ -22,6 +23,7 @@ import {
   splitByStatus,
   stopLabel,
   whenAndWhoLabel,
+  whereAndWho,
   withPerson,
 } from "./session-rules.ts";
 
@@ -287,6 +289,39 @@ describe("a title and its séances", () => {
     ];
     expect(seanceOfTitle(sessions, dune)?.code).toBe("NEW");
     expect(seanceOfTitle(sessions, { id: 11, type: "tv" })).toBeNull();
+  });
+
+  it("says where a séance is and with whom, before offering to resume it", () => {
+    const series = session("BEAR", {
+      title: "The Bear",
+      participants: [ines],
+      episode: { index: 2, count: 8, label: "S1 · É3" },
+    });
+    expect(whereAndWho(series)).toBe("S1 · É3 avec Inès");
+    expect(whereAndWho({ ...series, participants: [] })).toBe("S1 · É3 · rien que toi pour l'instant");
+    expect(whereAndWho(films({ participants: [leo, ines] }))).toBe("Film 1 sur 2 avec Léo et Inès");
+    expect(whereAndWho(session("DUNE", { participants: [anna] }))).toBe("Avec Anna");
+    expect(whereAndWho(session("DUNE"))).toBe("Rien que toi pour l'instant");
+  });
+
+  it("still offers the séance of a series when the episode picked comes later, and says why", () => {
+    const series = session("BEAR", { episode: { index: 2, count: 8, label: "S1 · É3" } });
+    expect(chosenEpisodeNote(series, { season: 1, episode: 5 })).toBe(
+      "S1 · É5 vient après : c'est la même série. Reprenez la séance à S1 · É3, les épisodes suivants s'enchaînent.",
+    );
+    expect(chosenEpisodeNote(series, { season: 2, episode: 1 })).toContain("S2 · É1 vient après");
+    expect(chosenEpisodeNote(series, { season: 1, episode: 1 })).toBe(
+      "La séance est déjà à S1 · É3, plus loin que S1 · É1.",
+    );
+  });
+
+  it("adds nothing for the very episode the séance is on, a film, or a label typed by hand", () => {
+    const series = session("BEAR", { episode: { index: 2, count: 8, label: "S1 · É3" } });
+    expect(chosenEpisodeNote(series, { season: 1, episode: 3 })).toBe("");
+    expect(chosenEpisodeNote(series, {})).toBe("");
+    expect(
+      chosenEpisodeNote(session("X", { episode: { index: 0, count: 1, label: "Pilote" } }), { season: 1, episode: 2 }),
+    ).toBe("");
   });
 
   it("shows each title once, by its most recent séance, and keeps séances of a pasted link", () => {

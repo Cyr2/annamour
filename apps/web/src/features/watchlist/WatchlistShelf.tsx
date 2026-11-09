@@ -1,12 +1,15 @@
 import { type Circle, sortWatchlist, splitWatchlist, type WatchlistItem } from "@annamour/protocol";
 import { ChevronRight, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { plural } from "../../lib/format.ts";
+import { sessionPath } from "../../sync/restart.ts";
 import { cx } from "../../ui/cx.ts";
 import { toast } from "../../ui/toast.ts";
 import { useAccount } from "../account/account.ts";
-import { ofCircle } from "../circles/circle-rules.ts";
+import { ofCircle, seanceToResume } from "../circles/circle-rules.ts";
+import { circleForTitle, useCircles } from "../circles/circles.ts";
+import { useSessions } from "../sessions/sessions.ts";
 import { useTv } from "../tv/tv-context.ts";
 import { PosterCard } from "./PosterCard.tsx";
 import { useLaunchTitle } from "./useLaunchTitle.ts";
@@ -18,8 +21,9 @@ const SHELF_SIZE = 10;
 
 /**
  * « Notre liste » on « Ce soir » and the TV home: the most wanted titles still
- * to watch. On a TV, OK on a film starts it at once (a series asks for its
- * episode first); adding stays on the phone.
+ * to watch. On a TV, OK on a film starts it at once, or reopens its séance
+ * under way in its circle (a series asks for its episode first); adding stays
+ * on the phone.
  */
 export function WatchlistShelf({
   circle = null,
@@ -33,17 +37,32 @@ export function WatchlistShelf({
   const tv = useTv();
   const me = useAccount((s) => s.account?.id ?? "");
   const items = useWatchlist((s) => s.items);
+  // On a TV, OK on a film under way in its circle goes back to that séance.
+  const sessions = useSessions((s) => s.sessions);
+  const circles = useCircles((s) => s.circles);
   const toWatch = useMemo(
     () => splitWatchlist(sortWatchlist(ofCircle(items, circle, me), "wants")).toWatch,
     [items, circle, me],
   );
   const [openId, setOpenId] = useState<string | null>(null);
   const { launch } = useLaunchTitle();
+  const [, navigate] = useLocation();
   if (toWatch.length === 0) return null;
 
   const want = (item: WatchlistItem, value: boolean) =>
     void toggleWant(item.id, me, value).catch((failure: Error) => toast({ message: failure.message }));
-  const pick = (item: WatchlistItem) => (tv && item.title.type === "movie" ? void launch(item) : setOpenId(item.id));
+  const pick = (item: WatchlistItem) => (tv && item.title.type === "movie" ? play(item) : setOpenId(item.id));
+  const ongoingOf = (item: WatchlistItem) =>
+    seanceToResume(item.title, { sessions, circleId: circleForTitle(item), circles, me });
+  const play = (item: WatchlistItem) => {
+    const ongoing = ongoingOf(item);
+    if (ongoing) navigate(sessionPath(ongoing.code));
+    else void launch(item);
+  };
+  const tvHint = (item: WatchlistItem) => {
+    if (!tv || item.title.type !== "movie") return undefined;
+    return ongoingOf(item) ? "OK pour reprendre" : "OK pour lancer";
+  };
 
   return (
     <section className="grid w-full gap-1 text-left" aria-labelledby="shelf-title">
@@ -66,13 +85,7 @@ export function WatchlistShelf({
       <ul className={cx("flex gap-3 overflow-x-auto py-3 [scrollbar-width:none]", tv && "-mx-6 gap-5 px-6 py-5")}>
         {toWatch.slice(0, SHELF_SIZE).map((item) => (
           <li key={item.id} className="w-[7.5rem] shrink-0">
-            <PosterCard
-              item={item}
-              me={me}
-              onPick={pick}
-              onWant={tv ? undefined : want}
-              hint={tv && item.title.type === "movie" ? "OK pour lancer" : undefined}
-            />
+            <PosterCard item={item} me={me} onPick={pick} onWant={tv ? undefined : want} hint={tvHint(item)} />
           </li>
         ))}
         {tv ? null : (
