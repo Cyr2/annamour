@@ -1,6 +1,6 @@
 import { Copy, Play } from "lucide-react";
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { formatClock, joinNames } from "../../lib/format.ts";
 import { useRoom } from "../../sync/room.ts";
 import { CodeLetters } from "../../ui/CodeLetters.tsx";
@@ -9,6 +9,9 @@ import { QrCode } from "../../ui/QrCode.tsx";
 import { ScreenTopBar } from "../../ui/ScreenTopBar.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import { DownloadCard } from "../download/DownloadCard.tsx";
+import { SeanceOptions } from "../sessions/SeanceOptions.tsx";
+import { useSessions } from "../sessions/sessions.ts";
+import { useLoadSessions } from "../sessions/useLoadSessions.ts";
 import { useTv } from "../tv/tv-context.ts";
 import { PrepLine } from "./PrepLine.tsx";
 import { SalonPresence } from "./Presence.tsx";
@@ -32,6 +35,10 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
   const you = useRoom((s) => s.you);
   const playback = useRoom((s) => s.playback);
   const [copied, setCopied] = useState(false);
+  const [, navigate] = useLocation();
+  useLoadSessions();
+  // This séance as my séances know it: only someone with an account in it can leave or delete it.
+  const seance = useSessions((s) => s.sessions.find((session) => session.code === code));
   const prep = usePrep(code);
   const joinUrl = `${window.location.origin}/s/${code}`;
   const others = members.filter((m) => m.id !== you).map((m) => m.name);
@@ -49,7 +56,14 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
 
   return (
     <div className="safe-area mx-auto flex min-h-dvh max-w-[1100px] flex-col">
-      <ScreenTopBar back="/" title={room?.media.title ?? "Séance"} />
+      <ScreenTopBar
+        back="/"
+        title={room?.media.title ?? "Séance"}
+        // Leave it, or delete it for everyone, from where one is: then back to « Ce soir ».
+        end={
+          seance && !tv ? <SeanceOptions session={seance} onGone={() => navigate("/", { replace: true })} /> : undefined
+        }
+      />
       <main className="grid flex-1 grid-cols-[minmax(0,1fr)] content-center items-center gap-8 py-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:gap-12">
         <div className="grid justify-items-center gap-6 text-center md:order-2">
           <SalonPresence members={members} you={you} className="w-[min(22.5rem,100%)]" />

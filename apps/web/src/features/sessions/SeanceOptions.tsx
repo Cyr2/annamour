@@ -16,13 +16,15 @@ interface SeanceOptionsProps {
   /** `glass` stands alone on a poster; `plain` sits inside a card. */
   variant?: "glass" | "plain";
   className?: string;
+  /** The séance left or deleted (e.g. leave its salon). */
+  onGone?: () => void;
 }
 
 /**
  * « ⋯ » on a séance, wherever it shows: copy its link, leave it, or (for the
  * person who created it) delete it for everyone, which asks first.
  */
-export function SeanceOptions({ session, variant = "plain", className }: SeanceOptionsProps) {
+export function SeanceOptions({ session, variant = "plain", className, onGone }: SeanceOptionsProps) {
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const title = sessionTitle(session);
@@ -31,7 +33,12 @@ export function SeanceOptions({ session, variant = "plain", className }: SeanceO
     setConfirming(false);
   };
   const run = (work: Promise<void>, done: string) =>
-    void work.then(() => toast({ message: done })).catch((failure: Error) => toast({ message: failure.message }));
+    void work
+      .then(() => {
+        toast({ message: done });
+        onGone?.();
+      })
+      .catch((failure: Error) => toast({ message: failure.message }));
 
   return (
     <>

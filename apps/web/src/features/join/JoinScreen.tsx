@@ -5,10 +5,11 @@ import { useLocation } from "wouter";
 import { errorMessage } from "../../api/http.ts";
 import { fetchRoom } from "../../api/rooms.ts";
 import { BrandBar } from "../../ui/BrandBar.tsx";
+import { BrandFooter } from "../../ui/BrandFooter.tsx";
 import { CodeInput } from "../../ui/CodeInput.tsx";
 import { Button } from "../../ui/controls.tsx";
 import { cx } from "../../ui/cx.ts";
-import { BackLink } from "../../ui/ScreenTopBar.tsx";
+import { ScreenTopBar } from "../../ui/ScreenTopBar.tsx";
 import { useTv } from "../tv/tv-context.ts";
 
 /** Only a TV downloads its on-screen keyboard. */
@@ -53,8 +54,8 @@ export function JoinScreen() {
 
   return (
     <div className="safe-area mx-auto flex min-h-dvh max-w-[1240px] flex-col">
-      {/* No tab leads here on a phone: a way back to « Ce soir ». The TV keeps its own focus path. */}
-      <BrandBar start={tv ? undefined : <BackLink href="/" />} />
+      {/* No tab leads here on a phone: a way back to « Ce soir », the name at the bottom like the other pages. */}
+      {tv ? <BrandBar /> : <ScreenTopBar back="/" />}
       <main className="grid flex-1 place-items-center py-8 text-center">
         <form
           className={cx("grid justify-items-center gap-[22px]", tv ? "w-[min(40rem,100%)]" : "w-[min(28.75rem,100%)]")}
@@ -103,6 +104,7 @@ export function JoinScreen() {
           )}
         </form>
       </main>
+      {tv ? null : <BrandFooter />}
     </div>
   );
 }
