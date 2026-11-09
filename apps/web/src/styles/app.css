@@ -452,6 +452,21 @@
 }
 
 /*
+ * On a touch screen, the page's frosted panels keep their tint but drop the
+ * live blur. Behind them the sky twinkles, so the blur was redrawn on every
+ * frame; and Safari rebuilds that blur when a sheet's scrim fades in above
+ * it: « Ce soir »'s card, the only frosted panel on a page, flashed
+ * see-through as the sheet opened. Over the film the capsule keeps its blur.
+ */
+@media (pointer: coarse) {
+  .am-frost:not([data-watching] .am-frost) {
+    --am-frost: var(--am-frost-dense);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/*
  * The bottom sheet is nearly opaque: on a phone its blur would be redrawn on
  * every frame of its slide for a difference nobody can see.
  */
@@ -513,6 +528,7 @@
     --lg-glass: var(--am-surface-raised);
     --lg-glass-active: var(--am-surface-raised);
     --am-frost: var(--am-surface-raised);
+    --am-frost-dense: var(--am-surface-raised);
     --am-sheet: var(--am-surface-raised);
     --am-scrim: var(--am-scrim-solid);
   }
