@@ -1,5 +1,4 @@
-import { Copy, Play } from "lucide-react";
-import { useState } from "react";
+import { Play } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { formatClock, joinNames } from "../../lib/format.ts";
 import { useRoom } from "../../sync/room.ts";
@@ -15,6 +14,7 @@ import { SeanceOptions } from "../sessions/SeanceOptions.tsx";
 import { useSessions } from "../sessions/sessions.ts";
 import { useLoadSessions } from "../sessions/useLoadSessions.ts";
 import { useTv } from "../tv/tv-context.ts";
+import { InviteLinkButton } from "./InviteLinkButton.tsx";
 import { PrepLine } from "./PrepLine.tsx";
 import { SalonPresence } from "./Presence.tsx";
 import { usePrep } from "./prep.ts";
@@ -36,7 +36,6 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
   const members = useRoom((s) => s.members);
   const you = useRoom((s) => s.you);
   const playback = useRoom((s) => s.playback);
-  const [copied, setCopied] = useState(false);
   const [, navigate] = useLocation();
   useLoadSessions(useAccount((s) => s.status === "member"));
   // This séance as my séances know it: only someone with an account in it can leave or delete it.
@@ -45,16 +44,6 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
   const joinUrl = `${window.location.origin}/s/${code}`;
   const others = members.filter((m) => m.id !== you).map((m) => m.name);
   const resumeAt = playback && playback.position > 1 ? playback.position : null;
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(joinUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2200);
-    } catch {
-      setCopied(false);
-    }
-  };
 
   return (
     <div className="safe-area mx-auto flex min-h-dvh max-w-[1100px] flex-col">
@@ -90,11 +79,6 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
           </div>
           <PrepLine status={prep} />
           <KeepSeanceLink code={code} />
-          {/* Downloading the whole film is only worth it when the server cannot make lighter qualities;
-              a TV is on a home connection, with no room to store a film. */}
-          {room && !tv && prep?.available === false && "caches" in window ? (
-            <DownloadCard src={room.media.src} duration={room.media.duration} />
-          ) : null}
         </div>
         <Surface className="surface-panel grid justify-items-center gap-5 p-6 text-center sm:p-8 md:order-1">
           <p className="type-label">Le code de la séance</p>
@@ -111,9 +95,7 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
             ) : (
               <div className="grid justify-items-start gap-2.5">
                 <p className="max-w-[18ch] text-sm text-fg-muted">Ou scanne ce code, ou envoie le lien.</p>
-                <Button icon={<Copy />} tone="accent" onClick={copy}>
-                  {copied ? "Lien copié" : "Copier le lien"}
-                </Button>
+                <InviteLinkButton url={joinUrl} title={room?.media.title ?? "la séance"} />
                 {/* How the film played on each device: a side page, kept out of the way. */}
                 <Link
                   href={`/s/${code}/qualite`}
@@ -125,6 +107,14 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
             )}
           </div>
         </Surface>
+        {/* Downloading the whole film is only worth it when the server cannot make lighter qualities;
+            a TV is on a home connection, with no room to store a film. On a phone it comes after
+            the invitation, which matters first; on a wide screen, under « Lancer ». */}
+        {room && !tv && prep?.available === false && "caches" in window ? (
+          <div className="grid justify-items-center empty:hidden md:order-3 md:col-start-2">
+            <DownloadCard src={room.media.src} duration={room.media.duration} />
+          </div>
+        ) : null}
       </main>
     </div>
   );

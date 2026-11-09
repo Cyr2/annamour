@@ -7,6 +7,7 @@ import {
   episodeName,
   episodeState,
   onSeries,
+  queueTitle,
   secondsLeft,
   seriesToMarkWatched,
   suggestedLabel,
@@ -98,8 +99,19 @@ describe("the « Épisodes » list", () => {
 
 describe("episode names", () => {
   it("uses the label, or the episode's number without one", () => {
-    expect(episodeName(room.episodes, 1)).toBe("É2");
-    expect(episodeName(room.episodes, 0)).toBe("Épisode 1");
+    expect(episodeName(room.episodes, 1, "The Bear")).toBe("É2");
+    expect(episodeName(room.episodes, 0, "The Bear")).toBe("Épisode 1");
+  });
+
+  it("names a séance of a single film by its title, not « Épisode 1 »", () => {
+    expect(episodeName([{}], 0, "Interstellar")).toBe("Interstellar");
+  });
+
+  it("calls the queue « Épisodes » for a series only", () => {
+    expect(queueTitle({ episodes: [{}], current: 0 })).toBe("File");
+    expect(queueTitle({ episodes: [{}, { label: "É2" }], current: 0 })).toBe("Épisodes");
+    const film = (title: string) => ({ catalog: { id: 7, type: "movie", title } as const });
+    expect(queueTitle({ episodes: [film("Alien"), film("Aliens")], current: 0 })).toBe("File");
   });
 
   it("suggests the label after the last one queued", () => {

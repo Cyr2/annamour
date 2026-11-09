@@ -20,7 +20,8 @@ test("à la fin d'un épisode, le suivant démarre chez tout le monde", async ({
   await anna.getByLabel("Lien de l'épisode d'après (.m3u8)").fill(HLS_URL);
   await expect(anna.getByLabel("Titre", { exact: true })).toHaveValue("Épisode 2");
   await anna.getByRole("button", { name: "Ajouter à la suite" }).click();
-  await expect(anna.getByRole("dialog", { name: "Épisodes" })).toBeHidden({ timeout: 30_000 });
+  // A single film's sheet is « File »; once the episode is added it is « Épisodes », then it closes.
+  await expect(anna.getByRole("dialog", { name: /^(File|Épisodes)$/ })).toBeHidden({ timeout: 30_000 });
   // Everyone else reads who changed the queue; Anna, who did it, is not told.
   await expect(darius.getByText("Anna a ajouté Épisode 2 à la file")).toBeVisible({ timeout: 15_000 });
   await expect(anna.getByText("Anna a ajouté Épisode 2 à la file")).toBeHidden();

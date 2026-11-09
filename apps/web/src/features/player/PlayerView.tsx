@@ -94,7 +94,7 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
     remoteShown: remote.shown,
   });
   usePlayerKeyboard(active && !sheetOpen && !over && !tv, { toggle, seekBy, toggleMute, fullscreen });
-  const surfaceTap = useSurfaceTap(toggle);
+  const surfaceTap = useSurfaceTap(toggle, hidden);
 
   return (
     <section
@@ -117,7 +117,7 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
         ))}
       </video>
       <FloatingReactions />
-      {/* The film's surface: tapping it plays or pauses (Space and K do it from the keyboard). Hidden controls take no taps. */}
+      {/* The film's surface: tapping it plays or pauses (Space and K do it from the keyboard). With the controls hidden, a tap only brings them back. */}
       <div
         ref={controlsLayer}
         {...surfaceTap}

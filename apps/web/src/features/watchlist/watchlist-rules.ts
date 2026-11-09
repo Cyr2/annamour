@@ -1,6 +1,6 @@
-import type { Participant, WatchlistItem } from "@annamour/protocol";
+import type { CatalogTitle, Participant, WatchlistItem } from "@annamour/protocol";
 import { joinNames, plural } from "../../lib/format.ts";
-import { describeTitle } from "../home/create/CatalogResults.tsx";
+import { describeTitle, titleFacts } from "../home/create/CatalogResults.tsx";
 import { relativeDay } from "../sessions/session-rules.ts";
 
 /* What the watchlist says, in French: who is in it, who wants what, who added it, when it was watched. */
@@ -23,6 +23,11 @@ export function peopleOf(items: readonly WatchlistItem[], me: string, known: Rea
 
 export function wantsLabel(count: number): string {
   return plural(count, "envie");
+}
+
+/** « 2014 · 2 h 49 » under a poster: the type would cut the length off; the title's sheet says it. */
+export function posterLine(title: CatalogTitle): string {
+  return titleFacts(title).join(" · ");
 }
 
 /** « Film · 2024 · 2 h 10 · ajouté par Léo », « … · ajouté par toi ». */

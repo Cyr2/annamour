@@ -32,7 +32,7 @@ interface EpisodeEndScreenProps {
 export function EpisodeEndScreen({ end, room, client, onWatchAgain, onAddNext }: EpisodeEndScreenProps) {
   const tv = useTv();
   const panel = useRef<HTMLDivElement>(null);
-  const next = episodeName(room.episodes, room.current + 1);
+  const next = episodeName(room.episodes, room.current + 1, room.media.title);
   const series = onSeries(room);
   const startNext = () => client?.send({ type: "playEpisode", from: room.current, to: room.current + 1 });
 
