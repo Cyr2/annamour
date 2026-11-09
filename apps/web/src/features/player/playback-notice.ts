@@ -1,13 +1,20 @@
-import { type Member, type PlaybackAction, type PlaybackState, positionAt } from "@annamour/protocol";
+import {
+  type EpisodeInfo,
+  type Member,
+  type PlaybackAction,
+  type PlaybackState,
+  positionAt,
+  type RoomChange,
+} from "@annamour/protocol";
 import { formatClock } from "../../lib/format.ts";
 
 /*
- * What to tell everyone else when someone changes the shared playback:
- * "Anna a mis en pause", "Léo a avancé de 10 s". Our own actions say nothing:
- * we just did them.
+ * What to tell everyone else when someone changes something for all:
+ * "Anna a mis en pause", "Léo a avancé de 10 s", "Inès a dit « Pas ce soir »".
+ * Our own actions say nothing: we just did them.
  */
 
-export type NoticeKind = "play" | "pause" | "forward" | "back" | "resume";
+export type NoticeKind = "play" | "pause" | "forward" | "back" | "resume" | RoomChange["kind"];
 
 export interface PlaybackNotice {
   kind: NoticeKind;
@@ -73,4 +80,47 @@ export function describePlaybackEvent({
   if (action === "pause") return { kind: "pause", message: `${name} a mis en pause`, member };
   const seek = seekNotice(name, previous, next);
   return seek ? { ...seek, member } : null;
+}
+
+interface RoomChangeInput {
+  change: RoomChange | undefined;
+  by: string | undefined;
+  /** The séance's episodes after the change, and the one now on screen. */
+  episodes: readonly EpisodeInfo[];
+  current: number;
+  members: Member[];
+  you: string | null;
+}
+
+/** « S1 · É4 », « Alien », or « l'épisode 2 » for one without a label, inside a sentence. */
+function queuedName(label: string | undefined, index: number): string {
+  return label ?? `l'épisode ${index + 1}`;
+}
+
+function roomChangeMessage(name: string, change: RoomChange, episodes: readonly EpisodeInfo[], current: number) {
+  switch (change.kind) {
+    case "episode":
+      return `${name} a lancé ${queuedName(episodes[current]?.label, current)}`;
+    case "declined":
+      return `${name} a dit « Pas ce soir »`;
+    case "added":
+      return `${name} a ajouté ${queuedName(episodes[change.episode]?.label, change.episode)} à la file`;
+    case "removed":
+      return `${name} a retiré ${queuedName(change.label, change.episode)} de la file`;
+  }
+}
+
+/** « Léo a lancé S1 · É3 », « Léo a ajouté Alien à la file »: what someone else did to the séance's episodes. */
+export function describeRoomChange({
+  change,
+  by,
+  episodes,
+  current,
+  members,
+  you,
+}: RoomChangeInput): PlaybackNotice | null {
+  if (!change || by === undefined || by === you) return null;
+  const member = members.find((m) => m.id === by);
+  const message = roomChangeMessage(member?.name ?? "Quelqu'un", change, episodes, current);
+  return { kind: change.kind, message, member };
 }

@@ -21,6 +21,24 @@ export function safeNext(raw: string | null): string {
 
 let checked = false;
 
+/** Asks the server once per launch who this device is (the cached account shows meanwhile). */
+export function useAccountCheck(): void {
+  useEffect(() => {
+    if (checked) return;
+    checked = true;
+    void refreshAccount();
+  }, []);
+}
+
+/** The app's mark while the account is being checked. */
+export function AccountChecking() {
+  return (
+    <main className="grid min-h-dvh place-items-center" aria-busy="true">
+      <Wordmark />
+    </main>
+  );
+}
+
 /**
  * Screens behind this gate need an account: a device without one is sent to
  * the first-launch flow, then brought back where it was going.
@@ -29,18 +47,9 @@ export function AccountGate({ children }: { children: ReactNode }) {
   const status = useAccount((s) => s.status);
   const [location] = useLocation();
   const tv = useTv();
-
-  useEffect(() => {
-    if (checked) return;
-    checked = true;
-    void refreshAccount();
-  }, []);
+  useAccountCheck();
 
   if (status === "member") return children;
   if (status === "guest") return <Redirect to={welcomePath(location + window.location.hash, tv)} replace />;
-  return (
-    <main className="grid min-h-dvh place-items-center" aria-busy="true">
-      <Wordmark />
-    </main>
-  );
+  return <AccountChecking />;
 }

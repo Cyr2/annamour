@@ -7,6 +7,8 @@ import { Button } from "../../ui/controls.tsx";
 import { QrCode } from "../../ui/QrCode.tsx";
 import { ScreenTopBar } from "../../ui/ScreenTopBar.tsx";
 import { Surface } from "../../ui/Surface.tsx";
+import { useAccount } from "../account/account.ts";
+import { KeepSeanceLink } from "../account/KeepSeanceLink.tsx";
 import { DownloadCard } from "../download/DownloadCard.tsx";
 import { SeanceOptions } from "../sessions/SeanceOptions.tsx";
 import { useSessions } from "../sessions/sessions.ts";
@@ -35,7 +37,7 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
   const you = useRoom((s) => s.you);
   const playback = useRoom((s) => s.playback);
   const [, navigate] = useLocation();
-  useLoadSessions();
+  useLoadSessions(useAccount((s) => s.status === "member"));
   // This séance as my séances know it: only someone with an account in it can leave or delete it.
   const seance = useSessions((s) => s.sessions.find((session) => session.code === code));
   const prep = usePrep(code);
@@ -76,6 +78,7 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
             </Button>
           </div>
           <PrepLine status={prep} />
+          <KeepSeanceLink code={code} />
         </div>
         <Surface className="surface-panel grid justify-items-center gap-5 p-6 text-center sm:p-8 md:order-1">
           <p className="type-label">Le code de la séance</p>

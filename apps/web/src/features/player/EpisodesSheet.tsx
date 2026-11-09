@@ -6,7 +6,7 @@ import { IconButton } from "../../ui/IconButton.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { useTv } from "../tv/tv-context.ts";
 import { AddToQueue } from "./AddToQueue.tsx";
-import { episodeName, episodeState, queueTitle } from "./episode-rules.ts";
+import { episodeName, episodeState, onSeries, queueTitle } from "./episode-rules.ts";
 
 interface EpisodesSheetProps {
   open: boolean;
@@ -17,16 +17,18 @@ interface EpisodesSheetProps {
 
 const STATE_TEXT = { watched: "Vu", current: "En cours", upcoming: "Ensuite" } as const;
 
-/** A single film has nothing to pick yet: the sheet is where what follows gets added (from a phone, not a TV). */
-function queueLede(series: boolean, tv: boolean): string {
-  if (series) return "Choisis un épisode : il démarre pour tout le monde.";
+/** A single video has nothing to pick yet: the sheet is where what follows gets added (from a phone, not a TV). */
+function queueLede(room: RoomSnapshot, tv: boolean): string {
+  if (room.episodes.length > 1) {
+    return `Choisis ${onSeries(room) ? "un épisode" : "un film"} : il démarre pour tout le monde.`;
+  }
   return tv
     ? "Ajoute la suite depuis ton téléphone."
     : "Ajoute ce que vous regarderez ensuite : ça démarrera pour tout le monde.";
 }
 
 /**
- * « Épisodes » (« File » for a single film): every episode of the séance, the watched ones ticked. Tapping
+ * « Épisodes » (« File » for films): every episode of the séance, the watched ones ticked. Tapping
  * one takes everyone there (the next one, a later one, or one to watch again).
  * A phone or a computer also adds what follows (next episode, a title, a link); a TV only picks.
  */
@@ -36,12 +38,12 @@ export function EpisodesSheet({ open, onClose, room, client }: EpisodesSheetProp
     client?.send({ type: "playEpisode", from: room.current, to });
     onClose();
   };
-  const series = room.episodes.length > 1;
+  const title = queueTitle(room);
   return (
-    <Sheet open={open} onClose={onClose} title={queueTitle(room.episodes.length)}>
-      <Sheet.Lede>{queueLede(series, tv)}</Sheet.Lede>
+    <Sheet open={open} onClose={onClose} title={title}>
+      <Sheet.Lede>{queueLede(room, tv)}</Sheet.Lede>
       <ol
-        aria-label={series ? "Épisodes de la séance" : "File de la séance"}
+        aria-label={`${title} de la séance`}
         className="grid max-h-[40dvh] grid-cols-[minmax(0,1fr)] gap-2 overflow-y-auto p-1"
       >
         {room.episodes.map((_, index) => {

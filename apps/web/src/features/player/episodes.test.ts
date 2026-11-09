@@ -1,4 +1,4 @@
-import type { SessionSummary } from "@annamour/protocol";
+import type { SessionSummary, WatchlistItem } from "@annamour/protocol";
 import { describe, expect, it } from "vitest";
 import { resumeKicker, sessionTitle } from "../sessions/session-rules.ts";
 import {
@@ -6,8 +6,10 @@ import {
   episodeEndOf,
   episodeName,
   episodeState,
+  onSeries,
   queueTitle,
   secondsLeft,
+  seriesToMarkWatched,
   suggestedLabel,
 } from "./episode-rules.ts";
 import { timelineKeyTarget } from "./seek.ts";
@@ -34,6 +36,39 @@ describe("the end screen of an episode", () => {
   it("speaks of a film when the séance has a single video", () => {
     expect(endTitle(1)).toBe("C'est fini");
     expect(endTitle(3)).toBe("Épisode terminé");
+  });
+});
+
+describe("what the end screen knows of a series", () => {
+  const bear = { id: 136315, type: "tv", title: "The Bear" } as const;
+  const episode = (n: number) => ({ label: `S1 · É${n}`, catalog: { ...bear, season: 1, episode: n } });
+  const listed: WatchlistItem = {
+    id: "w1",
+    title: { id: 136315, type: "tv", title: "The Bear" },
+    addedBy: { accountId: "lea", name: "Léa", color: "lilac" },
+    addedAt: 0,
+    sharedWith: [],
+    wantedBy: [],
+  };
+
+  it("tells a series episode from a film", () => {
+    expect(onSeries({ episodes: [episode(1)], current: 0 })).toBe(true);
+    expect(onSeries({ episodes: [{ catalog: { id: 7, type: "movie", title: "Alien" } }], current: 0 })).toBe(false);
+    expect(onSeries({ episodes: [{}], current: 0 })).toBe(false);
+    expect(onSeries({ episodes: [{}, { label: "É2" }], current: 1 })).toBe(true);
+  });
+
+  it("offers to mark the series watched at the end of the last episode queued, when it is in the list", () => {
+    const room = { episodes: [episode(1), episode(2)], current: 1 };
+    expect(seriesToMarkWatched([listed], room)).toBe(listed);
+  });
+
+  it("does not offer it before the last episode, for a series not in the list, or already watched", () => {
+    expect(seriesToMarkWatched([listed], { episodes: [episode(1), episode(2)], current: 0 })).toBeUndefined();
+    expect(seriesToMarkWatched([], { episodes: [episode(1)], current: 0 })).toBeUndefined();
+    expect(seriesToMarkWatched([{ ...listed, watchedAt: 1 }], { episodes: [episode(1)], current: 0 })).toBeUndefined();
+    const film = { episodes: [{ catalog: { id: 136315, type: "movie", title: "Homonyme" } as const }], current: 0 };
+    expect(seriesToMarkWatched([listed], film)).toBeUndefined();
   });
 });
 
@@ -73,8 +108,10 @@ describe("episode names", () => {
   });
 
   it("calls the queue « Épisodes » for a series only", () => {
-    expect(queueTitle(1)).toBe("File");
-    expect(queueTitle(2)).toBe("Épisodes");
+    expect(queueTitle({ episodes: [{}], current: 0 })).toBe("File");
+    expect(queueTitle({ episodes: [{}, { label: "É2" }], current: 0 })).toBe("Épisodes");
+    const film = (title: string) => ({ catalog: { id: 7, type: "movie", title } as const });
+    expect(queueTitle({ episodes: [film("Alien"), film("Aliens")], current: 0 })).toBe("File");
   });
 
   it("suggests the label after the last one queued", () => {

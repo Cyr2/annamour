@@ -3,6 +3,7 @@ import { useState } from "react";
 import { addCatalogEpisode } from "../../api/catalog.ts";
 import { errorMessage } from "../../api/http.ts";
 import { addEpisode } from "../../api/rooms.ts";
+import { currentIdentity } from "../../sync/identity.ts";
 import { Button } from "../../ui/controls.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { ThreadSpinner } from "../../ui/ThreadSpinner.tsx";
@@ -30,7 +31,9 @@ export function AddToQueue({ room, onDone }: { room: RoomSnapshot; onDone: () =>
       setBusy(false);
     }
   };
-  const addFromCatalog = (play: CatalogRef) => add(() => addCatalogEpisode(room.code, play));
+  // The others read who added it, found by this device's id.
+  const { clientId } = currentIdentity();
+  const addFromCatalog = (play: CatalogRef) => add(() => addCatalogEpisode(room.code, { ...play, clientId }));
 
   if (byLink) {
     return (
@@ -38,7 +41,7 @@ export function AddToQueue({ room, onDone }: { room: RoomSnapshot; onDone: () =>
         room={room}
         busy={busy}
         error={error}
-        onSubmit={(url, label) => add(() => addEpisode(room.code, url, label))}
+        onSubmit={(url, label) => add(() => addEpisode(room.code, url, label, clientId))}
         onSearch={() => setByLink(false)}
       />
     );

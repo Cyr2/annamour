@@ -14,6 +14,11 @@ export function sessionRoutes({ services }: RouteDeps) {
     return c.body(null, 204);
   });
 
+  routes.post(API.session, signedIn, (c) => {
+    history.keep(c.req.param("code").toUpperCase(), c.var.account.id);
+    return c.body(null, 204);
+  });
+
   routes.delete(API.session, signedIn, (c) => {
     history.leave(c.req.param("code").toUpperCase(), c.var.account.id);
     return c.body(null, 204);

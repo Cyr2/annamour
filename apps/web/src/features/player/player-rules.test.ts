@@ -1,6 +1,6 @@
-import type { Member, PlaybackState } from "@annamour/protocol";
+import type { Member, PlaybackState, RoomChange } from "@annamour/protocol";
 import { describe, expect, it } from "vitest";
-import { describePlaybackEvent } from "./playback-notice.ts";
+import { describePlaybackEvent, describeRoomChange } from "./playback-notice.ts";
 import { tapToggles } from "./player-keys.ts";
 import { audibleLevel, supportsVolumeControl, toggledMute, useVolume, withLevel } from "./volume.ts";
 
@@ -8,6 +8,35 @@ const anna: Member = { id: "m2", name: "Anna", color: "lilac", buffering: false 
 const paused = (position: number, at = 0): PlaybackState => ({ status: "paused", position, at });
 const playing = (position: number, at = 0): PlaybackState => ({ status: "playing", position, at });
 const base = { members: [anna], you: "m1" };
+
+describe("notices of what someone does to the séance's episodes", () => {
+  const episodes = [{}, { label: "S1 · É2" }, { label: "Alien" }, {}];
+  const change = (c: RoomChange, by: string | undefined = "m2") =>
+    describeRoomChange({ ...base, change: c, by, episodes, current: 1 });
+
+  it("names who started an episode, said « Pas ce soir », added or removed one", () => {
+    expect(change({ kind: "episode" })).toMatchObject({ message: "Anna a lancé S1 · É2", member: anna });
+    expect(change({ kind: "declined" })?.message).toBe("Anna a dit « Pas ce soir »");
+    expect(change({ kind: "added", episode: 2 })?.message).toBe("Anna a ajouté Alien à la file");
+    expect(change({ kind: "removed", episode: 2, label: "S1 · É4" })?.message).toBe("Anna a retiré S1 · É4 de la file");
+  });
+
+  it("names an episode without a label by its place", () => {
+    expect(change({ kind: "added", episode: 3 })?.message).toBe("Anna a ajouté l'épisode 4 à la file");
+    expect(change({ kind: "removed", episode: 2 })?.message).toBe("Anna a retiré l'épisode 3 de la file");
+  });
+
+  it("says « Quelqu'un » for someone who already left", () => {
+    expect(change({ kind: "declined" }, "m9")?.message).toBe("Quelqu'un a dit « Pas ce soir »");
+  });
+
+  it("stays quiet about my own changes and those the séance made by itself", () => {
+    expect(change({ kind: "declined" }, "m1")).toBeNull();
+    const byNobody = { ...base, change: { kind: "episode" } as const, by: undefined, episodes, current: 1 };
+    expect(describeRoomChange(byNobody)).toBeNull();
+    expect(describeRoomChange({ ...base, change: undefined, by: "m2", episodes, current: 1 })).toBeNull();
+  });
+});
 
 describe("playback notices", () => {
   it("names who paused or relaunched the film", () => {

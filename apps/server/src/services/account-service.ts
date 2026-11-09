@@ -110,6 +110,16 @@ export class AccountService {
     return { token, expiresAt };
   }
 
+  /**
+   * Whose account a QR code opens, without using it: a device already signed in
+   * to another account asks before being switched over.
+   */
+  linkTokenAccount(token: string): Account {
+    const accountId = this.repositories.linkTokens.find(hashToken(token), this.now());
+    if (accountId === undefined) throw new InvalidLinkTokenError();
+    return this.get(accountId);
+  }
+
   linkWithToken(token: string): SignedIn {
     const accountId = this.repositories.linkTokens.consume(hashToken(token), this.now());
     if (accountId === undefined) throw new InvalidLinkTokenError();

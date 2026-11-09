@@ -4,7 +4,7 @@
  * zod alone was ~28 kB gzip of the first visit). The server reads them too.
  */
 import { z } from "zod/mini";
-import { CatalogRef } from "./catalog.ts";
+import { CatalogRef, PlayCatalogRequest } from "./catalog.ts";
 import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "./room-code.ts";
 
 /** The colours a person can pick for their bubble. Values live in the web tokens. */
@@ -88,6 +88,9 @@ export const RoomSnapshot = z.object({
 });
 export type RoomSnapshot = z.infer<typeof RoomSnapshot>;
 
+/** A device's own random id (see the PWA's identity): it names who did something, without an account. */
+export const ClientId = z.string().check(z.minLength(8), z.maxLength(64));
+
 export const Name = z.string().check(z.trim(), z.minLength(1), z.maxLength(24));
 
 /** A short set, light on top of a film, from tender to teasing: love, then shyness and mischief, then shock, then laughing at the film. */
@@ -102,7 +105,7 @@ export const REACTION_COOLDOWN_MS = 300;
 export const ClientMessage = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("hello"),
-    clientId: z.string().check(z.minLength(8), z.maxLength(64)),
+    clientId: ClientId,
     name: Name,
     color: BubbleColor,
   }),
@@ -130,6 +133,22 @@ export type ClientMessage = z.infer<typeof ClientMessage>;
 export const PlaybackAction = z.enum(["play", "pause", "seek", "wait", "resume"]);
 export type PlaybackAction = z.infer<typeof PlaybackAction>;
 
+/**
+ * What someone changed in the séance's episodes, so each of the others can be
+ * told: « Léo a ajouté Alien à la file ».
+ */
+export const RoomChange = z.discriminatedUnion("kind", [
+  /** Everyone moved to another episode. */
+  z.object({ kind: z.literal("episode") }),
+  /** « Pas ce soir »: the countdown stopped for everyone. */
+  z.object({ kind: z.literal("declined") }),
+  /** An episode joined the queue, at `episode`. */
+  z.object({ kind: z.literal("added"), episode: EpisodeIndex }),
+  /** The episode at `episode` left the queue: it is no longer in the room, hence its label here. */
+  z.object({ kind: z.literal("removed"), episode: EpisodeIndex, label: z.optional(z.string()) }),
+]);
+export type RoomChange = z.infer<typeof RoomChange>;
+
 export const ErrorCode = z.enum(["room_not_found", "bad_message", "room_full"]);
 export type ErrorCode = z.infer<typeof ErrorCode>;
 
@@ -147,7 +166,14 @@ export const ServerMessage = z.discriminatedUnion("type", [
   /** The room starts (or stops) waiting for everyone's lead before the film starts. */
   z.object({ type: z.literal("readying"), readying: z.nullable(ReadyingSchema) }),
   /** The episodes changed (one added or removed, the countdown, the next one started): the whole room again. */
-  z.object({ type: z.literal("room"), room: RoomSnapshot, by: z.optional(z.string()) }),
+  z.object({
+    type: z.literal("room"),
+    room: RoomSnapshot,
+    /** Who caused it; absent when the room itself did (the end of an episode, everyone leaving). */
+    by: z.optional(z.string()),
+    /** What they did, to tell the others. */
+    change: z.optional(RoomChange),
+  }),
   /** Shown to everyone in the room, the sender included. */
   z.object({ type: z.literal("reaction"), by: z.string(), emoji: Reaction }),
   z.object({ type: z.literal("error"), code: ErrorCode, message: z.string() }),
@@ -169,8 +195,18 @@ export type CreateRoomResponse = z.infer<typeof CreateRoomResponse>;
 export const AddEpisodeRequest = z.object({
   url: z.url({ protocol: /^https$/ }),
   label: z.optional(EpisodeLabel),
+  /** The device that adds it, so the others read who did. */
+  clientId: z.optional(ClientId),
 });
 export type AddEpisodeRequest = z.infer<typeof AddEpisodeRequest>;
+
+/** Adds a catalog title to a séance's queue: the next episode of its series, or another film. */
+export const AddCatalogEpisodeRequest = z.intersection(
+  PlayCatalogRequest,
+  /** `clientId`: the device that adds it, so the others read who did. */
+  z.object({ clientId: z.optional(ClientId) }),
+);
+export type AddCatalogEpisodeRequest = z.infer<typeof AddCatalogEpisodeRequest>;
 export const AddEpisodeResponse = z.object({ episode: EpisodeIndex });
 export type AddEpisodeResponse = z.infer<typeof AddEpisodeResponse>;
 

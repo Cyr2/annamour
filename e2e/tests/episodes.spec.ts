@@ -20,7 +20,11 @@ test("à la fin d'un épisode, le suivant démarre chez tout le monde", async ({
   await anna.getByLabel("Lien de l'épisode d'après (.m3u8)").fill(HLS_URL);
   await expect(anna.getByLabel("Titre", { exact: true })).toHaveValue("Épisode 2");
   await anna.getByRole("button", { name: "Ajouter à la suite" }).click();
-  await expect(anna.getByRole("dialog", { name: "Épisodes" })).toBeHidden({ timeout: 30_000 });
+  // A single film's sheet is « File »; once the episode is added it is « Épisodes », then it closes.
+  await expect(anna.getByRole("dialog", { name: /^(File|Épisodes)$/ })).toBeHidden({ timeout: 30_000 });
+  // Everyone else reads who changed the queue; Anna, who did it, is not told.
+  await expect(darius.getByText("Anna a ajouté Épisode 2 à la file")).toBeVisible({ timeout: 15_000 });
+  await expect(anna.getByText("Anna a ajouté Épisode 2 à la file")).toBeHidden();
 
   // Darius jumps to the end: the countdown shows on both screens.
   await darius.mouse.move(20, 20);
@@ -28,15 +32,15 @@ test("à la fin d'un épisode, le suivant démarre chez tout le monde", async ({
   await position.focus();
   await position.press("End");
   for (const page of [darius, anna]) {
-    await expect(page.getByRole("button", { name: "Lancer maintenant" })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("button", { name: "Lancer pour tout le monde" })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("heading", { name: "Épisode 2" })).toBeVisible();
   }
 
   // One tap starts it for everyone: the same séance, the next episode, from its start.
-  await anna.getByRole("button", { name: "Lancer maintenant" }).click();
+  await anna.getByRole("button", { name: "Lancer pour tout le monde" }).click();
   for (const page of [darius, anna]) {
     await expect(page.getByText("The Bear · Épisode 2")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("button", { name: "Lancer maintenant" })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Lancer pour tout le monde" })).toBeHidden();
   }
   await expect.poll(() => videoTime(darius), { timeout: 30_000 }).toBeGreaterThan(1);
   expect(await videoTime(darius)).toBeLessThan(60);
@@ -45,7 +49,7 @@ test("à la fin d'un épisode, le suivant démarre chez tout le monde", async ({
   await darius.mouse.move(30, 30);
   await darius.getByRole("button", { name: "Épisodes", exact: true }).click();
   await darius.getByRole("button", { name: "Regarder Épisode 1, Vu" }).click();
-  await expect(anna.getByText("Darius lance Épisode 1")).toBeVisible({ timeout: 15_000 });
+  await expect(anna.getByText("Darius a lancé l'épisode 1")).toBeVisible({ timeout: 15_000 });
   await expect(anna.getByText("The Bear · Épisode 2")).toBeHidden();
 
   // Mid-episode, « Épisode suivant » skips everyone ahead without waiting for the end.
