@@ -18,9 +18,9 @@ test("le salon dit de quel cercle est la séance, chez un invité aussi", async 
   await darius.request.patch(`/api/me/circles/${circles[0]?.id}`, { data: { name: "Les potes du jeudi" } });
 
   await onboard(leo, "Léo", room);
-  await expect(leo.getByText("Séance de Les potes du jeudi")).toBeVisible();
+  await expect(leo.getByText("Cercle · Les potes du jeudi")).toBeVisible();
 
-  await expect(darius.getByText("Séance de Les potes du jeudi")).toBeVisible();
+  await expect(darius.getByText("Cercle · Les potes du jeudi")).toBeVisible();
   const after = (await (await darius.request.get("/api/me/circles")).json()) as {
     circles: { members: unknown[] }[];
   };

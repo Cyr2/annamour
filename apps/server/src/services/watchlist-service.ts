@@ -12,7 +12,7 @@ export interface WatchlistServiceOptions {
 const NOT_IN_LIST = "Ce titre n'est plus dans ta liste.";
 
 /**
- * « À regarder ensemble ». A title is shared with chosen people its author
+ * « Notre liste ». A title is shared with chosen people its author
  * watched with, or with « Tout le monde »: everyone in the author's history,
  * people met after it was added included. Everyone who sees it may vote,
  * start it or remove it. Nobody can push a title onto a stranger's list.

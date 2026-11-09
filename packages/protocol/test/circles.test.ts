@@ -48,13 +48,13 @@ describe("circles", () => {
 describe("the salon's line about its séance's circle", () => {
   it("names a named circle, for its people and for a guest alike", () => {
     const potes = { name: "Les potes du jeudi", members: [me, annou] };
-    expect(seanceCircleLine(potes, "darius")).toBe("Séance de Les potes du jeudi");
-    expect(seanceCircleLine(potes, "zoe")).toBe("Séance de Les potes du jeudi");
+    expect(seanceCircleLine(potes, "darius")).toBe("Cercle · Les potes du jeudi");
+    expect(seanceCircleLine(potes, "zoe")).toBe("Cercle · Les potes du jeudi");
   });
 
-  it("says with whom for one of its people, whose séance it is for a guest", () => {
+  it("says with whom for one of its people, and names the circle for a guest", () => {
     expect(seanceCircleLine({ members: [me, leo, ines] }, "darius")).toBe("avec Léo et Inès");
-    expect(seanceCircleLine({ members: [me, leo] }, "zoe")).toBe("Séance de Darius et Léo");
+    expect(seanceCircleLine({ members: [me, leo] }, "zoe")).toBe("Cercle · Darius et Léo");
   });
 
   it("says nothing of an unnamed circle with nobody else left in it", () => {

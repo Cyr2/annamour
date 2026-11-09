@@ -15,8 +15,8 @@ const CREATE_HINT = "Pour créer une séance, colle le lien sur ton téléphone 
 
 /**
  * The home screen's lower half on a TV: the « Reprendre » card alone in the
- * middle (joining with a code sits in the top bar), then « À regarder
- * ensemble » and « Mes séances » as rows to browse with ← →.
+ * middle (joining with a code sits in the top bar), then « Notre
+ * liste » and « Mes séances » as rows to browse with ← →.
  * Creating a séance stays on the phone (pasting a link with a remote is no fun).
  */
 export function TvHomeShelf() {
