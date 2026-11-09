@@ -44,6 +44,20 @@ export function remainingLabel(session: SessionSummary): string {
   return `reste ${formatDuration(Math.max(0, session.duration - session.position))}`;
 }
 
+/**
+ * The few words beside a card's progress bar, which already shows where it
+ * stopped: « reste 58 min », « Terminée », or the stop time when the length is unknown.
+ */
+export function progressNote(session: SessionSummary): string {
+  if (isFinished(session)) return "Terminée";
+  return remainingLabel(session) || `Arrêtés à ${formatClock(session.position)}`;
+}
+
+/** « Aujourd'hui · avec Anna et Léo »: when, then with whom, on one line. */
+export function whenAndWhoLabel(session: SessionSummary, now: number): string {
+  return `${relativeDay(session.lastUsedAt, now)} · ${companionsLabel(session)}`;
+}
+
 /** « avec Anna et Léo », or « Rien que toi pour l'instant » before anyone with an account joined. */
 export function companionsLabel(session: SessionSummary): string {
   const names = session.participants.map((participant) => participant.name);

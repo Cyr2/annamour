@@ -6,7 +6,6 @@ import { exit, spring } from "../../lib/motion.ts";
 import { sessionPath } from "../../sync/restart.ts";
 import { BubbleStack, type StackedPerson } from "../../ui/BubbleStack.tsx";
 import { Button } from "../../ui/controls.tsx";
-import { cx } from "../../ui/cx.ts";
 import { EpisodeBars } from "../../ui/EpisodeBars.tsx";
 import { LinkButton } from "../../ui/LinkButton.tsx";
 import { Progress } from "../../ui/Progress.tsx";
@@ -22,6 +21,7 @@ import {
   stopLabel,
 } from "../sessions/session-rules.ts";
 import { useTv } from "../tv/tv-context.ts";
+import { SessionCompactDetails } from "./SessionCompactDetails.tsx";
 
 interface SessionRowProps {
   session: SessionSummary;
@@ -31,16 +31,22 @@ interface SessionRowProps {
   onRemove: (session: SessionSummary) => void;
 }
 
-/**
- * What a session is: its title, code, day, who was there, how far, where it
- * stopped. Shared by the profile's rows and the TV's « Mes séances » cards.
- */
-export function SessionDetails({ session, me, now }: Omit<SessionRowProps, "onRemove">) {
-  const progress = progressOf(session);
-  const people = useMemo(
+/** Everyone of the séance for its bubbles, me first. */
+function useSessionPeople(session: SessionSummary, me: StackedPerson): StackedPerson[] {
+  return useMemo(
     () => [me, ...session.participants.map((p) => ({ id: p.accountId, name: p.name, color: p.color }))],
     [me, session.participants],
   );
+}
+
+/**
+ * What a session is, read from the sofa: its title, code (a remote has no
+ * « ⋯ » to show it), day, who was there, how far, where it stopped. The TV's
+ * rows and home shelf; a phone shows the shorter SessionCompactDetails.
+ */
+export function SessionDetails({ session, me, now }: Omit<SessionRowProps, "onRemove">) {
+  const progress = progressOf(session);
+  const people = useSessionPeople(session, me);
 
   return (
     <div className="grid min-w-0 gap-2">
@@ -96,27 +102,44 @@ export function SessionRow({ session, me, now, onRemove, primary = false }: Sess
       animate={{ opacity: 1, y: 0, transition: spring.ui }}
       exit={{ opacity: 0, scale: 0.96, transition: exit.quick }}
     >
-      <Surface
-        className={cx(
-          "grid gap-3 rounded-panel p-4 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-5 sm:p-5",
-          tv && "sm:gap-8 sm:p-6",
-        )}
-      >
-        {/* The poster tells the séance at a glance; a TV's rows stay text, read from the sofa. */}
-        <div className="flex min-w-0 gap-3.5">
-          {tv ? null : <SeancePoster session={session} className="w-16 shrink-0 self-start" />}
+      {tv ? (
+        // A TV's rows stay text, read from the sofa.
+        <Surface className="grid gap-3 rounded-panel p-4 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-8 sm:p-6">
           <SessionDetails session={session} me={me} now={now} />
-        </div>
-        <div
-          // A TV's focus ring and lift reach out around a button: keep them off the next one.
-          className={cx("flex items-center justify-self-end", tv ? "gap-6" : "gap-2")}
-          data-tv-primary={primary ? "" : undefined}
-        >
-          <OpenSessionLink session={session} size={tv ? "large" : "regular"} />
-          {tv ? <RemoveButton session={session} onRemove={onRemove} /> : <SeanceOptions session={session} />}
-        </div>
-      </Surface>
+          <div
+            // A TV's focus ring and lift reach out around a button: keep them off the next one.
+            className="flex items-center gap-6 justify-self-end"
+            data-tv-primary={primary ? "" : undefined}
+          >
+            <OpenSessionLink session={session} size="large" />
+            <RemoveButton session={session} onRemove={onRemove} />
+          </div>
+        </Surface>
+      ) : (
+        <CompactCard session={session} me={me} now={now} />
+      )}
     </m.li>
+  );
+}
+
+/**
+ * A phone's card, short like a list in an Apple app: the poster, then the
+ * title, when and with whom, how far; the way back in and « ⋯ » underneath,
+ * or beside it all once the screen is wide enough.
+ */
+function CompactCard({ session, me, now }: Omit<SessionRowProps, "onRemove">) {
+  const people = useSessionPeople(session, me);
+  return (
+    <Surface className="flex gap-3 rounded-panel p-3 sm:gap-4 sm:p-4">
+      <SeancePoster session={session} className="w-16 shrink-0 self-start" />
+      <div className="grid min-w-0 flex-1 gap-2.5 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-5">
+        <SessionCompactDetails session={session} people={people} now={now} />
+        <div className="flex items-center gap-2 justify-self-end">
+          <OpenSessionLink session={session} size="regular" />
+          <SeanceOptions session={session} />
+        </div>
+      </div>
+    </Surface>
   );
 }
 
