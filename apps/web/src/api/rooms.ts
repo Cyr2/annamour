@@ -30,9 +30,16 @@ export async function createRoom(url: string, title?: string, circleId?: string 
   return code;
 }
 
-/** Imports the next episode of a séance and queues it for everyone in it; returns its index. */
-export async function addEpisode(code: string, url: string, label: string): Promise<number> {
-  const input = AddEpisodeRequest.safeParse({ url: url.trim(), ...(label.trim() ? { label: label.trim() } : {}) });
+/**
+ * Imports the next episode of a séance and queues it for everyone in it, who
+ * read that this device (`clientId`) added it; returns its index.
+ */
+export async function addEpisode(code: string, url: string, label: string, clientId: string): Promise<number> {
+  const input = AddEpisodeRequest.safeParse({
+    url: url.trim(),
+    clientId,
+    ...(label.trim() ? { label: label.trim() } : {}),
+  });
   if (!input.success) throw new ApiRequestError(400, "Colle un lien https vers une playlist .m3u8.");
   const { episode } = await request(AddEpisodeResponse, `/api/rooms/${encodeURIComponent(code)}/episodes`, {
     body: input.data,

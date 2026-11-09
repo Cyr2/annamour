@@ -28,6 +28,7 @@ import {
   positionAt,
   REACTION_COOLDOWN_MS,
   type Readying,
+  type RoomChange,
   type RoomSnapshot,
   readyingFrom,
   readyToStart,
@@ -291,13 +292,18 @@ export class Room {
     this.maybeStart(now);
   }
 
-  /** Queues an episode after the others; everyone in the room sees it at once. Returns its index. */
-  addEpisode(episode: Episode): number {
+  /**
+   * Queues an episode after the others; everyone in the room sees it at once,
+   * with who added it when `byClientId` is one of its devices. Returns its index.
+   */
+  addEpisode(episode: Episode, byClientId?: string): number {
     this.episodes.push(episode);
     this.episodeIds = Math.max(this.episodeIds, episode.id + 1);
     this.progress = episodeAdded(this.progress);
-    this.broadcastRoom();
-    return this.episodes.length - 1;
+    const index = this.episodes.length - 1;
+    const by = [...this.participants.values()].find((p) => p.clientId === byClientId)?.id;
+    this.broadcastRoom(by, { kind: "added", episode: index });
+    return index;
   }
 
   handle(memberId: string, message: ClientMessage, now: number): void {
@@ -399,7 +405,7 @@ export class Room {
           this.moveTo(goToEpisode(this.progress, message.to), now, "playing", memberId);
         return;
       case "declineNext":
-        this.setProgress(declineNextEpisode(this.progress), memberId);
+        this.setProgress(declineNextEpisode(this.progress), memberId, { kind: "declined" });
         return;
       case "removeEpisode":
         this.onRemoveEpisode(message.episode, memberId);
@@ -490,8 +496,10 @@ export class Room {
   private onRemoveEpisode(index: number, memberId: string): void {
     if (!canRemoveEpisode(this.progress, index)) return;
     const [removed] = this.episodes.splice(index, 1);
-    if (removed) this.persistence.removeEpisode(removed.id);
-    this.setProgress(episodeRemoved(this.progress), memberId);
+    if (!removed) return;
+    this.persistence.removeEpisode(removed.id);
+    const change: RoomChange = { kind: "removed", episode: index, ...(removed.label ? { label: removed.label } : {}) };
+    this.setProgress(episodeRemoved(this.progress), memberId, change);
   }
 
   /** Another episode becomes the current one (or the same one stays): from its start, saved, shown to all. */
@@ -506,13 +514,13 @@ export class Room {
     this.readying = status === "playing" ? readyingFrom(this.leads(), 0, duration, now) : null;
     this.playback = { status: this.readying ? "paused" : status, position: 0, at: now };
     this.persistence.saveCurrentEpisode(next.current, duration, now);
-    this.broadcastRoom(by);
+    this.broadcastRoom(by, by ? { kind: "episode" } : undefined);
   }
 
-  private setProgress(next: EpisodeProgress, by?: string): void {
+  private setProgress(next: EpisodeProgress, by?: string, change?: RoomChange): void {
     if (next === this.progress) return;
     this.progress = next;
-    this.broadcastRoom(by);
+    this.broadcastRoom(by, change);
   }
 
   private episodeAtIndex(index: number): Episode {
@@ -541,9 +549,9 @@ export class Room {
     this.broadcast({ type: "members", members: this.members() });
   }
 
-  private broadcastRoom(by?: string): void {
+  private broadcastRoom(by?: string, change?: RoomChange): void {
     if (this.participants.size === 0) return;
-    this.broadcast({ type: "room", room: this.snapshot(), ...(by ? { by } : {}) });
+    this.broadcast({ type: "room", room: this.snapshot(), ...(by ? { by } : {}), ...(change ? { change } : {}) });
   }
 
   private broadcast(message: ServerMessage): void {

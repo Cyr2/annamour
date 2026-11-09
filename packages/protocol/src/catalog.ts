@@ -60,10 +60,6 @@ export type PlayCatalogRequest = z.infer<typeof PlayCatalogRequest>;
 export const CatalogRef = PlayCatalogRequest;
 export type CatalogRef = PlayCatalogRequest;
 
-/** Adds a catalog title to a séance's queue: the next episode of its series, or another film. */
-export const AddCatalogEpisodeRequest = PlayCatalogRequest;
-export type AddCatalogEpisodeRequest = PlayCatalogRequest;
-
 /** Episode labels are at most this long (see EpisodeLabel). */
 const EPISODE_LABEL_MAX = 40;
 
