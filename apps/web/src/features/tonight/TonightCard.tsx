@@ -17,6 +17,7 @@ import { resumeLine, sessionTitle } from "../sessions/session-rules.ts";
 import { useSeanceOfTitle } from "../sessions/useSeanceOfTitle.ts";
 import { useLaunchTitle } from "../watchlist/useLaunchTitle.ts";
 import { wantersLine } from "../watchlist/watchlist-rules.ts";
+import { PickPlaceholder } from "./PickPlaceholder.tsx";
 
 interface TonightCardProps {
   pick: TonightPick;
@@ -24,10 +25,12 @@ interface TonightCardProps {
   /** A series asks for its episode first: its sheet opens. */
   onOpenItem: (item: WatchlistItem) => void;
   onAdd: () => void;
+  /** The list or the séances are still on their way: « nothing » may not be true yet. */
+  loading: boolean;
 }
 
 /** « On regarde ? »: the one thing to watch tonight with the circle on screen, one tap away. */
-export function TonightCard({ pick, me, onOpenItem, onAdd }: TonightCardProps) {
+export function TonightCard({ pick, me, onOpenItem, onAdd, loading }: TonightCardProps) {
   return (
     <m.section
       aria-label="On regarde ?"
@@ -37,7 +40,7 @@ export function TonightCard({ pick, me, onOpenItem, onAdd }: TonightCardProps) {
       <Surface className="surface-panel grid gap-4 p-5">
         {pick.kind === "resume" ? <ResumeBody pick={pick} /> : null}
         {pick.kind === "title" ? <TitleBody item={pick.item} me={me} onOpenItem={onOpenItem} /> : null}
-        {pick.kind === "nothing" ? <NothingBody onAdd={onAdd} /> : null}
+        {pick.kind === "nothing" ? loading ? <PickPlaceholder /> : <NothingBody onAdd={onAdd} /> : null}
       </Surface>
     </m.section>
   );
@@ -86,7 +89,7 @@ function TitleBody({
   return (
     <>
       <div className="flex gap-4">
-        <Poster title={item.title} />
+        <Poster title={item.title} priority />
         <div className="grid min-w-0 content-center gap-1">
           <span className="text-xs font-semibold text-accent">On regarde ?</span>
           <strong className="truncate font-rounded-tight text-lg font-extrabold text-fg">{item.title.title}</strong>

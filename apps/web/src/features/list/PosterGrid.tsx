@@ -1,7 +1,7 @@
 import type { WatchlistItem } from "@annamour/protocol";
 import { m } from "motion/react";
 import { spring } from "../../lib/motion.ts";
-import { PosterCard } from "../watchlist/PosterCard.tsx";
+import { FIRST_ROW, PosterCard } from "../watchlist/PosterCard.tsx";
 
 export interface PosterHandlers {
   me: string;
@@ -35,7 +35,7 @@ export function PosterGrid({ items, label, replayKey, ...handlers }: PosterGridP
             transition: { ...spring.ui, delay: Math.min(index, STAGGERED) * 0.035 },
           }}
         >
-          <PosterCard item={item} {...handlers} />
+          <PosterCard item={item} priority={index < FIRST_ROW} {...handlers} />
         </m.li>
       ))}
     </ul>

@@ -16,13 +16,18 @@ interface PosterCardProps {
   onWant?: (item: WatchlistItem, want: boolean) => void;
   /** Read out after the title, e.g. « OK pour lancer » on a TV. */
   hint?: string;
+  /** In the first row, on screen as the page opens (see FIRST_ROW). */
+  priority?: boolean;
 }
+
+/** How many posters a phone shows in a row, on the shelf or in the grid: those load first. */
+export const FIRST_ROW = 3;
 
 /**
  * A title as a poster, the same everywhere: who proposed it at the bottom,
  * the heart at the top (full: I want to watch it; the number: how many do).
  */
-export function PosterCard({ item, me, onPick, onWant, hint }: PosterCardProps) {
+export function PosterCard({ item, me, onPick, onWant, hint, priority }: PosterCardProps) {
   const wanted = item.wantedBy.includes(me);
   const count = item.wantedBy.length;
   const author = { id: item.addedBy.accountId, name: item.addedBy.name, color: item.addedBy.color };
@@ -33,10 +38,10 @@ export function PosterCard({ item, me, onPick, onWant, hint }: PosterCardProps) 
         type="button"
         onClick={() => onPick(item)}
         aria-label={`${item.title.title}, ${describeTitle(item.title)}${hint ? ` : ${hint}` : ""}`}
-        className="grid w-full cursor-pointer gap-2 rounded-control text-left"
+        className="am-press grid w-full cursor-pointer gap-2 rounded-control text-left"
       >
         <span className="relative block">
-          <Poster title={item.title} size="card" />
+          <Poster title={item.title} size="card" priority={priority} />
           <BubbleStack people={[author]} className="absolute bottom-2 left-2" />
         </span>
         <span className="grid gap-0.5 px-0.5">

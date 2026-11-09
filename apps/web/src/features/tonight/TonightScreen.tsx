@@ -38,6 +38,8 @@ export function TonightScreen() {
   const circle = useShownCircle();
   const sessions = useSessions((s) => s.sessions);
   const items = useWatchlist((s) => s.items);
+  const listLoading = useWatchlist((s) => s.status === "idle" || s.status === "loading");
+  const sessionsLoading = useSessions((s) => s.status === "idle" || s.status === "loading");
   const pick = useMemo(() => tonightPick(sessions, items, circle, me), [sessions, items, circle, me]);
   const ongoing = useMemo(
     () =>
@@ -58,7 +60,13 @@ export function TonightScreen() {
       <main className="mx-auto grid w-full max-w-[760px] content-start gap-6 py-6">
         <TonightHero circle={circle} />
         <CircleFilter centered />
-        <TonightCard pick={pick} me={me} onOpenItem={setOpenItem} onAdd={() => setAdding(true)} />
+        <TonightCard
+          pick={pick}
+          me={me}
+          onOpenItem={setOpenItem}
+          onAdd={() => setAdding(true)}
+          loading={listLoading || sessionsLoading}
+        />
         <OngoingShelf sessions={ongoing} />
         <WatchlistShelf circle={circle} title="Notre liste" />
         {/* Last and quiet: a séance mostly starts from a title of the list, or is joined from a link. */}
