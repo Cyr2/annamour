@@ -8,6 +8,7 @@ import { useIdentity } from "../../sync/identity.ts";
 import { resetCircles } from "../circles/circles.ts";
 import { resetSessions } from "../sessions/sessions.ts";
 import { resetWatchlist } from "../watchlist/watchlist.ts";
+import { settleGuest } from "./guest.ts";
 
 /*
  * Who is signed in on this device. The account is cached so the app opens
@@ -64,6 +65,7 @@ function signIn(account: Account): Account {
   writeStored(ACCOUNT_STORAGE, account);
   useAccount.setState({ status: "member", account, key: keyFor(account) });
   void checkUncheckedKey(account);
+  void settleGuest();
   // The bubble shown in rooms is the account's.
   const identity = useIdentity.getState();
   identity.setName(account.name);

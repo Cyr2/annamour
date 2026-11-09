@@ -9,9 +9,17 @@ export async function person(browser: Browser, options: BrowserContextOptions = 
   return context.newPage();
 }
 
-/** First launch: name, then the key, then « Plus tard » for the passkey. */
+/**
+ * First launch: name, then the key, then « Plus tard » for the passkey; then
+ * `path` (a séance link opens without an account, so the account is made first).
+ */
 export async function onboard(page: Page, name: string, path = "/") {
-  await page.goto(path);
+  await firstLaunch(page, name);
+  if (path !== "/") await page.goto(path);
+}
+
+async function firstLaunch(page: Page, name: string) {
+  await page.goto("/");
   await expect(page).toHaveURL(/\/bienvenue/);
   await page.getByLabel("Ton prénom").fill(name);
   await page.getByRole("button", { name: "Continuer" }).click();

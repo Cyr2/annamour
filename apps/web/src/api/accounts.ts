@@ -100,6 +100,11 @@ export async function updateAccount(changes: UpdateAccountRequest): Promise<Acco
   return account;
 }
 
+/** Adds a séance watched as a guest to my séances, now that I have an account. */
+export async function keepSession(code: string): Promise<void> {
+  await request(Ignored, apiPath(API.session, { code }), { method: "POST" });
+}
+
 /** Leaves a séance: gone from my séances and my circles; the others keep it. */
 export async function leaveSession(code: string): Promise<void> {
   await request(Ignored, apiPath(API.session, { code }), { method: "DELETE" });
