@@ -59,6 +59,9 @@ export type LinkWithTokenRequest = z.infer<typeof LinkWithTokenRequest>;
 /** Someone who was in a session with you. */
 export const Participant = z.object({ accountId: z.string(), name: Name, color: BubbleColor });
 export type Participant = z.infer<typeof Participant>;
+/** Someone of a séance; `left` once they took it out of their séances (the others still see who was there). */
+export const SessionParticipant = z.object({ ...Participant.shape, left: z.optional(z.boolean()) });
+export type SessionParticipant = z.infer<typeof SessionParticipant>;
 
 export const SessionSummary = z.object({
   code: RoomCode,
@@ -68,7 +71,7 @@ export const SessionSummary = z.object({
   position: z.number().check(z.gte(0)),
   lastUsedAt: z.number(),
   /** The other people of the session; never includes the requester. */
-  participants: z.array(Participant),
+  participants: z.array(SessionParticipant),
   /** Where the séance is among its episodes; `duration` and `position` are this episode's. */
   episode: z.object({ index: z.number(), count: z.number(), label: z.optional(z.string()) }),
   /** The circle the séance belongs to (see circles.ts); absent for a séance watched alone. */

@@ -38,7 +38,10 @@ interface SessionRowProps {
 export function SessionDetails({ session, me, now }: Omit<SessionRowProps, "onRemove">) {
   const progress = progressOf(session);
   const people = useMemo(
-    () => [me, ...session.participants.map((p) => ({ id: p.accountId, name: p.name, color: p.color }))],
+    () => [
+      me,
+      ...session.participants.map((p) => ({ id: p.accountId, name: p.name, color: p.color, left: p.left ?? false })),
+    ],
     [me, session.participants],
   );
 

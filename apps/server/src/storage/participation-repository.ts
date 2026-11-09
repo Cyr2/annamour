@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import { BubbleColor, type CatalogRef, type Participant } from "@annamour/protocol";
+import { BubbleColor, type CatalogRef, type SessionParticipant } from "@annamour/protocol";
 import { z } from "zod";
 import { parseCatalog } from "./room-repository.ts";
 import { changedRows, parseRows } from "./rows.ts";
@@ -39,6 +39,7 @@ const CompanionRow = z.object({
   account_id: z.string(),
   name: z.string(),
   color: BubbleColor,
+  hidden: z.number(),
 });
 
 /** What the history tells of the catalog title a room plays. */
@@ -75,14 +76,6 @@ export class ParticipationRepository {
          ) WHERE created_by IS NULL`,
       )
       .run();
-  }
-
-  /** Takes this account out of a séance (no longer in its séances nor its circles' counts). False when it was not in. */
-  remove(roomCode: string, accountId: string): boolean {
-    const result = this.db
-      .prepare("DELETE FROM participations WHERE room_code = ? AND account_id = ?")
-      .run(roomCode, accountId);
-    return changedRows(result) > 0;
   }
 
   /** Returns false when this account never was in that room. */
@@ -141,20 +134,25 @@ export class ParticipationRepository {
     return parseRows(z.object({ account_id: z.string() }), rows).map((row) => row.account_id);
   }
 
-  companions(accountId: string): Map<string, Participant[]> {
+  companions(accountId: string): Map<string, SessionParticipant[]> {
     const rows = this.db
       .prepare(
-        `SELECT p.room_code, a.id AS account_id, a.name, a.color
+        `SELECT p.room_code, a.id AS account_id, a.name, a.color, p.hidden
          FROM participations p JOIN accounts a ON a.id = p.account_id
          WHERE p.account_id <> ?
            AND p.room_code IN (SELECT room_code FROM participations WHERE account_id = ? AND hidden = 0)
          ORDER BY p.rowid`,
       )
       .all(accountId, accountId);
-    const byRoom = new Map<string, Participant[]>();
+    const byRoom = new Map<string, SessionParticipant[]>();
     for (const row of parseRows(CompanionRow, rows)) {
       const list = byRoom.get(row.room_code) ?? [];
-      list.push({ accountId: row.account_id, name: row.name, color: row.color });
+      list.push({
+        accountId: row.account_id,
+        name: row.name,
+        color: row.color,
+        ...(row.hidden ? { left: true } : {}),
+      });
       byRoom.set(row.room_code, list);
     }
     return byRoom;

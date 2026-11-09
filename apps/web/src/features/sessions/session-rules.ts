@@ -44,16 +44,26 @@ export function remainingLabel(session: SessionSummary): string {
   return `reste ${formatDuration(Math.max(0, session.duration - session.position))}`;
 }
 
-/** « avec Anna et Léo », or « Rien que toi pour l'instant » before anyone with an account joined. */
+const namesOf = (session: SessionSummary, left: boolean) =>
+  session.participants.filter((person) => (person.left ?? false) === left).map((person) => person.name);
+
+/**
+ * « avec Anna et Léo », or « Rien que toi pour l'instant » before anyone with an account joined.
+ * Who left still shows, said so: « avec Anna, et Léo, qui a quitté la séance ».
+ */
 export function companionsLabel(session: SessionSummary): string {
-  const names = session.participants.map((participant) => participant.name);
-  return names.length ? `avec ${joinNames(names)}` : "Rien que toi pour l'instant";
+  const here = namesOf(session, false);
+  const gone = namesOf(session, true);
+  if (!here.length && !gone.length) return "Rien que toi pour l'instant";
+  if (!gone.length) return `avec ${joinNames(here)}`;
+  const left = `${joinNames(gone)}, qui ${gone.length > 1 ? "ont" : "a"} quitté la séance`;
+  return here.length ? `avec ${joinNames(here)}, et ${left}` : `avec ${left}`;
 }
 
-/** The home card's line: « Il y a 3 jours avec Anna · reste 58 min ». */
+/** The home card's line: « Il y a 3 jours avec Anna · reste 58 min ». Who left the séance is not waited for. */
 export function resumeLine(session: SessionSummary, now: number): string {
   const when = relativeDay(session.lastUsedAt, now);
-  const names = session.participants.map((participant) => participant.name);
+  const names = namesOf(session, false);
   const withWhom = names.length ? `${when} avec ${joinNames(names)}` : when;
   const remaining = remainingLabel(session);
   return remaining ? `${withWhom} · ${remaining}` : withWhom;

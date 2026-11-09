@@ -107,7 +107,8 @@ function ConfirmDelete({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  const others = session.participants.map((person) => person.name);
+  // Who already left it no longer sees it: nothing to lose for them.
+  const others = session.participants.filter((person) => !person.left).map((person) => person.name);
   return (
     <div className="grid gap-5">
       <Sheet.Lede>

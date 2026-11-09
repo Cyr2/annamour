@@ -52,9 +52,12 @@ export class HistoryService {
     }));
   }
 
-  /** Leaves a séance: gone from my séances and my circles' counts; the others keep it. Joining again brings it back. */
+  /**
+   * Leaves a séance: gone from my séances and my circles' counts; the others keep it, and my bubble on it,
+   * marked gone (we were there together). Joining again brings it back.
+   */
   leave(roomCode: string, accountId: string): void {
-    if (!this.repositories.participations.remove(roomCode, accountId))
+    if (!this.repositories.participations.hide(roomCode, accountId))
       throw new NotFoundError("Cette séance n'est pas dans tes séances.");
   }
 

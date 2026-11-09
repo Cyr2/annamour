@@ -53,6 +53,22 @@ describe("leaving a séance", () => {
     expect(await codes(annou.cookie)).toContain(room.code);
     expect(await evenings(annou.cookie)).toBe(2);
   });
+
+  it("leaves my bubble to the others, marked gone, until I come back", async () => {
+    const { account, seance, get, send, services, codes } = setup();
+    const darius = await account("Darius");
+    const annou = await account("Annou");
+    const room = seance(darius.id, annou.id);
+    const seenByAnnou = async () =>
+      (await get<SessionList>(API.sessions, annou.cookie)).sessions.find((s) => s.code === room.code)?.participants;
+
+    await send(apiPath(API.session, { code: room.code }), darius.cookie);
+    expect(await seenByAnnou()).toMatchObject([{ name: "Darius", left: true }]);
+
+    services.history.recordParticipation(room.code, darius.id);
+    expect(await codes(darius.cookie)).toContain(room.code);
+    expect((await seenByAnnou())?.[0]?.left).toBeUndefined();
+  });
 });
 
 describe("deleting a séance for everyone", () => {
