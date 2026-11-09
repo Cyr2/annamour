@@ -41,8 +41,13 @@ const ItemRow = z.object({
   added_by: z.string(),
   added_at: z.number(),
   watched_at: z.number().nullable(),
+  watched_by_room: z.string().nullable(),
+  marker_id: z.string().nullable(),
+  marker_name: z.string().nullable(),
+  marker_color: z.nullable(BubbleColor),
   circle_id: z.string().nullable(),
 });
+type ItemRow = z.infer<typeof ItemRow>;
 
 const PersonRow = z.object({
   item_id: z.string(),
@@ -123,14 +128,23 @@ export class WatchlistRepository {
   /** `bySeance`: the séance that reached the end of the film, so deleting it can take the mark back. */
   setWatched(itemId: string, watchedAt: number | null, bySeance: string | null = null): void {
     this.db
-      .prepare("UPDATE watchlist_items SET watched_at = ?, watched_by_room = ? WHERE id = ?")
+      .prepare("UPDATE watchlist_items SET watched_at = ?, watched_by_room = ?, watched_by_account = NULL WHERE id = ?")
       .run(watchedAt, watchedAt === null ? null : bySeance, itemId);
+  }
+
+  /** Someone said « C'est vu » by hand: remembered so the others learn who did. */
+  markWatchedBy(itemId: string, watchedAt: number, accountId: string): void {
+    this.db
+      .prepare("UPDATE watchlist_items SET watched_at = ?, watched_by_room = NULL, watched_by_account = ? WHERE id = ?")
+      .run(watchedAt, accountId, itemId);
   }
 
   /** A séance is deleted: the titles it marked « vu » go back to watch. */
   unwatchSeance(code: string): void {
     this.db
-      .prepare("UPDATE watchlist_items SET watched_at = NULL, watched_by_room = NULL WHERE watched_by_room = ?")
+      .prepare(
+        "UPDATE watchlist_items SET watched_at = NULL, watched_by_room = NULL, watched_by_account = NULL WHERE watched_by_room = ?",
+      )
       .run(code);
   }
 
@@ -146,7 +160,9 @@ export class WatchlistRepository {
       this.db
         .prepare(
           `WITH ${AUDIENCE}
-           SELECT i.id, i.title, i.added_by, i.added_at, i.watched_at, i.circle_id FROM watchlist_items i
+           SELECT i.id, i.title, i.added_by, i.added_at, i.watched_at, i.watched_by_room, i.circle_id,
+             marker.id AS marker_id, marker.name AS marker_name, marker.color AS marker_color
+           FROM watchlist_items i LEFT JOIN accounts marker ON marker.id = i.watched_by_account
            WHERE i.id IN (SELECT item_id FROM audience WHERE account_id = ?)
            ORDER BY i.added_at DESC`,
         )
@@ -163,7 +179,7 @@ export class WatchlistRepository {
         // The author always sees their item; the fallback only guards a hand-edited database.
         addedBy: author ? toParticipant(author) : { accountId: row.added_by, name: "?", color: "peach" },
         addedAt: row.added_at,
-        ...(row.watched_at === null ? {} : { watchedAt: row.watched_at }),
+        ...watchedFields(row),
         // The author first, then the others by name.
         sharedWith: [...audience]
           .sort((a, b) => Number(b.account_id === row.added_by) - Number(a.account_id === row.added_by))
@@ -191,4 +207,13 @@ export class WatchlistRepository {
     for (const row of parseRows(PersonRow, rows)) byItem.set(row.item_id, [...(byItem.get(row.item_id) ?? []), row]);
     return byItem;
   }
+}
+
+/** When it was watched, and how: in a séance, or marked by hand by someone. */
+function watchedFields(row: ItemRow): Pick<WatchlistItem, "watchedAt" | "watchedInSeance" | "watchedBy"> {
+  if (row.watched_at === null) return {};
+  if (row.watched_by_room !== null) return { watchedAt: row.watched_at, watchedInSeance: true };
+  const { marker_id: accountId, marker_name: name, marker_color: color } = row;
+  if (accountId === null || name === null || color === null) return { watchedAt: row.watched_at };
+  return { watchedAt: row.watched_at, watchedBy: { accountId, name, color } };
 }
