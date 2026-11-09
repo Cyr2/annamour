@@ -12,6 +12,7 @@ import { LinkButton } from "../../ui/LinkButton.tsx";
 import { Progress } from "../../ui/Progress.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import { SeanceOptions } from "../sessions/SeanceOptions.tsx";
+import { SeancePoster } from "../sessions/SeancePoster.tsx";
 import {
   companionsLabel,
   isFinished,
@@ -96,7 +97,11 @@ export function SessionRow({ session, me, now, onRemove, primary = false }: Sess
           tv && "sm:gap-8 sm:p-6",
         )}
       >
-        <SessionDetails session={session} me={me} now={now} />
+        {/* The poster tells the séance at a glance; a TV's rows stay text, read from the sofa. */}
+        <div className="flex min-w-0 gap-3.5">
+          {tv ? null : <SeancePoster session={session} className="w-16 shrink-0 self-start" />}
+          <SessionDetails session={session} me={me} now={now} />
+        </div>
         <div
           // A TV's focus ring and lift reach out around a button: keep them off the next one.
           className={cx("flex items-center justify-self-end", tv ? "gap-6" : "gap-2")}

@@ -1,7 +1,7 @@
 import type { SessionSummary } from "@annamour/protocol";
 import type { ReactNode } from "react";
 import { cx } from "../../ui/cx.ts";
-import { progressOf } from "../sessions/session-rules.ts";
+import { progressOf } from "./session-rules.ts";
 
 /**
  * A séance as a portrait poster with how far it went along the bottom: the

@@ -18,6 +18,11 @@ test("les séances se rangent par cercle : Ce soir, Notre liste et Nous", async 
   await darius.goto("/nous");
   await expect(darius.getByText("Annou et toi")).toBeVisible();
 
+  // Every séance has its place: « Toutes mes séances » lists it, under way.
+  await darius.getByRole("link", { name: /Toutes mes séances/ }).click();
+  await expect(darius.getByRole("heading", { name: /En cours/ })).toBeVisible();
+  await expect(darius.getByText("Premier film")).toBeVisible();
+
   // The former addresses lead to their counterparts.
   await darius.goto("/profil");
   await expect(darius).toHaveURL(/\/nous$/);

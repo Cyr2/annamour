@@ -15,6 +15,7 @@ import {
   OurListScreen,
   ProfileScreen,
   ReportScreen,
+  SeancesScreen,
   SessionScreen,
   TvLinkScreen,
   TvPairingScreen,
@@ -56,6 +57,7 @@ export function App() {
           <Route path="/">{() => gated(tv ? <HomeScreen /> : <TonightScreen />)}</Route>
           <Route path="/liste">{() => gated(<OurListScreen />)}</Route>
           <Route path="/nous">{() => gated(<UsScreen />)}</Route>
+          <Route path="/seances">{() => gated(<SeancesScreen />)}</Route>
           <Route path="/a-regarder">
             <Redirect to="/liste" replace />
           </Route>

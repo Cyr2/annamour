@@ -12,11 +12,11 @@ import type { TonightPick } from "../circles/circle-rules.ts";
 import { describeTitle } from "../home/create/CatalogResults.tsx";
 import { ResumeSeanceAction } from "../sessions/ResumeSeanceAction.tsx";
 import { SeanceOptions } from "../sessions/SeanceOptions.tsx";
+import { SeancePoster } from "../sessions/SeancePoster.tsx";
 import { resumeLine, sessionTitle } from "../sessions/session-rules.ts";
 import { useSeanceOfTitle } from "../sessions/useSeanceOfTitle.ts";
 import { useLaunchTitle } from "../watchlist/useLaunchTitle.ts";
 import { wantersLine } from "../watchlist/watchlist-rules.ts";
-import { SeancePoster } from "./SeancePoster.tsx";
 
 interface TonightCardProps {
   pick: TonightPick;

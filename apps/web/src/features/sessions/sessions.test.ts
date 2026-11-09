@@ -222,28 +222,3 @@ describe("a title and its séances", () => {
     expect(onePerTitle(sessions).map((s) => s.code)).toEqual(["B2", "LINK1", "LINK2"]);
   });
 });
-
-describe("a title and its séances", () => {
-  const dune = { id: 11, type: "movie" } as const;
-
-  it("finds the séance still under way for a title, the latest one", () => {
-    const sessions = [
-      session("OLD", { catalog: dune, lastUsedAt: 5 }),
-      session("NEW", { catalog: dune, lastUsedAt: 9 }),
-      session("DONE", { catalog: dune, lastUsedAt: 12, position: 7826 }),
-      session("OTHER", { catalog: { id: 12, type: "movie" }, lastUsedAt: 20 }),
-    ];
-    expect(seanceOfTitle(sessions, dune)?.code).toBe("NEW");
-    expect(seanceOfTitle(sessions, { id: 11, type: "tv" })).toBeNull();
-  });
-
-  it("shows each title once, by its most recent séance, and keeps séances of a pasted link", () => {
-    const sessions = [
-      session("B2", { catalog: dune, lastUsedAt: 9 }),
-      session("LINK1", { lastUsedAt: 8 }),
-      session("B1", { catalog: dune, lastUsedAt: 5 }),
-      session("LINK2", { lastUsedAt: 4 }),
-    ];
-    expect(onePerTitle(sessions).map((s) => s.code)).toEqual(["B2", "LINK1", "LINK2"]);
-  });
-});
