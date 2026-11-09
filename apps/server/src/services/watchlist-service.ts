@@ -115,9 +115,12 @@ export class WatchlistService {
     for (const itemId of items) watchlist.setWatched(itemId, this.now(), code);
   }
 
+  /** « C'est vu » or « Pas encore vu »: for everyone who sees the title; the list remembers who said it. */
   setWatched(accountId: string, itemId: string, watched: boolean): void {
     this.requireMember(accountId, itemId);
-    this.repositories.watchlist.setWatched(itemId, watched ? this.now() : null);
+    const { watchlist } = this.repositories;
+    if (watched) watchlist.markWatchedBy(itemId, this.now(), accountId);
+    else watchlist.setWatched(itemId, null);
   }
 
   /** « Retirer de la liste »: gone for everyone it was shared with. */

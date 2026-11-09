@@ -50,6 +50,64 @@ export function watchedLine(item: WatchlistItem, me: string, now: number): strin
   return `Vu${when}${others.length ? ` avec ${joinNames(others)}` : ""}`;
 }
 
+/** « mardi », « aujourd'hui », « il y a 3 semaines ». */
+function whenWatched(watchedAt: number, now: number): string {
+  const day = relativeDay(watchedAt, now).toLocaleLowerCase("fr");
+  return /^\d/.test(day) ? `il y a ${day}` : day;
+}
+
+/** How a title became « vu »: « Vu en séance, mardi », « Marqué vu par Léo, hier », « Marqué vu, mardi ». */
+export function watchedHowLine(item: WatchlistItem, me: string, now: number): string {
+  if (item.watchedAt === undefined) return "";
+  const when = whenWatched(item.watchedAt, now);
+  if (item.watchedInSeance) return `Vu en séance, ${when}`;
+  if (!item.watchedBy) return `Marqué vu, ${when}`;
+  const who = item.watchedBy.accountId === me ? "toi" : item.watchedBy.name;
+  return `Marqué vu par ${who}, ${when}`;
+}
+
+/** Names them up to this many others; beyond, « tout le cercle » or « tout le monde » reads better. */
+const NAMED_AUDIENCE_MAX = 3;
+
+/**
+ * For whom « C'est vu » and « Retirer » count: everyone who sees the title.
+ * « Rien que pour toi », « Pour Léo et toi », « Pour tout le cercle », « Pour tout le monde ».
+ */
+export function actionAudience(item: WatchlistItem, me: string): string {
+  const others = othersOf(item, me);
+  if (others.length === 0) return "Rien que pour toi";
+  if (others.length <= NAMED_AUDIENCE_MAX) return `Pour ${joinNames([...others, "toi"])}`;
+  return item.circleId === undefined ? "Pour tout le monde" : "Pour tout le cercle";
+}
+
+/** Removing a title others see takes it from them too: that asks first. */
+export function removalNeedsConfirmation(item: WatchlistItem, me: string): boolean {
+  return othersOf(item, me).length > 0;
+}
+
+/** What the confirmation says: who loses it, and what goes with it. */
+export function removalWarning(item: WatchlistItem, me: string): string {
+  return `« ${item.title.title} » disparaîtra aussi de la liste de ${joinNames(othersOf(item, me))}, avec les envies de chacun.`;
+}
+
+/** « Rangé dans « Déjà vus » pour Léo et toi », « Remis dans « À voir » »: for whom, when others see it. */
+export function watchedToast(item: WatchlistItem, me: string, watched: boolean): string {
+  const done = watched ? "Rangé dans « Déjà vus »" : "Remis dans « À voir »";
+  return withAudience(done, item, me);
+}
+
+/** « « Interstellar » retiré de la liste pour tout le monde ». */
+export function removedToast(item: WatchlistItem, me: string): string {
+  return withAudience(`« ${item.title.title} » retiré de la liste`, item, me);
+}
+
+function withAudience(done: string, item: WatchlistItem, me: string): string {
+  if (!removalNeedsConfirmation(item, me)) return done;
+  const audience = actionAudience(item, me);
+  // Only its first letter: the names in it keep their capitals.
+  return `${done} ${audience.charAt(0).toLocaleLowerCase("fr")}${audience.slice(1)}`;
+}
+
 /** The others (never me) who want an item, by name. */
 function othersWanting(item: WatchlistItem, me: string): string[] {
   return item.sharedWith

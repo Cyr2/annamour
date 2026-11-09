@@ -20,8 +20,12 @@ export const WatchlistItem = z.object({
   addedAt: z.number(),
   /** Set once watched: the item then sits in « Vus ». */
   watchedAt: z.optional(z.number()),
-  /** The people of the séance that watched it to its end; absent when someone marked it « vu » by hand. */
+  /** Watched: a séance reached the end of it (otherwise someone marked it by hand). */
+  watchedInSeance: z.optional(z.boolean()),
+  /** Watched in a séance: that séance's people (absent when someone marked it « vu » by hand). */
   watchedWith: z.optional(z.array(Participant)),
+  /** Watched by hand: who said « C'est vu » (absent for marks older than this field). */
+  watchedBy: z.optional(Participant),
   /** Everyone the item is shared with, its author included. */
   sharedWith: z.array(Participant),
   /** Account ids of those who said « J'ai envie ». */

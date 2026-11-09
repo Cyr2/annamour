@@ -9,6 +9,7 @@ import {
 } from "@annamour/protocol";
 import { describe, expect, it } from "vitest";
 import { migrate } from "../src/storage/database.ts";
+import { WatchlistRepository } from "../src/storage/watchlist-repository.ts";
 import { jsonRequest, media, sessionCookieOf, testApp } from "./helpers.ts";
 
 const film: CatalogTitle = { id: 157336, type: "movie", title: "Interstellar", year: 2014, runtime: 169 };
@@ -169,6 +170,57 @@ describe("the shared watchlist", () => {
 
     expect((await remove(lea.cookie, id)).status).toBe(204);
     expect(await list(darius.cookie)).toEqual([]);
+  });
+
+  it("tells everyone who marked a title « vu » by hand, and forgets it once it is back to watch", async () => {
+    const { account, watchTogether, add, list, put } = setup();
+    const darius = await account("Darius", "peach");
+    const lea = await account("Léa", "lilac");
+    watchTogether(darius.id, lea.id);
+    await add(darius.cookie, { title: film, shareWith: [lea.id], want: false });
+    const id = (await list(lea.cookie))[0]?.id ?? "";
+
+    await put(lea.cookie, WATCHLIST_API.watched, id, { watched: true });
+    const marked = (await list(darius.cookie))[0];
+    expect(marked?.watchedBy).toEqual({ accountId: lea.id, name: "Léa", color: "lilac" });
+    expect(marked?.watchedInSeance).toBeUndefined();
+
+    await put(darius.cookie, WATCHLIST_API.watched, id, { watched: false });
+    expect((await list(lea.cookie))[0]?.watchedBy).toBeUndefined();
+  });
+
+  it("says how a title became « vu »: in a séance, by someone's hand, or unknown for older marks", () => {
+    const db = new DatabaseSync(":memory:");
+    db.exec("PRAGMA foreign_keys = ON");
+    migrate(db);
+    db.exec(
+      "INSERT INTO accounts (id, key_hash, name, color, created_at) VALUES ('d', 'h1', 'Darius', 'peach', 0), ('l', 'h2', 'Léa', 'lilac', 0)",
+    );
+    const watchlist = new WatchlistRepository(db);
+    for (const id of ["seance", "hand", "older"])
+      watchlist.insert({
+        id,
+        catalogKey: `movie:${id}`,
+        title: film,
+        addedBy: "d",
+        addedAt: 0,
+        memberIds: ["d", "l"],
+        everyone: false,
+        wantedBy: [],
+      });
+    watchlist.markWatchedBy("seance", 10, "l");
+    watchlist.setWatched("seance", 20, "ROOM");
+    watchlist.markWatchedBy("hand", 30, "l");
+    watchlist.setWatched("older", 40);
+
+    const how = Object.fromEntries(
+      watchlist.listFor("d").map((item) => [item.id, [item.watchedAt, item.watchedInSeance, item.watchedBy?.name]]),
+    );
+    expect(how).toEqual({
+      seance: [20, true, undefined],
+      hand: [30, undefined, "Léa"],
+      older: [40, undefined, undefined],
+    });
   });
 
   it("answers 404 to someone the title is not shared with", async () => {
