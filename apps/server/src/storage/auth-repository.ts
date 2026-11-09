@@ -48,6 +48,14 @@ export class LinkTokenRepository {
       .run(tokenHash, accountId, expiresAt);
   }
 
+  /** The account a token still opens, leaving the token usable. */
+  find(tokenHash: string, now: number): string | undefined {
+    const row = this.db
+      .prepare("SELECT account_id FROM link_tokens WHERE token_hash = ? AND expires_at > ?")
+      .get(tokenHash, now);
+    return parseOptionalRow(AccountIdRow, row)?.account_id;
+  }
+
   /** Deletes the token while reading it, so it can never be used twice. */
   consume(tokenHash: string, now: number): string | undefined {
     const row = this.db

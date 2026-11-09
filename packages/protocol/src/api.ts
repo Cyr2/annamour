@@ -170,6 +170,8 @@ export const API = {
   createAccount: "/api/account",
   loginWithKey: "/api/account/login",
   linkWithToken: "/api/account/link",
+  /** POST: whose account a QR code opens, without using the code. */
+  linkTokenAccount: "/api/account/link/account",
   me: "/api/me",
   linkToken: "/api/me/link-token",
   checkKey: "/api/me/key",

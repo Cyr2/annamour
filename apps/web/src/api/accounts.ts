@@ -20,6 +20,8 @@ import { ApiRequestError, request } from "./http.ts";
 
 const UNAVAILABLE = "Les comptes ne sont pas encore disponibles sur ce serveur.";
 const Ignored = z.unknown();
+const LINK_INCOMPLETE = "Ce lien de connexion est incomplet. Scanne à nouveau le QR code.";
+const LINK_USED = "Ce QR code a expiré ou a déjà servi. Affiches-en un nouveau sur ton autre appareil.";
 
 export async function createAccount(name: string, color: BubbleColor): Promise<CreateAccountResponse> {
   return request(CreateAccountResponse, API.createAccount, {
@@ -44,11 +46,18 @@ export async function loginWithKey(key: AccountKey): Promise<Account> {
 export async function linkWithToken(token: string): Promise<Account> {
   const { account } = await request(AccountResponse, API.linkWithToken, {
     body: { token },
+    messages: { 400: LINK_INCOMPLETE, 401: LINK_USED, 404: LINK_USED, 410: LINK_USED },
+  });
+  return account;
+}
+
+/** Whose account a QR code opens; the code stays usable. */
+export async function linkTokenAccount(token: string): Promise<Account> {
+  const { account } = await request(AccountResponse, API.linkTokenAccount, {
+    body: { token },
     messages: {
-      400: "Ce lien de connexion est incomplet. Scanne à nouveau le QR code.",
-      401: "Ce QR code a expiré ou a déjà servi. Affiches-en un nouveau sur ton autre appareil.",
-      404: "Ce QR code a expiré ou a déjà servi. Affiches-en un nouveau sur ton autre appareil.",
-      410: "Ce QR code a expiré ou a déjà servi. Affiches-en un nouveau sur ton autre appareil.",
+      400: LINK_INCOMPLETE,
+      401: LINK_USED,
     },
   });
   return account;
