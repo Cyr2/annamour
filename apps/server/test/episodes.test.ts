@@ -115,6 +115,50 @@ describe("a séance with episodes", () => {
   });
 });
 
+describe("what someone does to the séance's episodes, told to everyone", () => {
+  /** The last room message, with who sent it and what they did. */
+  const lastRoomMessage = (inbox: ServerMessage[]) => inbox.findLast((m) => m.type === "room");
+
+  it("names who started the next episode", () => {
+    const { room, b, idA } = setup();
+    room.handle(idA, { type: "playEpisode", from: 0, to: 1 }, 1000);
+    expect(lastRoomMessage(b.inbox)).toMatchObject({ by: idA, change: { kind: "episode" } });
+  });
+
+  it("names who said « Pas ce soir »", () => {
+    const { room, a, idA, idB } = setup();
+    room.handle(idA, { type: "ended", episode: 0 }, 1000);
+    room.handle(idB, { type: "declineNext" }, 2000);
+    expect(lastRoomMessage(a.inbox)).toMatchObject({ by: idB, change: { kind: "declined" } });
+  });
+
+  it("names who took an episode out of the queue, and which one, since it is gone from the room", () => {
+    const { room, a, idB } = setup();
+    room.handle(idB, { type: "removeEpisode", episode: 1 }, 1000);
+    expect(lastRoomMessage(a.inbox)).toMatchObject({ by: idB, change: { kind: "removed", episode: 1, label: "É2" } });
+  });
+
+  it("names who queued an episode, found by the device that asked", () => {
+    const { store, room, a, idB } = setup();
+    store.addEpisode(room, "Alien", episodeTwo, undefined, "client-bbbb");
+    expect(lastRoomMessage(a.inbox)).toMatchObject({ by: idB, change: { kind: "added", episode: 2 } });
+  });
+
+  it("names nobody for an episode queued by a device that is not in the séance", () => {
+    const { store, room, a } = setup();
+    store.addEpisode(room, "Alien", episodeTwo, undefined, "client-zzzz");
+    const message = lastRoomMessage(a.inbox);
+    expect(message).toMatchObject({ change: { kind: "added", episode: 2 } });
+    expect(message).not.toHaveProperty("by");
+  });
+
+  it("names nobody when the room moves on by itself, at the end of an episode", () => {
+    const { room, a, idA } = setup();
+    room.handle(idA, { type: "ended", episode: 0 }, 1000);
+    expect(lastRoomMessage(a.inbox)).not.toHaveProperty("change");
+  });
+});
+
 describe("séances saved before episodes existed", () => {
   it("become a séance whose only episode is the video they had", () => {
     const db = new DatabaseSync(":memory:");

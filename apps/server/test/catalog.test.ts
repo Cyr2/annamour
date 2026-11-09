@@ -276,6 +276,14 @@ describe("adding a catalog title to a séance's queue", () => {
     expect(await snapshot()).toMatchObject({ episodes: [{}, { label: "Dune" }] });
   });
 
+  it("hears which device queues it, without keeping that device with the title", async () => {
+    const { add, snapshot } = await seriesSession({ [DUNE]: SOURCES });
+    const dune = { id: 7, type: "movie", title: "Dune" };
+    expect((await add({ ...dune, clientId: "client-leo-1" })).status).toBe(201);
+    const { episodes } = (await snapshot()) as { episodes: Array<{ catalog?: unknown }> };
+    expect(episodes[1]?.catalog).toEqual(dune);
+  });
+
   it("asks nothing of Naka for a séance that does not exist", async () => {
     const { add, bridge } = await seriesSession({ [DUNE]: SOURCES });
     const before = bridge.calls.length;

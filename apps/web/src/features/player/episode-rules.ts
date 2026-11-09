@@ -1,4 +1,4 @@
-import { type EpisodeInfo, nextEpisodeLabel, type RoomSnapshot } from "@annamour/protocol";
+import { type EpisodeInfo, nextEpisodeLabel, type RoomSnapshot, type WatchlistItem } from "@annamour/protocol";
 
 /* What the player shows around episodes: the end screen, the countdown, the « Épisodes » list. */
 
@@ -34,6 +34,24 @@ export function episodeName(episodes: readonly EpisodeInfo[], index: number): st
 /** The label offered for the episode after the last one queued. */
 export function suggestedLabel(episodes: readonly EpisodeInfo[]): string {
   return nextEpisodeLabel(episodes.at(-1)?.label, episodes.length);
+}
+
+type EpisodesOf = Pick<RoomSnapshot, "episodes" | "current">;
+
+/** The video on screen is an episode of a series: from the catalog, or one of several pasted videos. */
+export function onSeries({ episodes, current }: EpisodesOf): boolean {
+  const catalog = episodes[current]?.catalog;
+  return catalog ? catalog.type === "tv" : episodes.length > 1;
+}
+
+/**
+ * The series on screen, as it stands in Notre liste and not yet watched: at
+ * the end of the last episode queued, the end screen offers to mark it watched.
+ */
+export function seriesToMarkWatched(items: readonly WatchlistItem[], room: EpisodesOf): WatchlistItem | undefined {
+  const catalog = room.episodes[room.current]?.catalog;
+  if (catalog?.type !== "tv" || room.current + 1 < room.episodes.length) return undefined;
+  return items.find((item) => item.title.type === "tv" && item.title.id === catalog.id && !item.watchedAt);
 }
 
 /** A séance of one video is a film: its end screen speaks of a film, not of an episode. */

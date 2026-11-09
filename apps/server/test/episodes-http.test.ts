@@ -1,4 +1,4 @@
-import { MAX_EPISODES, type RoomSnapshot } from "@annamour/protocol";
+import { MAX_EPISODES, type RoomSnapshot, type ServerMessage } from "@annamour/protocol";
 import { describe, expect, it } from "vitest";
 import { FetchError, type TextFetcher } from "../src/safe-fetch.ts";
 import { jsonRequest, media, testApp } from "./helpers.ts";
@@ -35,6 +35,16 @@ describe("queuing the next episode", () => {
     await addEpisode({ url: EPISODE });
     await addEpisode({ url: EPISODE });
     expect(room.snapshot().episodes.map((e) => e.label)).toEqual([undefined, "Épisode 2", "Épisode 3"]);
+  });
+
+  it("tells the others in the séance who queued it", async () => {
+    const { room, addEpisode } = setup();
+    const inbox: ServerMessage[] = [];
+    const connection = { send: (message: ServerMessage) => inbox.push(message), close: () => {} };
+    const leo = room.join("client-leo-1", "Léo", "mint", connection, 1000) ?? "";
+    room.join("client-ines-1", "Inès", "sky", { send: () => {}, close: () => {} }, 1000);
+    await addEpisode({ url: EPISODE, label: "S2 · É5", clientId: "client-leo-1" });
+    expect(inbox.findLast((m) => m.type === "room")).toMatchObject({ by: leo, change: { kind: "added", episode: 1 } });
   });
 
   it("says plainly when the link or the séance is wrong", async () => {

@@ -213,7 +213,7 @@ describe("waiting for someone else", () => {
     members: [],
     playback: { status: "paused", position: 10, at: 0 },
     lastEvent: { action: "wait", by: "leo", seq: 1 },
-    episodeEvent: null,
+    roomEvent: null,
     error: null,
     readying: null,
     ...overrides,
