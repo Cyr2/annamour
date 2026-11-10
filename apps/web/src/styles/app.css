@@ -473,6 +473,18 @@
 .am-sheet {
   background-color: var(--am-sheet);
   box-shadow: var(--am-shadow-sheet);
+  /*
+   * Kept on its own layer for as long as it is open. Otherwise, once its slide
+   * ends, Chrome on Android folds it back into the page and, over the sideways
+   * shelves of « Ce soir », skipped painting its background for two frames: the
+   * page flashed through the sheet.
+   */
+  will-change: transform;
+}
+
+/* Its scrim, likewise, stays on one layer from its fade in to its fade out. */
+.am-sheet-scrim {
+  will-change: opacity;
 }
 
 @media (pointer: fine) {
@@ -665,6 +677,13 @@
   max-width: none;
   border-radius: var(--am-radius-control);
   font-size: var(--am-text-md);
+}
+
+/* A search field's clear button: the touch minimum, its cross kept by the field's edge. */
+.am-input .lg-input-clear {
+  width: var(--am-touch-target);
+  height: var(--am-touch-target);
+  margin-right: calc(var(--am-space-3) * -1);
 }
 
 /* A bottom sheet never scrolls sideways: a button longer than the phone shrinks, its label cut, instead of pushing it. */

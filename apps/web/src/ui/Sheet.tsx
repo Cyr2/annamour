@@ -73,7 +73,7 @@ function SheetPanel({ onClose, title, children }: Omit<SheetProps, "open">) {
     >
       <m.div
         aria-hidden
-        className="absolute inset-0 bg-scrim"
+        className="am-sheet-scrim absolute inset-0 bg-scrim"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0, transition: exit.quick }}
