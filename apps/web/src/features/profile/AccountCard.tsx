@@ -1,4 +1,4 @@
-import { LogOut, ScanFace, Smartphone, Tv } from "lucide-react";
+import { LogOut, Smartphone, Tv } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { errorMessage } from "../../api/http.ts";
@@ -6,18 +6,22 @@ import { passkeysSupported } from "../../api/passkeys.ts";
 import { Surface } from "../../ui/Surface.tsx";
 import { toast } from "../../ui/toast.ts";
 import { logout, registerPasskey, useAccount } from "../account/account.ts";
+import { PasskeyIcon } from "../account/PasskeyIcon.tsx";
+import { thisDevicePasskey } from "../account/passkey-wording.ts";
 import { useTv } from "../tv/tv-context.ts";
 import { AccountKeyBox } from "./AccountKeyBox.tsx";
 import { AccountRow } from "./AccountRow.tsx";
 import { AddDeviceSheet } from "./AddDeviceSheet.tsx";
 import { LinkTvSheet } from "./LinkTvSheet.tsx";
 import { NewKeyRow } from "./NewKeyRow.tsx";
+import { SignOutSheet } from "./SignOutSheet.tsx";
 
-/** « Ton compte »: the key, another device, Face ID, and leaving. */
+/** « Ton compte »: the key, another device, a passkey, and leaving (which asks first). */
 export function AccountCard() {
   const keyWords = useAccount((s) => s.key);
   const [addingDevice, setAddingDevice] = useState(false);
   const [linkingTv, setLinkingTv] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const tv = useTv();
   const [, navigate] = useLocation();
 
@@ -54,7 +58,7 @@ export function AccountCard() {
             onClick={() => setLinkingTv(true)}
           />
         )}
-        {/* Face ID belongs to a phone or a computer, not to a TV. */}
+        {/* A passkey belongs to a phone or a computer, not to a TV. */}
         {passkeysSupported() && !tv ? <PasskeyRow /> : null}
         {/* Leaving sits apart from the rest, so it is never tapped by mistake. */}
         <hr className="mx-2 my-1 border-line" />
@@ -63,9 +67,18 @@ export function AccountCard() {
           title="Se déconnecter"
           detail="Ta clé te reconnecte quand tu veux"
           tone="destructive"
-          onClick={() => void signOut()}
+          onClick={() => setLeaving(true)}
         />
       </div>
+      <SignOutSheet
+        open={leaving}
+        keyWords={keyWords}
+        onClose={() => setLeaving(false)}
+        onConfirm={() => {
+          setLeaving(false);
+          void signOut();
+        }}
+      />
       <AddDeviceSheet open={addingDevice} onClose={() => setAddingDevice(false)} />
       {tv ? null : <LinkTvSheet open={linkingTv} onClose={() => setLinkingTv(false)} />}
     </Surface>
@@ -75,12 +88,13 @@ export function AccountCard() {
 function PasskeyRow() {
   const hasPasskey = useAccount((s) => s.account?.hasPasskey ?? false);
   const [busy, setBusy] = useState(false);
+  const [wording] = useState(thisDevicePasskey);
 
   const enable = async () => {
     setBusy(true);
     try {
       await registerPasskey();
-      toast({ message: "Face ID activé" });
+      toast({ message: wording.enabled });
     } catch (failure) {
       toast({ message: errorMessage(failure) });
     } finally {
@@ -90,8 +104,8 @@ function PasskeyRow() {
 
   return (
     <AccountRow
-      icon={<ScanFace />}
-      title="Activer Face ID"
+      icon={<PasskeyIcon kind={wording.icon} />}
+      title={wording.enable}
       detail={busy ? "Suis les instructions de ton appareil…" : "Se connecter sans taper la clé"}
       onClick={hasPasskey ? undefined : () => void enable()}
       disabled={hasPasskey || busy}
