@@ -135,6 +135,8 @@ export class PlayerSync {
   private expectPlayUntil = 0;
   private expectPauseUntil = 0;
   private expectSeekUntil = 0;
+  /** A start we asked for has not settled yet: a pause meanwhile is the browser's answer, not a person's. */
+  private playPending = false;
   private seekIssuedAt = -Infinity;
   /** Seconds a seek takes to land, learned; we seek that far ahead while playing. */
   private seekLead = 0.15;
@@ -530,6 +532,7 @@ export class PlayerSync {
     const video = this.video;
     if (!video.paused) return;
     this.expectPlayUntil = now() + EXPECT_PLAY_PAUSE_MS;
+    this.playPending = true;
     const attempt = video.play();
     attempt
       ?.then(() => {
@@ -539,7 +542,11 @@ export class PlayerSync {
         this.expectPlayUntil = 0;
         if (error instanceof DOMException && error.name === "NotAllowedError") this.update({ blocked: true });
         // AbortError: interrupted by a pause or a new source; the loop retries.
+      })
+      .finally(() => {
+        this.playPending = false;
       });
+    if (!attempt) this.playPending = false;
   }
 
   private doPause(): void {
@@ -583,12 +590,27 @@ export class PlayerSync {
       return;
     }
     if (!this.armed) return;
-    const video = this.video;
-    // Not a person's decision: reaching the end, or the OS pausing a backgrounded page.
-    if (video.ended || document.visibilityState === "hidden") return;
+    // At most a wait for data (the stall report holds the room), never a pause in someone's name.
+    if (this.pausedByBrowser()) return;
     if (this.effective()?.status !== "playing") return;
     if (!this.pause()) this.tick();
   };
+
+  /**
+   * Not a person's decision: reaching the end, the OS pausing a backgrounded
+   * page, the browser refusing a start it was asked for without a tap (Safari
+   * starts, then pauses), or a video that ran out of data.
+   */
+  private pausedByBrowser(): boolean {
+    const video = this.video;
+    return (
+      video.ended ||
+      document.visibilityState === "hidden" ||
+      this.playPending ||
+      this.state.blocked ||
+      video.readyState < HAVE_FUTURE_DATA
+    );
+  }
 
   private readonly onSeeked = (): void => {
     if (now() < this.expectSeekUntil) {

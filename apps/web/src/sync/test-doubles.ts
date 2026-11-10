@@ -23,6 +23,8 @@ export class FakeVideo extends EventTarget {
   bufferedRanges: Array<[number, number]> = [[0, 7826]];
   /** Set to make the next play() fail like an autoplay refusal. */
   refusePlay = false;
+  /** Set to make play() start, then pause by itself and fail, as Safari does when it refuses autoplay. */
+  refusePlayAfterStarting = false;
   readonly calls: string[] = [];
   private attributes = new Map<string, string>();
 
@@ -52,10 +54,25 @@ export class FakeVideo extends EventTarget {
 
   play(): Promise<void> {
     this.calls.push("play");
+    if (this.refusePlayAfterStarting) return this.startThenRefuse();
     if (this.refusePlay) return Promise.reject(new DOMException("autoplay", "NotAllowedError"));
     this.paused = false;
     this.dispatchEvent(new Event("play"));
     return Promise.resolve();
+  }
+
+  private startThenRefuse(): Promise<void> {
+    this.paused = false;
+    this.dispatchEvent(new Event("play"));
+    this.paused = true;
+    this.dispatchEvent(new Event("pause"));
+    return Promise.reject(new DOMException("autoplay", "NotAllowedError"));
+  }
+
+  /** The browser pausing the video by itself (no call to pause() from the page). */
+  pauseByItself(): void {
+    this.paused = true;
+    this.dispatchEvent(new Event("pause"));
   }
 
   pause(): void {

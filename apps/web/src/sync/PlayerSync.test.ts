@@ -206,13 +206,39 @@ describe("PlayerSync", () => {
     expect(client.of("play")).toEqual([]);
   });
 
-  it("tells the room when the person pauses with the native controls", () => {
+  it("tells the room when the person pauses with the native controls", async () => {
     start();
     video.fire("canplay");
     sync.setPlayback(playing(10));
+    await vi.advanceTimersByTimeAsync(0); // the film has started
     video.pause();
     expect(client.of("pause")).toHaveLength(1);
     expect(client.of("pause")[0]?.position).toBeCloseTo(video.currentTime);
+  });
+
+  it("does not pause the room when the browser refuses to start the film: it waits for a tap", async () => {
+    start();
+    video.fire("canplay");
+    sync.setPlayback(paused(10));
+    video.refusePlayAfterStarting = true;
+    // « Lancer le film », at the end of its countdown: no tap left to start the video with.
+    sync.play();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(client.of("pause")).toEqual([]);
+    expect(lastState()?.blocked).toBe(true);
+  });
+
+  it("waits for the video instead of pausing the room when the browser pauses it for lack of data", async () => {
+    start();
+    video.fire("canplay");
+    sync.setPlayback(playing(10));
+    video.readyState = 2;
+    video.pauseByItself();
+    expect(client.of("pause")).toEqual([]);
+    // The film goes on by itself, and the room waits for this device as for any stall.
+    await vi.advanceTimersByTimeAsync(3100);
+    expect(video.paused).toBe(false);
+    expect(client.of("buffering")).toEqual([{ type: "buffering", buffering: true, position: video.currentTime }]);
   });
 
   it("nudges the rate for a small drift and seeks for a large one", () => {
