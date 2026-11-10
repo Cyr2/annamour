@@ -473,6 +473,18 @@
 .am-sheet {
   background-color: var(--am-sheet);
   box-shadow: var(--am-shadow-sheet);
+  /*
+   * Kept on its own layer for as long as it is open. Otherwise, once its slide
+   * ends, Chrome on Android folds it back into the page and, over the sideways
+   * shelves of « Ce soir », skipped painting its background for two frames: the
+   * page flashed through the sheet.
+   */
+  will-change: transform;
+}
+
+/* Its scrim, likewise, stays on one layer from its fade in to its fade out. */
+.am-sheet-scrim {
+  will-change: opacity;
 }
 
 @media (pointer: fine) {
