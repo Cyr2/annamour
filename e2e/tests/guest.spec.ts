@@ -7,8 +7,10 @@ test("rejoindre avec un prénom sans compte, puis voir la séance", async ({ bro
   await onboard(darius, "Darius");
   const roomUrl = await createSession(darius, "Séance sans compte");
 
-  // Léa opens the link without an account: two clear ways in, and no account made yet.
+  // Léa opens the link without an account: who waits and for what, two clear ways in, and no account made yet.
+  await expect(darius.getByRole("heading", { name: "En attente des autres…" })).toBeVisible();
   await lea.goto(roomUrl);
+  await expect(lea.getByText("Darius t'attend pour « Séance sans compte ».")).toBeVisible();
   await expect(lea).toHaveURL(new RegExp(`${roomUrl}$`));
   await expect(lea.getByRole("button", { name: /J'ai déjà un compte/ })).toBeVisible();
   await lea.getByRole("button", { name: /Entrer avec un prénom/ }).click();

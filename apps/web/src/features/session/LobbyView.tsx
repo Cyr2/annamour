@@ -1,4 +1,4 @@
-import { Play } from "lucide-react";
+import { Play, RotateCcw } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { formatClock, joinNames } from "../../lib/format.ts";
 import { useRoom } from "../../sync/room.ts";
@@ -16,6 +16,7 @@ import { useSessions } from "../sessions/sessions.ts";
 import { useLoadSessions } from "../sessions/useLoadSessions.ts";
 import { useTv } from "../tv/tv-context.ts";
 import { InviteLinkButton } from "./InviteLinkButton.tsx";
+import { type LobbyStart, lobbyStart } from "./lobby-rules.ts";
 import { PrepLine } from "./PrepLine.tsx";
 import { SalonPresence } from "./Presence.tsx";
 import { usePrep } from "./prep.ts";
@@ -26,13 +27,16 @@ function headline(otherNames: string[]): string {
   return `${joinNames(otherNames)} ${otherNames.length > 1 ? "sont là" : "est là"}`;
 }
 
-function statusLine(resumeAt: number | null, othersCount: number): string {
-  if (resumeAt) return `On reprend à ${formatClock(resumeAt)}, là où vous vous étiez arrêtés`;
+function statusLine(next: LobbyStart, othersCount: number): string {
+  if (next.kind === "resume") return `On reprend à ${formatClock(next.at)}, là où vous vous étiez arrêtés`;
+  if (next.kind === "rewatch") return "Séance terminée : on la revoit depuis le début";
   return othersCount ? "Vous êtes connectés" : "Envoie le code à qui tu veux, jusqu'à 8 personnes";
 }
 
+const START_VERB = { start: "Lancer", resume: "Reprendre", rewatch: "Revoir" } as const;
+
 /** The salon: the code and its QR to share, who is here, and the button that starts the film for everyone. */
-export function LobbyView({ code, onStart }: { code: string; onStart: () => void }) {
+export function LobbyView({ code, onStart }: { code: string; onStart: (fromStart: boolean) => void }) {
   const tv = useTv();
   const room = useRoom((s) => s.room);
   const members = useRoom((s) => s.members);
@@ -45,7 +49,7 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
   const prep = usePrep(code);
   const joinUrl = `${window.location.origin}/s/${code}`;
   const others = members.filter((m) => m.id !== you).map((m) => m.name);
-  const resumeAt = playback && playback.position > 1 ? playback.position : null;
+  const next = lobbyStart(room, playback);
   const what = room && onSeries(room) ? "l'épisode" : "le film";
 
   return (
@@ -72,13 +76,19 @@ export function LobbyView({ code, onStart }: { code: string; onStart: () => void
                 aria-hidden
                 className={`mr-2 inline-block size-2 rounded-full align-middle ${others.length ? "bg-success" : "bg-waiting"}`}
               />
-              {statusLine(resumeAt, others.length)}
+              {statusLine(next, others.length)}
             </p>
           </div>
           {/* The salon starts here on a TV: OK launches the film for everyone. */}
           <div data-tv-primary>
-            <Button variant="filled" size="large" icon={<Play />} onClick={onStart} disabled={!room}>
-              {`${resumeAt ? "Reprendre" : "Lancer"} ${what}`}
+            <Button
+              variant="filled"
+              size="large"
+              icon={next.kind === "rewatch" ? <RotateCcw /> : <Play />}
+              onClick={() => onStart(next.kind === "rewatch")}
+              disabled={!room}
+            >
+              {`${START_VERB[next.kind]} ${what}`}
             </Button>
           </div>
           <PrepLine status={prep} />

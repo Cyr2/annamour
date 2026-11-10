@@ -487,6 +487,17 @@
   will-change: opacity;
 }
 
+/*
+ * Without its blur, the sheet's last few percent of transparency let the
+ * page's words show through (« Se déconnecter », the logo, the tab bar):
+ * on a touch screen it is solid, as with reduced transparency.
+ */
+@media (pointer: coarse) {
+  :root {
+    --am-sheet: var(--am-surface-raised);
+  }
+}
+
 @media (pointer: fine) {
   .am-sheet {
     -webkit-backdrop-filter: blur(var(--am-frost-blur)) saturate(var(--am-frost-saturate));

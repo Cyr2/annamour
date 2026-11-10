@@ -1,11 +1,13 @@
 import { ChevronLeft, ChevronRight, KeyRound, UserRound } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
 import { type ReactNode, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useParams } from "wouter";
 import { exit, spring } from "../../lib/motion.ts";
 import { BrandBar } from "../../ui/BrandBar.tsx";
 import { IconButton } from "../../ui/IconButton.tsx";
+import { InviteLede, SeanceGone } from "./GuestInvite.tsx";
 import { GuestNameStep } from "./GuestNameStep.tsx";
+import { type Invite, useInvite } from "./invite.ts";
 
 /** The key login, then back to the séance this link opened. */
 export function keyLoginPath(next: string): string {
@@ -19,6 +21,8 @@ export function keyLoginPath(next: string): string {
 export function GuestWelcome() {
   const [step, setStep] = useState<"choose" | "name">("choose");
   const [location, navigate] = useLocation();
+  // The séance's link (/s/ABCD) says who waits, and for what; « Rejoindre » with a code has none yet.
+  const invite = useInvite(useParams<{ code?: string }>().code);
 
   return (
     <div className="safe-area mx-auto flex min-h-dvh max-w-[1240px] flex-col">
@@ -46,6 +50,7 @@ export function GuestWelcome() {
             >
               {step === "choose" ? (
                 <Choices
+                  invite={invite}
                   onAccount={() => navigate(keyLoginPath(location + window.location.hash))}
                   onGuest={() => setStep("name")}
                 />
@@ -60,11 +65,19 @@ export function GuestWelcome() {
   );
 }
 
-function Choices({ onAccount, onGuest }: { onAccount: () => void; onGuest: () => void }) {
+interface ChoicesProps {
+  invite: Invite;
+  onAccount: () => void;
+  onGuest: () => void;
+}
+
+function Choices({ invite, onAccount, onGuest }: ChoicesProps) {
+  if (invite.status === "gone") return <SeanceGone />;
+
   return (
     <div className="grid w-full justify-items-center gap-5">
       <h1 className="type-title">Une soirée ensemble</h1>
-      <p className="type-lede">On t'attend dans la séance. Comment veux-tu entrer ?</p>
+      <InviteLede invite={invite} />
       <div className="grid w-full gap-3">
         <Choice
           icon={<KeyRound />}

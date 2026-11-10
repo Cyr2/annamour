@@ -99,6 +99,32 @@ export function nextEpisodeLabel(previous: string | undefined, nextIndex: number
   return previous.slice(0, last.index) + next + previous.slice(last.index + last[0].length);
 }
 
+/** The credits roll: a video stopped in its last minute counts as watched. */
+export const CREDITS_SECONDS = 60;
+
+/** Where a séance stopped: in which of its videos (`index` of `count`), and where in that one. */
+export interface SeanceSpot {
+  position: number;
+  /** The current video's length; unknown for some links. */
+  duration: number | undefined;
+  index: number;
+  count: number;
+}
+
+/** The video on screen reached its credits. */
+export function atCredits(spot: SeanceSpot): boolean {
+  return spot.duration !== undefined && spot.position >= spot.duration - CREDITS_SECONDS;
+}
+
+/**
+ * Watched to the end: its last film or episode reached its credits. Between
+ * two, a séance is still under way. The salon and the séances' list both ask
+ * this, so one says « Revoir » where the other says « Terminée ».
+ */
+export function seanceFinished(spot: SeanceSpot): boolean {
+  return atCredits(spot) && spot.index >= spot.count - 1;
+}
+
 /** « The Bear · S2 · É5 »: the séance's name, then the episode's when it has one. */
 export function episodeTitle(title: string, label: string | undefined): string {
   return label ? `${title} · ${label}` : title;

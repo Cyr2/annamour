@@ -8,7 +8,7 @@ const COUNTDOWN_STEP_MS = 820;
 
 /**
  * The salon until the film starts, then the film. Pressing « Lancer » counts
- * 3-2-1 then starts it for everyone; when someone else starts it (or it was
+ * 3-2-1 then starts it for everyone (« Revoir » first rewinds it); when someone else starts it (or it was
  * already playing on arrival) this device goes straight to the film.
  */
 export function useSessionStage(controls: PlayerControls) {
@@ -31,5 +31,11 @@ export function useSessionStage(controls: PlayerControls) {
     return () => clearTimeout(timer);
   }, [countdown, controls]);
 
-  return { stage, countdown, start: () => setCountdown(COUNTDOWN_FROM) };
+  /** `fromStart` (« Revoir »): back to the beginning for everyone at once, then the same countdown. */
+  const start = (fromStart = false) => {
+    if (fromStart) controls.seek(0);
+    setCountdown(COUNTDOWN_FROM);
+  };
+
+  return { stage, countdown, start };
 }

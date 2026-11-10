@@ -1,10 +1,16 @@
-import { type BubbleColor, catalogEpisodeLabel, episodeTitle, type SessionSummary } from "@annamour/protocol";
+import {
+  type BubbleColor,
+  catalogEpisodeLabel,
+  episodeTitle,
+  type SeanceSpot,
+  type SessionSummary,
+  seanceFinished,
+  atCredits as videoAtCredits,
+} from "@annamour/protocol";
 import { formatClock, formatDuration, joinNames } from "../../lib/format.ts";
 
 /* What the sessions history means: finished or not, how far, with whom, and when, in French. */
 
-/** The credits roll: a session stopped in its last minute counts as watched. */
-export const FINISHED_MARGIN_SECONDS = 60;
 /** The heart only means something once you have watched together more than once. */
 export const FAVORITE_MIN_SESSIONS = 2;
 
@@ -34,13 +40,20 @@ export function resumeKicker(session: SessionSummary): string {
   return `Reprendre · ${isFilms(session) ? "film" : "épisode"} ${session.episode.index + 1}`;
 }
 
-/** The video playing reached its credits. */
-const atCredits = (session: SessionSummary) =>
-  session.duration !== undefined && session.position >= session.duration - FINISHED_MARGIN_SECONDS;
+/** Where the séance stopped, as the protocol's rules read it. */
+const spotOf = (session: SessionSummary): SeanceSpot => ({
+  position: session.position,
+  duration: session.duration,
+  index: session.episode.index,
+  count: session.episode.count,
+});
 
-/** Over once its last film or episode is: between two, a séance is still under way. */
+/** The video playing reached its credits. */
+const atCredits = (session: SessionSummary) => videoAtCredits(spotOf(session));
+
+/** Over once its last film or episode is (the same rule as the salon's « Revoir »). */
 export function isFinished(session: SessionSummary): boolean {
-  return atCredits(session) && session.episode.index >= session.episode.count - 1;
+  return seanceFinished(spotOf(session));
 }
 
 /** Between two videos: « Film suivant : Alien », or « Épisode suivant »; empty otherwise. */

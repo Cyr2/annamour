@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  atCredits,
   canGoToEpisode,
   canRemoveEpisode,
   declineNextEpisode,
@@ -13,8 +14,28 @@ import {
   hasNextEpisode,
   NEXT_EPISODE_COUNTDOWN_MS,
   nextEpisodeLabel,
+  seanceFinished,
   startProgress,
 } from "../src/index.ts";
+
+describe("a séance watched to the end", () => {
+  const dune = { duration: 7826, index: 0, count: 1 };
+
+  it("counts a séance stopped in its credits (its last minute) as watched", () => {
+    expect(seanceFinished({ ...dune, position: 7790 })).toBe(true);
+    expect(atCredits({ ...dune, position: 7790 })).toBe(true);
+    expect(seanceFinished({ ...dune, position: 7700 })).toBe(false);
+  });
+
+  it("is never over while the length of the video is unknown", () => {
+    expect(seanceFinished({ duration: undefined, index: 0, count: 1, position: 99_999 })).toBe(false);
+  });
+
+  it("is over only at the end of its last film or episode, not between two", () => {
+    expect(seanceFinished({ duration: 3000, index: 0, count: 2, position: 2990 })).toBe(false);
+    expect(seanceFinished({ duration: 3000, index: 1, count: 2, position: 2990 })).toBe(true);
+  });
+});
 
 describe("the end of an episode", () => {
   it("starts the countdown for everyone when another episode follows", () => {
