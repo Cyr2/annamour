@@ -1,8 +1,8 @@
 import { type CatalogTitle, type Circle, circleTitle, othersIn } from "@annamour/protocol";
 import { Check, ChevronLeft, Heart, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { BubbleStack } from "../../ui/BubbleStack.tsx";
-import { Button } from "../../ui/controls.tsx";
+import { Button, Switch } from "../../ui/controls.tsx";
 import { cx } from "../../ui/cx.ts";
 import { Poster } from "../../ui/Poster.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
@@ -69,13 +69,7 @@ export function CircleShareStep({
           Tout le monde avec qui tu regardes le verra, et pourra le lancer ou dire en avoir envie.
         </p>
       )}
-      <Button
-        icon={<Heart className={want ? "fill-current text-accent" : undefined} />}
-        aria-pressed={want}
-        onClick={() => setWant(!want)}
-      >
-        J'en ai envie aussi
-      </Button>
+      <WantSwitch want={want} onChange={setWant} />
       <p role="alert" className="min-h-5 text-sm text-danger">
         {error ?? ""}
       </p>
@@ -87,6 +81,24 @@ export function CircleShareStep({
           {busy ? "Un instant…" : circle ? `Ajouter à ${circleTitle(circle, me)}` : "Ajouter"}
         </Button>
       </Sheet.Actions>
+    </div>
+  );
+}
+
+/** « J'en ai envie », on by default: a switch, so whether it is on reads at a glance. */
+function WantSwitch({ want, onChange }: { want: boolean; onChange: (want: boolean) => void }) {
+  const switchId = useId();
+  return (
+    <div className="flex items-center gap-3">
+      {/* The whole line toggles it, not only the small switch. */}
+      <label
+        htmlFor={switchId}
+        className="flex min-h-11 flex-1 cursor-pointer items-center gap-2 text-sm font-semibold text-fg"
+      >
+        <Heart aria-hidden className={cx("size-4", want ? "fill-current text-accent" : "text-fg-muted")} />
+        J'en ai envie
+      </label>
+      <Switch id={switchId} checked={want} onCheckedChange={onChange} />
     </div>
   );
 }

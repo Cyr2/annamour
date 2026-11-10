@@ -50,7 +50,7 @@ export function TogetherActions({
       ) : null}
       {canAdd ? (
         <Button variant="filled" size="large" icon={<Plus />} onClick={onAddNext}>
-          {series ? "Ajouter l'épisode suivant" : "Ajouter un film ou un épisode"}
+          {series ? "Ajouter l'épisode suivant" : "Ajouter un film"}
         </Button>
       ) : null}
       {end === "countdown" ? null : (

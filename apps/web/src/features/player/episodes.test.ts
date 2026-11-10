@@ -33,9 +33,9 @@ describe("the end screen of an episode", () => {
     expect(episodeEndOf({ ...room, finished: true, current: 1 })).toBe("nothing-next");
   });
 
-  it("speaks of a film when the séance has a single video", () => {
-    expect(endTitle(1)).toBe("C'est fini");
-    expect(endTitle(3)).toBe("Épisode terminé");
+  it("speaks of an episode for a series only", () => {
+    expect(endTitle(false)).toBe("C'est fini");
+    expect(endTitle(true)).toBe("Épisode terminé");
   });
 });
 
@@ -55,7 +55,11 @@ describe("what the end screen knows of a series", () => {
     expect(onSeries({ episodes: [episode(1)], current: 0 })).toBe(true);
     expect(onSeries({ episodes: [{ catalog: { id: 7, type: "movie", title: "Alien" } }], current: 0 })).toBe(false);
     expect(onSeries({ episodes: [{}], current: 0 })).toBe(false);
-    expect(onSeries({ episodes: [{}, { label: "É2" }], current: 1 })).toBe(true);
+  });
+
+  it("never takes videos pasted by link for a series, however many the séance plays", () => {
+    expect(onSeries({ episodes: [{}, { label: "É2" }], current: 1 })).toBe(false);
+    expect(onSeries({ episodes: [episode(1), {}], current: 1 })).toBe(false);
   });
 
   it("offers to mark the series watched at the end of the last episode queued, when it is in the list", () => {
@@ -109,7 +113,9 @@ describe("episode names", () => {
 
   it("calls the queue « Épisodes » for a series only", () => {
     expect(queueTitle({ episodes: [{}], current: 0 })).toBe("File");
-    expect(queueTitle({ episodes: [{}, { label: "É2" }], current: 0 })).toBe("Épisodes");
+    expect(queueTitle({ episodes: [{}, { label: "É2" }], current: 0 })).toBe("File");
+    const show = { catalog: { id: 136315, type: "tv", title: "The Bear", season: 1, episode: 1 } as const };
+    expect(queueTitle({ episodes: [show], current: 0 })).toBe("Épisodes");
     const film = (title: string) => ({ catalog: { id: 7, type: "movie", title } as const });
     expect(queueTitle({ episodes: [film("Alien"), film("Aliens")], current: 0 })).toBe("File");
   });

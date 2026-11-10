@@ -15,6 +15,7 @@ import { FIRST_ROW, PosterCard } from "./PosterCard.tsx";
 import { ShelfPlaceholder } from "./ShelfPlaceholder.tsx";
 import { useLaunchTitle } from "./useLaunchTitle.ts";
 import { useLoadWatchlist } from "./useLoadWatchlist.ts";
+import { useShownOrder } from "./useShownOrder.ts";
 import { WatchlistItemSheet } from "./WatchlistItemSheet.tsx";
 import { toggleWant, useWatchlist } from "./watchlist.ts";
 
@@ -41,10 +42,12 @@ export function WatchlistShelf({
   // On a TV, OK on a film under way in its circle goes back to that séance.
   const sessions = useSessions((s) => s.sessions);
   const circles = useCircles((s) => s.circles);
-  const toWatch = useMemo(
+  const sorted = useMemo(
     () => splitWatchlist(sortWatchlist(ofCircle(items, circle, me), "wants")).toWatch,
     [items, circle, me],
   );
+  // A heart does not move its poster: the most wanted come first again on the next visit or circle.
+  const toWatch = useShownOrder(sorted, circle?.id ?? "tout");
   const [openId, setOpenId] = useState<string | null>(null);
   const { launch } = useLaunchTitle();
   const [, navigate] = useLocation();

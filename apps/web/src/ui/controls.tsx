@@ -81,8 +81,9 @@ export function Glass({ ref, ...props }: GlisseGlassProps & { ref?: Ref<HTMLDivE
 
 /* ---------- Input ---------- */
 
+/** A search field's clear button is named in French (glisse is patched to take the label). */
 export function Input({ className, ref, ...props }: GlisseInputProps & { ref?: Ref<HTMLInputElement> }) {
-  return <GlisseInput ref={ref} {...props} className={cx("am-input", className)} />;
+  return <GlisseInput ref={ref} clearLabel="Effacer la recherche" {...props} className={cx("am-input", className)} />;
 }
 
 /* ---------- Switch, Slider, SegmentedControl, Menu ---------- */

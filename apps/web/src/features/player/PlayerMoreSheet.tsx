@@ -1,6 +1,7 @@
 import { ListVideo, Maximize, SkipForward, Subtitles, Volume2, VolumeX } from "lucide-react";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { AccountRow } from "../profile/AccountRow.tsx";
+import { useQueueTitle } from "./EpisodeLayer.tsx";
 import { audibleLevel, useVolume } from "./volume.ts";
 
 interface PlayerMoreSheetProps {
@@ -21,6 +22,7 @@ interface PlayerMoreSheetProps {
 export function PlayerMoreSheet({ open, onClose, ...actions }: PlayerMoreSheetProps) {
   const silent = useVolume((s) => audibleLevel(s) === 0);
   const toggleMute = useVolume((s) => s.toggleMute);
+  const queueTitle = useQueueTitle();
   const run = (action: () => void) => () => {
     action();
     onClose();
@@ -37,7 +39,7 @@ export function PlayerMoreSheet({ open, onClose, ...actions }: PlayerMoreSheetPr
         />
         <AccountRow
           icon={<ListVideo />}
-          title="Épisodes"
+          title={queueTitle}
           detail="Choisir ou ajouter la suite"
           onClick={run(actions.onOpenUpNext)}
         />

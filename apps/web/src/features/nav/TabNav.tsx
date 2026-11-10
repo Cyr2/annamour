@@ -32,6 +32,13 @@ function usePreloadNextScreens(enabled: boolean): void {
   }, [enabled]);
 }
 
+/** Whether the tab bar is on screen (see TabNav): notifications then rise just above it, clear of the screen's header. */
+export function useTabBarShown(): boolean {
+  const [location] = useLocation();
+  const member = useAccount((s) => s.status === "member");
+  return member && tabFor(location) !== null;
+}
+
 /**
  * The glass tab bar floating at the bottom: Ce soir, Notre liste, Nous. Only on
  * those screens, once the account is known: never over the film,

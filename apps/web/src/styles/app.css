@@ -667,6 +667,13 @@
   font-size: var(--am-text-md);
 }
 
+/* A search field's clear button: the touch minimum, its cross kept by the field's edge. */
+.am-input .lg-input-clear {
+  width: var(--am-touch-target);
+  height: var(--am-touch-target);
+  margin-right: calc(var(--am-space-3) * -1);
+}
+
 /* A bottom sheet never scrolls sideways: a button longer than the phone shrinks, its label cut, instead of pushing it. */
 .am-sheet .am-button.lg-button {
   max-width: 100%;
