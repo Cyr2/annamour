@@ -1,11 +1,11 @@
 import {
-  atCredits as videoAtCredits,
   type BubbleColor,
   catalogEpisodeLabel,
   episodeTitle,
   type SeanceSpot,
   type SessionSummary,
   seanceFinished,
+  atCredits as videoAtCredits,
 } from "@annamour/protocol";
 import { formatClock, formatDuration, joinNames } from "../../lib/format.ts";
 
