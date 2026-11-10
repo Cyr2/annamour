@@ -1,5 +1,4 @@
 import { AccountKey, KEY_WORD_COUNT } from "@annamour/protocol";
-import { ScanFace } from "lucide-react";
 import { m, useAnimationControls } from "motion/react";
 import { type ClipboardEvent, type FormEvent, useState } from "react";
 import { useLocation, useSearch } from "wouter";
@@ -11,6 +10,8 @@ import { Button, Input } from "../../ui/controls.tsx";
 import { BackLink } from "../../ui/ScreenTopBar.tsx";
 import { safeNext } from "../account/AccountGate.tsx";
 import { loginWithKey, loginWithPasskey } from "../account/account.ts";
+import { PasskeyIcon } from "../account/PasskeyIcon.tsx";
+import { thisDevicePasskey } from "../account/passkey-wording.ts";
 
 const EMPTY = Array.from({ length: KEY_WORD_COUNT }, () => "");
 const ORDINALS = ["1er mot", "2e mot", "3e mot", "4e mot"];
@@ -28,6 +29,7 @@ export function KeyLoginScreen() {
   const [words, setWords] = useState<string[]>(EMPTY);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [passkey] = useState(thisDevicePasskey);
   const controls = useAnimationControls();
   const [, navigate] = useLocation();
   const next = safeNext(new URLSearchParams(useSearch()).get("suite"));
@@ -92,8 +94,12 @@ export function KeyLoginScreen() {
           </p>
           <div className="flex flex-wrap justify-center gap-2">
             {passkeysSupported() ? (
-              <Button icon={<ScanFace />} disabled={busy} onClick={() => void attempt(loginWithPasskey)}>
-                Face ID
+              <Button
+                icon={<PasskeyIcon kind={passkey.icon} />}
+                disabled={busy}
+                onClick={() => void attempt(loginWithPasskey)}
+              >
+                {passkey.name}
               </Button>
             ) : null}
             <Button type="submit" variant="filled" disabled={busy}>

@@ -4,7 +4,6 @@ import { useDragControls } from "motion/react";
 import { Reorder } from "motion/react-m";
 import { useState } from "react";
 import { Link } from "wouter";
-import { inviteToCircle, inviteUrl } from "../../api/circles.ts";
 import { errorMessage } from "../../api/http.ts";
 import { plural } from "../../lib/format.ts";
 import { IconButton } from "../../ui/IconButton.tsx";
@@ -15,21 +14,9 @@ import { leaveCircle, useCircles } from "../circles/circles.ts";
 import { useSessions } from "../sessions/sessions.ts";
 import { CircleOptionsSheet } from "./CircleOptionsSheet.tsx";
 import { CircleThread } from "./CircleThread.tsx";
+import { inviteToCircleNow } from "./circle-invite.ts";
 import { NameCircleSheet } from "./NameCircleSheet.tsx";
 import { ReuniteSheet } from "./ReuniteSheet.tsx";
-
-/** Shares an invitation link: the phone's share sheet where there is one, else the clipboard. */
-async function shareInvite(circle: Circle, me: string): Promise<void> {
-  const { token } = await inviteToCircle(circle.id);
-  const url = inviteUrl(token);
-  const text = `Rejoins « ${circleTitle(circle, me)} » sur Annamour`;
-  if (navigator.share) {
-    await navigator.share({ title: "Annamour", text, url }).catch(() => {});
-    return;
-  }
-  await navigator.clipboard.writeText(url);
-  toast({ message: "Lien d'invitation copié" });
-}
 
 interface CircleCardProps {
   circle: Circle;
@@ -56,7 +43,7 @@ export function CircleCard({ circle, me, onMove, canMoveUp, canMoveDown, onDrop 
   // The very séances « Séances » lists for this circle, once mine are loaded.
   const count = useSessions((s) => seanceCount(circle, s.status === "ready" ? s.sessions : null, me));
   const invite = () =>
-    void shareInvite(circle, me).catch((failure: unknown) => toast({ message: errorMessage(failure) }));
+    void inviteToCircleNow(circle).catch((failure: unknown) => toast({ message: errorMessage(failure) }));
   const leave = () =>
     void leaveCircle(circle.id)
       .then(() => toast({ message: `Tu as quitté « ${title} »` }))
