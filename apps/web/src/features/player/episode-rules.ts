@@ -43,10 +43,9 @@ export function suggestedLabel(episodes: readonly EpisodeInfo[]): string {
 
 type EpisodesOf = Pick<RoomSnapshot, "episodes" | "current">;
 
-/** The video on screen is an episode of a series: from the catalog, or one of several pasted videos. */
+/** The video on screen is an episode of a series, as the catalog says: a video pasted by link never is. */
 export function onSeries({ episodes, current }: EpisodesOf): boolean {
-  const catalog = episodes[current]?.catalog;
-  return catalog ? catalog.type === "tv" : episodes.length > 1;
+  return episodes[current]?.catalog?.type === "tv";
 }
 
 /** The heading of the list of what the séance plays: « Épisodes » for a series, « File » for films. */
@@ -64,7 +63,7 @@ export function seriesToMarkWatched(items: readonly WatchlistItem[], room: Episo
   return items.find((item) => item.title.type === "tv" && item.title.id === catalog.id && !item.watchedAt);
 }
 
-/** A séance of one video is a film: its end screen speaks of a film, not of an episode. */
-export function endTitle(episodeCount: number): string {
-  return episodeCount > 1 ? "Épisode terminé" : "C'est fini";
+/** Only a series ends an episode: a film, or a video pasted by link, is simply over. */
+export function endTitle(series: boolean): string {
+  return series ? "Épisode terminé" : "C'est fini";
 }

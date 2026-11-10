@@ -86,39 +86,44 @@ function TitleBody({
   const wanters = item.sharedWith
     .filter((person) => item.wantedBy.includes(person.accountId))
     .map((person) => ({ id: person.accountId, name: person.name, color: person.color }));
+  const series = item.title.type === "tv";
+  // A phone: the poster by the words, the button across the card. From a tablet up, as « On reprend ? »:
+  // a larger poster, the words and a button sized to its label beside it.
   return (
-    <>
-      <div className="flex gap-4">
-        <Poster title={item.title} priority />
-        <div className="grid min-w-0 content-center gap-1">
-          <span className="text-xs font-semibold text-accent">On regarde ?</span>
-          <strong className="truncate font-rounded-tight text-lg font-extrabold text-fg">{item.title.title}</strong>
-          <span className="text-xs text-fg-muted">{describeTitle(item.title)}</span>
-          <span className="flex items-center gap-2 text-xs text-fg-muted">
-            <BubbleStack people={wanters} />
-            {wantersLine(item, me)}
-          </span>
-        </div>
+    <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 sm:items-center sm:gap-y-3">
+      <div className="sm:row-span-2">
+        <Poster title={item.title} size="feature" priority />
       </div>
-      {ongoing ? (
-        <ResumeSeanceAction session={ongoing} />
-      ) : (
-        <Button
-          variant="filled"
-          size="large"
-          icon={<Play />}
-          disabled={busy}
-          onClick={() => (item.title.type === "tv" ? onOpenItem(item) : void launch(item))}
-        >
-          {busy ? "On prépare la séance…" : "On regarde ?"}
-        </Button>
-      )}
-      {error ? (
-        <p role="alert" className="text-sm text-danger">
-          {error}
-        </p>
-      ) : null}
-    </>
+      <div className="grid min-w-0 content-center gap-1 sm:self-end">
+        <span className="text-xs font-semibold text-accent">On regarde ?</span>
+        <strong className="truncate font-rounded-tight text-lg font-extrabold text-fg">{item.title.title}</strong>
+        <span className="text-xs text-fg-muted">{describeTitle(item.title)}</span>
+        <span className="flex items-center gap-2 text-xs text-fg-muted">
+          <BubbleStack people={wanters} />
+          {wantersLine(item, me)}
+        </span>
+      </div>
+      <div className="col-span-2 grid gap-2 sm:col-span-1 sm:col-start-2 sm:self-start sm:justify-items-start">
+        {ongoing ? (
+          <ResumeSeanceAction session={ongoing} />
+        ) : (
+          <Button
+            variant="filled"
+            size="large"
+            icon={<Play />}
+            disabled={busy}
+            onClick={() => (series ? onOpenItem(item) : void launch(item))}
+          >
+            {busy ? "On prépare la séance…" : series ? "Choisir l'épisode" : "Lancer le film"}
+          </Button>
+        )}
+        {error ? (
+          <p role="alert" className="text-sm text-danger">
+            {error}
+          </p>
+        ) : null}
+      </div>
+    </div>
   );
 }
 

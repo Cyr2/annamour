@@ -138,6 +138,20 @@ export function othersWantingLine(item: WatchlistItem, me: string): string {
   return item.wantedBy.includes(me) ? "Personne d'autre pour l'instant" : "Personne pour l'instant";
 }
 
+/**
+ * The list in the order it was shown, so a poster never jumps away under the
+ * finger that just hearted it: titles already on screen keep their places,
+ * titles new since come first (in `fresh`'s order), titles gone are dropped.
+ * The fresh order takes over the next time the screen, circle or tab opens.
+ */
+export function keepShownOrder<T extends { id: string }>(shownIds: readonly string[], fresh: readonly T[]): T[] {
+  const place = new Map(shownIds.map((id, index) => [id, index]));
+  const added = fresh.filter((item) => !place.has(item.id));
+  const kept = fresh.filter((item) => place.has(item.id));
+  kept.sort((a, b) => (place.get(a.id) ?? 0) - (place.get(b.id) ?? 0));
+  return [...added, ...kept];
+}
+
 /** The heart's spoken name: what pressing it says about me. */
 export function wantToggleLabel(item: WatchlistItem): string {
   return `J'ai envie de voir ${item.title.title}`;

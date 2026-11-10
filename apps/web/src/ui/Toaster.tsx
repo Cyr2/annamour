@@ -6,14 +6,17 @@ import { LayoutMotion } from "./LayoutMotion.tsx";
 import { Surface } from "./Surface.tsx";
 import { type Toast, useToasts } from "./toast.ts";
 
-/** A glass pill that springs down from the top of the screen. */
-function Capsule({ toast }: { toast: Toast }) {
+type ToasterPlace = "top" | "bottom";
+
+/** A glass pill that springs in from its edge of the screen. */
+function Capsule({ toast, at }: { toast: Toast; at: ToasterPlace }) {
+  const away = at === "top" ? -1 : 1;
   return (
     <m.li
       layout
-      initial={{ opacity: 0, y: -28, scale: 0.86 }}
+      initial={{ opacity: 0, y: 28 * away, scale: 0.86 }}
       animate={{ opacity: 1, y: 0, scale: 1, transition: spring.capsule }}
-      exit={{ opacity: 0, y: -10, scale: 0.94, transition: exit.quick }}
+      exit={{ opacity: 0, y: 10 * away, scale: 0.94, transition: exit.quick }}
       transition={spring.ui}
     >
       <Surface className="flex min-h-11 items-center gap-2.5 rounded-pill py-2 pr-5 pl-3.5 text-sm font-semibold text-fg shadow-float">
@@ -48,19 +51,31 @@ function firstToast(): Promise<void> {
   });
 }
 
-/** Mount once near the root. The capsules come down under the top bar, never over the title, the code or the bubbles. */
-export function Toaster() {
+const PLACES: Record<ToasterPlace, string> = {
+  top: "top-0 pt-[calc(max(var(--am-space-4),var(--am-safe-top))+var(--am-top-bar-room))]",
+  bottom: "bottom-0 pb-[calc(max(var(--am-space-3),var(--am-safe-bottom))+var(--am-tab-bar-room))]",
+};
+
+/**
+ * Mount once near the root. The capsules come down under the top bar, never
+ * over the title, the code or the bubbles; on the tab screens, whose headers
+ * hold their own buttons, they rise just above the tab bar instead.
+ */
+export function Toaster({ at }: { at: ToasterPlace }) {
   const toasts = useToasts((s) => s.toasts);
   return (
     <ol
       role="status"
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 top-0 z-[var(--am-z-toast)] flex flex-col items-center gap-2 px-4 pt-[calc(max(var(--am-space-4),var(--am-safe-top))+var(--am-top-bar-room))]"
+      className={cx(
+        "pointer-events-none fixed inset-x-0 z-[var(--am-z-toast)] flex flex-col items-center gap-2 px-4",
+        PLACES[at],
+      )}
     >
       <LayoutMotion when={firstToast}>
         <AnimatePresence initial={false} mode="popLayout">
           {toasts.map((t) => (
-            <Capsule key={t.id} toast={t} />
+            <Capsule key={t.id} toast={t} at={at} />
           ))}
         </AnimatePresence>
       </LayoutMotion>

@@ -7,6 +7,8 @@ const SIZES = {
   /** A card in a row of posters (home, TV). */
   card: "aspect-[2/3] w-full rounded-control",
   large: "h-[9.75rem] w-[6.5rem] rounded-control",
+  /** Regular on a phone, large from a tablet up, where a small poster was lost in a wide card. */
+  feature: "h-[72px] w-[48px] rounded-[10px] sm:h-[9.75rem] sm:w-[6.5rem] sm:rounded-control",
 } as const;
 
 interface PosterProps {

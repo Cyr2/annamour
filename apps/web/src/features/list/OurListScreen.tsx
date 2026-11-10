@@ -10,6 +10,7 @@ import { ofCircle } from "../circles/circle-rules.ts";
 import { loadCircles, useShownCircle } from "../circles/circles.ts";
 import { AddToWatchlistSheet } from "../watchlist/AddToWatchlistSheet.tsx";
 import { useLoadWatchlist } from "../watchlist/useLoadWatchlist.ts";
+import { useShownOrder } from "../watchlist/useShownOrder.ts";
 import { WatchlistItemSheet } from "../watchlist/WatchlistItemSheet.tsx";
 import { toggleWant, useWatchlist } from "../watchlist/watchlist.ts";
 import { CircleFilter } from "./CircleFilter.tsx";
@@ -30,10 +31,9 @@ export function OurListScreen() {
   const watchedPage = new URLSearchParams(useSearch()).has("vus");
   const [, navigate] = useLocation();
 
-  const titles = useMemo(
-    () => splitWatchlist(sortWatchlist(ofCircle(items, circle, me), "wants")),
-    [items, circle, me],
-  );
+  const sorted = useMemo(() => sortWatchlist(ofCircle(items, circle, me), "wants"), [items, circle, me]);
+  // A heart does not move its poster: the most wanted come first again on the next visit, circle or tab.
+  const titles = splitWatchlist(useShownOrder(sorted, `${circle?.id ?? "tout"}:${watchedPage ? "vus" : "voir"}`));
   const handlers: PosterHandlers = {
     me,
     onPick: (item) => setOpenId(item.id),

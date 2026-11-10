@@ -1,5 +1,5 @@
 diff --git a/dist/index.cjs b/dist/index.cjs
-index 28f5d34cfd831154aa8a64b3ddf135be3072475d..5aaa9073e00c7e674037bb913cdcd508e8cb4a77 100644
+index 28f5d34cfd831154aa8a64b3ddf135be3072475d..67ddaae79af25c9466406dbea1c36b22447dfcf6 100644
 --- a/dist/index.cjs
 +++ b/dist/index.cjs
 @@ -1088,6 +1088,57 @@ function parseColour(context, colour) {
@@ -196,8 +196,52 @@ index 28f5d34cfd831154aa8a64b3ddf135be3072475d..5aaa9073e00c7e674037bb913cdcd508
  }
  // src/button.tsx
  const Button = /* @__PURE__ */ (0, react.forwardRef)(function Button({ icon, variant = "glass", destructive, tint, children, className, style, type = "button", ...props }, forwardedRef) {
+@@ -1510,7 +1567,7 @@ function useControllable(value, defaultValue, onChange) {
+ 	return [controlled ? value : uncontrolled, set];
+ }
+ // src/input.tsx
+-const Input = /* @__PURE__ */ (0, react.forwardRef)(function Input({ value: valueProp, defaultValue = "", onValueChange, icon, className, style, ...props }, forwardedRef) {
++const Input = /* @__PURE__ */ (0, react.forwardRef)(function Input({ value: valueProp, defaultValue = "", onValueChange, icon, clearLabel = "Clear", className, style, ...props }, forwardedRef) {
+ 	const rootRef = (0, react.useRef)(null);
+ 	const inputRef = (0, react.useRef)(null);
+ 	const [value, setValue] = useControllable(valueProp, defaultValue, onValueChange);
+@@ -1537,7 +1594,7 @@ const Input = /* @__PURE__ */ (0, react.forwardRef)(function Input({ value: valu
+ 			props.type === "search" && value && !props.disabled ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+ 				type: "button",
+ 				className: "lg-input-clear",
+-				"aria-label": "Clear",
++				"aria-label": clearLabel,
+ 				onPointerDown: (event) => event.preventDefault(),
+ 				onClick: () => {
+ 					setValue("");
+diff --git a/dist/index.d.cts b/dist/index.d.cts
+index 19092e551b0fc8b84ac68249ebd11190404a1710..c55a7438fd1cb514f425c52703550925863d21da 100644
+--- a/dist/index.d.cts
++++ b/dist/index.d.cts
+@@ -19,6 +19,8 @@ interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "value"
+   onValueChange?: (value: string) => void;
+   /** Shown before the text, such as a person or envelope glyph. */
+   icon?: ReactNode;
++  /** Annamour: names the clear button of a search field, in the page's language. */
++  clearLabel?: string;
+ }
+ export declare const Input: ForwardRefExoticComponent<InputProps & RefAttributes<HTMLInputElement>>;
+ interface MenuItem {
+diff --git a/dist/index.d.ts b/dist/index.d.ts
+index 19092e551b0fc8b84ac68249ebd11190404a1710..c55a7438fd1cb514f425c52703550925863d21da 100644
+--- a/dist/index.d.ts
++++ b/dist/index.d.ts
+@@ -19,6 +19,8 @@ interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "value"
+   onValueChange?: (value: string) => void;
+   /** Shown before the text, such as a person or envelope glyph. */
+   icon?: ReactNode;
++  /** Annamour: names the clear button of a search field, in the page's language. */
++  clearLabel?: string;
+ }
+ export declare const Input: ForwardRefExoticComponent<InputProps & RefAttributes<HTMLInputElement>>;
+ interface MenuItem {
 diff --git a/dist/index.js b/dist/index.js
-index 02d488ace3671da61835b1d629c1714cc92fb52c..2d6d4a71b050157533ceb994d2808f07aa57f4f5 100644
+index 02d488ace3671da61835b1d629c1714cc92fb52c..3e02b413f526e2a3123812fad0f00274ce853388 100644
 --- a/dist/index.js
 +++ b/dist/index.js
 @@ -1087,6 +1087,57 @@ function parseColour(context, colour) {
@@ -394,3 +438,21 @@ index 02d488ace3671da61835b1d629c1714cc92fb52c..2d6d4a71b050157533ceb994d2808f07
  }
  // src/button.tsx
  const Button = /* @__PURE__ */ forwardRef(function Button({ icon, variant = "glass", destructive, tint, children, className, style, type = "button", ...props }, forwardedRef) {
+@@ -1509,7 +1566,7 @@ function useControllable(value, defaultValue, onChange) {
+ 	return [controlled ? value : uncontrolled, set];
+ }
+ // src/input.tsx
+-const Input = /* @__PURE__ */ forwardRef(function Input({ value: valueProp, defaultValue = "", onValueChange, icon, className, style, ...props }, forwardedRef) {
++const Input = /* @__PURE__ */ forwardRef(function Input({ value: valueProp, defaultValue = "", onValueChange, icon, clearLabel = "Clear", className, style, ...props }, forwardedRef) {
+ 	const rootRef = useRef(null);
+ 	const inputRef = useRef(null);
+ 	const [value, setValue] = useControllable(valueProp, defaultValue, onValueChange);
+@@ -1536,7 +1593,7 @@ const Input = /* @__PURE__ */ forwardRef(function Input({ value: valueProp, defa
+ 			props.type === "search" && value && !props.disabled ? /* @__PURE__ */ jsx("button", {
+ 				type: "button",
+ 				className: "lg-input-clear",
+-				"aria-label": "Clear",
++				"aria-label": clearLabel,
+ 				onPointerDown: (event) => event.preventDefault(),
+ 				onClick: () => {
+ 					setValue("");

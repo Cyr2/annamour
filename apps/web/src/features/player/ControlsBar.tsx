@@ -6,6 +6,7 @@ import { IconButton } from "../../ui/IconButton.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import { useTv } from "../tv/tv-context.ts";
 import { EndClock } from "./EndClock.tsx";
+import { useQueueTitle } from "./EpisodeLayer.tsx";
 import { ReactionPicker } from "./ReactionPicker.tsx";
 import { Scrubber } from "./Scrubber.tsx";
 import { SEEK_STEP } from "./seek.ts";
@@ -41,6 +42,7 @@ interface ControlsBarProps {
 export function ControlsBar(props: ControlsBarProps) {
   const { playing, onToggle, onSeek } = props;
   const tv = useTv();
+  const queueTitle = useQueueTitle();
   // What a phone held upright folds behind « ⋯ »: one row of five buttons there.
   const folded = "max-sm:hidden";
   // Only this capsule follows the video frame by frame; the rest of the player does not re-render.
@@ -80,7 +82,7 @@ export function ControlsBar(props: ControlsBarProps) {
             className="max-sm:hidden"
           />
         ) : null}
-        <IconButton label="Épisodes" icon={<ListVideo />} onClick={props.onOpenUpNext} className={folded} />
+        <IconButton label={queueTitle} icon={<ListVideo />} onClick={props.onOpenUpNext} className={folded} />
         {tv ? null : (
           <IconButton label="Plein écran" icon={<Maximize />} onClick={props.onFullscreen} className={folded} />
         )}
