@@ -4,7 +4,7 @@ import { Redirect, Route, Router, Switch, useSearch } from "wouter";
 import { AccountGate } from "./features/account/AccountGate.tsx";
 import { SeanceGate } from "./features/account/SeanceGate.tsx";
 import { HomeScreen } from "./features/home/HomeScreen.tsx";
-import { TabNav } from "./features/nav/TabNav.tsx";
+import { TabNav, useTabBarShown } from "./features/nav/TabNav.tsx";
 import { TonightScreen } from "./features/tonight/TonightScreen.tsx";
 import { useTv } from "./features/tv/tv-context.ts";
 import { useTvLocation } from "./features/tv/tv-location.ts";
@@ -45,6 +45,13 @@ function ToTvPairing() {
 function TopOfNewPage() {
   useTopOfNewPage();
   return null;
+}
+
+/** Inside the router too: over the tab bar, notifications stay clear of the screen's header and tabs. */
+function PlacedToaster() {
+  const tabBar = useTabBarShown();
+  const tv = useTv();
+  return <Toaster at={tabBar && !tv ? "bottom" : "top"} />;
 }
 
 /** Home ships with the app; every other screen is fetched the first time it opens (see routes.ts). */
@@ -94,7 +101,7 @@ export function App() {
       ) : (
         <TabNav />
       )}
-      <Toaster />
+      <PlacedToaster />
     </Router>
   );
 }

@@ -61,7 +61,7 @@ export function EpisodeEndScreen({ end, room, client, onWatchAgain, onAddNext }:
           titleId={TITLE_ID}
         />
       ) : (
-        <EndHeading end={end} next={next} series={series} episodeCount={room.episodes.length} />
+        <EndHeading end={end} next={next} series={series} />
       )}
       <BubbleStack people={room.members} />
       <div className="flex w-[min(28rem,100%)] flex-col gap-4">
@@ -85,18 +85,17 @@ interface EndHeadingProps {
   end: End;
   next: string;
   series: boolean;
-  episodeCount: number;
 }
 
-function EndHeading({ end, next, series, episodeCount }: EndHeadingProps) {
+function EndHeading({ end, next, series }: EndHeadingProps) {
   const tv = useTv();
   const addHint = tv
     ? "On enchaîne ? Ajoute la suite depuis ton téléphone : elle démarrera ici."
-    : `On enchaîne ? Ajoute ${series ? "l'épisode d'après" : "un film ou un épisode"} : il démarre chez tout le monde.`;
+    : `On enchaîne ? Ajoute ${series ? "l'épisode d'après" : "un film"} : il démarre chez tout le monde.`;
   return (
     <div className="grid justify-items-center gap-3">
       <h2 id={TITLE_ID} className="type-title">
-        {end === "next-ready" ? `À suivre : ${next}` : endTitle(episodeCount)}
+        {end === "next-ready" ? `À suivre : ${next}` : endTitle(series)}
       </h2>
       <p className="type-lede">{end === "next-ready" ? "Il démarre pour tout le monde quand vous voulez." : addHint}</p>
     </div>

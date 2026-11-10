@@ -12,16 +12,16 @@ test("à la fin d'un épisode, le suivant démarre chez tout le monde", async ({
   await darius.getByRole("button", { name: "Lancer le film" }).click();
   await expect.poll(() => videoTime(anna), { timeout: 30_000 }).toBeGreaterThan(1);
 
-  // Anna queues the next episode from « Épisodes »; the label is guessed for her.
+  // Anna queues the next video from « File » (pasted links are not a series); the label is guessed for her.
   await anna.mouse.move(10, 10);
-  await anna.getByRole("button", { name: "Épisodes", exact: true }).click();
+  await anna.getByRole("button", { name: "File", exact: true }).click();
   // Adding opens on the title search; a link stays one tap away.
   await anna.getByRole("button", { name: "Coller un lien" }).click();
   await anna.getByLabel("Lien de l'épisode d'après (.m3u8)").fill(HLS_URL);
   await expect(anna.getByLabel("Titre", { exact: true })).toHaveValue("Épisode 2");
   await anna.getByRole("button", { name: "Ajouter à la suite" }).click();
-  // A single film's sheet is « File »; once the episode is added it is « Épisodes », then it closes.
-  await expect(anna.getByRole("dialog", { name: /^(File|Épisodes)$/ })).toBeHidden({ timeout: 30_000 });
+  // Once the video is added, the sheet closes.
+  await expect(anna.getByRole("dialog", { name: "File" })).toBeHidden({ timeout: 30_000 });
   // Everyone else reads who changed the queue; Anna, who did it, is not told.
   await expect(darius.getByText("Anna a ajouté Épisode 2 à la file")).toBeVisible({ timeout: 15_000 });
   await expect(anna.getByText("Anna a ajouté Épisode 2 à la file")).toBeHidden();
@@ -47,7 +47,7 @@ test("à la fin d'un épisode, le suivant démarre chez tout le monde", async ({
 
   // The episode watched stays in the menu, ticked: picking it takes everyone back to it.
   await darius.mouse.move(30, 30);
-  await darius.getByRole("button", { name: "Épisodes", exact: true }).click();
+  await darius.getByRole("button", { name: "File", exact: true }).click();
   await darius.getByRole("button", { name: "Regarder Épisode 1, Vu" }).click();
   await expect(anna.getByText("Darius a lancé l'épisode 1")).toBeVisible({ timeout: 15_000 });
   await expect(anna.getByText("The Bear · Épisode 2")).toBeHidden();

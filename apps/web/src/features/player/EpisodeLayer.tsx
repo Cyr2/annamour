@@ -5,7 +5,7 @@ import type { SyncClient } from "../../sync/SyncClient.ts";
 import { toast } from "../../ui/toast.ts";
 import { EpisodeEndScreen } from "./EpisodeEndScreen.tsx";
 import { EpisodesSheet } from "./EpisodesSheet.tsx";
-import { episodeEndOf } from "./episode-rules.ts";
+import { episodeEndOf, queueTitle } from "./episode-rules.ts";
 import { describeRoomChange } from "./playback-notice.ts";
 
 interface EpisodeLayerProps {
@@ -45,6 +45,11 @@ export function EpisodeLayer({ active, client, upNextOpen, onUpNextOpenChange, o
 /** Whether the end screen covers the film: the player's own controls then step aside. */
 export function useEpisodeOver(): boolean {
   return useRoom((s) => (s.room ? episodeEndOf(s.room) !== null : false));
+}
+
+/** What the way to the séance's list is called: « Épisodes » for a series, « File » otherwise. */
+export function useQueueTitle(): string {
+  return useRoom((s) => queueTitle(s.room ?? { episodes: [], current: 0 }));
 }
 
 /** Skips everyone to the next episode, mid-way through this one; undefined on the last episode. */

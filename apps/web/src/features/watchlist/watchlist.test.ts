@@ -167,3 +167,22 @@ describe("what the watchlist says", () => {
     expect(rules.removedToast({ ...film, sharedWith: [darius] }, "darius")).toBe("« Interstellar » retiré de la liste");
   });
 });
+
+describe("the order of the posters while the screen stays open", () => {
+  const ids = (items: readonly { id: string }[]) => items.map((item) => item.id);
+  const a = { id: "a" };
+  const b = { id: "b" };
+  const c = { id: "c" };
+
+  it("keeps a hearted title where it was, even when it now has more wants", () => {
+    expect(ids(rules.keepShownOrder(["a", "b", "c"], [c, a, b]))).toEqual(["a", "b", "c"]);
+  });
+
+  it("shows a title added since first, and drops one removed", () => {
+    expect(ids(rules.keepShownOrder(["a", "b"], [b, c]))).toEqual(["c", "b"]);
+  });
+
+  it("takes the fresh order when nothing was shown yet", () => {
+    expect(ids(rules.keepShownOrder([], [c, a, b]))).toEqual(["c", "a", "b"]);
+  });
+});
