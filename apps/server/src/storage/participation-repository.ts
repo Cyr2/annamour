@@ -104,6 +104,14 @@ export class ParticipationRepository {
     return changedRows(result) > 0;
   }
 
+  /** This account is in that room and still lists it. */
+  includes(roomCode: string, accountId: string): boolean {
+    const row = this.db
+      .prepare("SELECT 1 FROM participations WHERE room_code = ? AND account_id = ? AND hidden = 0")
+      .get(roomCode, accountId);
+    return row !== undefined;
+  }
+
   /** Rooms this account joined and did not hide, most recently used first. */
   visibleRooms(accountId: string): JoinedRoom[] {
     const rows = this.db

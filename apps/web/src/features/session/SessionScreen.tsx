@@ -12,6 +12,7 @@ import { NoticeScreen } from "../../ui/NoticeScreen.tsx";
 import { PlayerView } from "../player/PlayerView.tsx";
 import { useMemberNotices } from "../player/usePlayerEffects.ts";
 import { LobbyView } from "./LobbyView.tsx";
+import { useAskIfFinishedOnLeave } from "./useAskIfFinishedOnLeave.ts";
 import { useSessionStage } from "./useSessionStage.ts";
 
 /** One séance: the salon first, then the film, on the same connection and the same video element. */
@@ -26,6 +27,7 @@ export function SessionScreen({ code: raw }: { code: string }) {
   const error = useRoom((s) => s.error);
   useMemberNotices();
   useRestartFromStart(client, code);
+  useAskIfFinishedOnLeave(video);
 
   if (!valid || status === "failed") {
     return <RoomUnavailable message={error?.message ?? "Aucune séance avec ce code."} />;

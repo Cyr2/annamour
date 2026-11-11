@@ -7,19 +7,34 @@ async function expectFitsWidth(page: Page, where: string) {
   const overflow = await page.evaluate(() => {
     const width = document.documentElement.clientWidth;
     const sheet = document.querySelector<HTMLElement>(".am-sheet");
+    const box = sheet?.getBoundingClientRect();
     return {
       page: document.documentElement.scrollWidth - width,
       sheet: sheet ? sheet.scrollWidth - sheet.clientWidth : 0,
+      sheetOut: box ? Math.max(0, -box.left, box.right - width) : 0,
     };
   });
   expect(overflow.page, `${where} : la page dépasse`).toBeLessThanOrEqual(1);
   expect(overflow.sheet, `${where} : la feuille défile sur le côté`).toBeLessThanOrEqual(1);
+  expect(overflow.sheetOut, `${where} : la feuille sort de l'écran`).toBeLessThanOrEqual(1);
+}
+
+/** As an older Android browser does: the CSS `translate` property ignored (it left sheets half off screen). */
+async function withoutTranslateProperty(page: Page) {
+  await page.context().addInitScript(() => {
+    document.addEventListener("DOMContentLoaded", () => {
+      const style = document.createElement("style");
+      style.textContent = "* { translate: none !important; }";
+      document.head.append(style);
+    });
+  });
 }
 
 test.use({ viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true });
 
 test("sur un petit téléphone, rien ne dépasse ni ne défile sur le côté", async ({ browser }) => {
   const darius = await person(browser, { viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true });
+  await withoutTranslateProperty(darius);
   await onboard(darius, "Darius");
   await expectFitsWidth(darius, "ce soir");
 

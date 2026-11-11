@@ -12,6 +12,7 @@ import {
   everyoneLeft,
   goToEpisode,
   hasNextEpisode,
+  inLastStretch,
   NEXT_EPISODE_COUNTDOWN_MS,
   nextEpisodeLabel,
   seanceFinished,
@@ -34,6 +35,28 @@ describe("a séance watched to the end", () => {
   it("is over only at the end of its last film or episode, not between two", () => {
     expect(seanceFinished({ duration: 3000, index: 0, count: 2, position: 2990 })).toBe(false);
     expect(seanceFinished({ duration: 3000, index: 1, count: 2, position: 2990 })).toBe(true);
+  });
+});
+
+describe("leaving just before the end", () => {
+  const dune = { duration: 9000, index: 0, count: 1 };
+
+  it("asks whether it is over when left in the credits' last minutes", () => {
+    // Three minutes of credits left: not counted yet, but almost surely over.
+    expect(inLastStretch({ ...dune, position: 8820 })).toBe(true);
+    expect(inLastStretch({ ...dune, position: 8100 })).toBe(true);
+    expect(inLastStretch({ ...dune, position: 8000 })).toBe(false);
+  });
+
+  it("does not ask once the credits counted it, nor without a known length", () => {
+    expect(inLastStretch({ ...dune, position: 8990 })).toBe(false);
+    expect(inLastStretch({ duration: undefined, index: 0, count: 1, position: 8820 })).toBe(false);
+  });
+
+  it("asks only in the last fifth of a short episode", () => {
+    const episode = { duration: 1500, index: 0, count: 3 };
+    expect(inLastStretch({ ...episode, position: 1250 })).toBe(true);
+    expect(inLastStretch({ ...episode, position: 1150 })).toBe(false);
   });
 });
 

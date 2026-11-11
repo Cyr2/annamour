@@ -1,5 +1,5 @@
 import type { SessionSummary } from "@annamour/protocol";
-import { Ellipsis, Link2, LogOut, Trash2 } from "lucide-react";
+import { CircleCheck, Ellipsis, Link2, LogOut, Trash2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { joinNames } from "../../lib/format.ts";
 import { Button } from "../../ui/controls.tsx";
@@ -8,8 +8,8 @@ import { Sheet } from "../../ui/Sheet.tsx";
 import { toast } from "../../ui/toast.ts";
 import { AccountRow } from "../profile/AccountRow.tsx";
 import { copySeanceLink } from "./copy-seance-link.tsx";
-import { sessionTitle } from "./session-rules.ts";
-import { deleteSession, leaveSession } from "./sessions.ts";
+import { canMarkFinished, sessionTitle } from "./session-rules.ts";
+import { deleteSession, finishSession, leaveSession } from "./sessions.ts";
 
 interface SeanceOptionsProps {
   session: SessionSummary;
@@ -66,6 +66,12 @@ export function SeanceOptions({ session, variant = "plain", className, onGone }:
               close();
               void copySeanceLink(session.code);
             })}
+            {canMarkFinished(session)
+              ? row(<CircleCheck />, "Marquer comme terminée", "Si vous l'avez finie pendant le générique", () => {
+                  close();
+                  run(finishSession(session.code), `« ${title} » est terminée`);
+                })
+              : null}
             {row(<LogOut />, "Quitter la séance", "Elle quitte tes séances ; les autres la gardent", () => {
               close();
               run(leaveSession(session.code), `Tu as quitté « ${title} »`);

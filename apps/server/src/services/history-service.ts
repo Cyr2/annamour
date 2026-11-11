@@ -1,5 +1,5 @@
 import type { SessionSummary } from "@annamour/protocol";
-import { NotFoundError, NotYoursToDeleteError } from "../errors.ts";
+import { NotFoundError, NotYoursToDeleteError, SeanceInUseError } from "../errors.ts";
 import type { RoomStore } from "../room-store.ts";
 import type { QueuedItem } from "../storage/participation-repository.ts";
 import type { Repositories } from "../storage/repositories.ts";
@@ -86,6 +86,13 @@ export class HistoryService {
   leave(roomCode: string, accountId: string): void {
     if (!this.repositories.participations.hide(roomCode, accountId))
       throw new NotFoundError("Cette séance n'est pas dans tes séances.");
+  }
+
+  /** « Oui, c'est fini »: the video on screen of one of my séances counts as watched to its end. */
+  finish(roomCode: string, accountId: string): void {
+    const room = this.repositories.participations.includes(roomCode, accountId) ? this.store.get(roomCode) : undefined;
+    if (!room) throw new NotFoundError("Cette séance n'est pas dans tes séances.");
+    if (!room.finishCurrent(this.now())) throw new SeanceInUseError();
   }
 
   /**

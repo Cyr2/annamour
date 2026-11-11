@@ -63,6 +63,16 @@ export const leaveSession = (code: string) => removeAtOnce(code, accounts.leaveS
 /** Deletes a séance for everyone (I created it): gone at once, for me and the others. */
 export const deleteSession = (code: string) => removeAtOnce(code, accounts.deleteSessionForEveryone);
 
+/** The video a séance stopped on is over: the list then shows it « Terminée », or on what follows. */
+export async function finishSession(code: string): Promise<void> {
+  try {
+    await accounts.finishSession(code);
+  } catch (error) {
+    throw new Error(errorMessage(error));
+  }
+  await loadSessions();
+}
+
 /** Another account signs in on this device: never show the previous one's history. */
 export function resetSessions(): void {
   useSessions.setState(initialState);

@@ -85,8 +85,10 @@ function SheetPanel({ onClose, title, children }: Omit<SheetProps, "open">) {
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
+        // Centred by its margins, not translate: older Android browsers ignore the `translate` property,
+        // which left the sheet half off the screen, its left part alone in view.
         className={cx(
-          "absolute bottom-0 left-1/2 flex max-h-[92%] w-[min(560px,100%)] -translate-x-1/2 flex-col gap-4 overflow-x-hidden overflow-y-auto overscroll-contain",
+          "absolute inset-x-0 bottom-0 mx-auto flex max-h-[92%] w-full max-w-[560px] flex-col gap-4 overflow-x-hidden overflow-y-auto overscroll-contain",
           "am-sheet rounded-t-sheet px-6 pt-2.5 pb-[max(28px,var(--am-safe-bottom))] outline-none sm:px-8",
         )}
         initial={{ y: "105%" }}
