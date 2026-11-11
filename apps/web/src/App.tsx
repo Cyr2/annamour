@@ -5,6 +5,7 @@ import { AccountGate } from "./features/account/AccountGate.tsx";
 import { SeanceGate } from "./features/account/SeanceGate.tsx";
 import { HomeScreen } from "./features/home/HomeScreen.tsx";
 import { TabNav, useTabBarShown } from "./features/nav/TabNav.tsx";
+import { FinishQuestionSheet } from "./features/sessions/FinishQuestionSheet.tsx";
 import { TonightScreen } from "./features/tonight/TonightScreen.tsx";
 import { useTv } from "./features/tv/tv-context.ts";
 import { useTvLocation } from "./features/tv/tv-location.ts";
@@ -99,7 +100,10 @@ export function App() {
           <TvRemote />
         </Suspense>
       ) : (
-        <TabNav />
+        <>
+          <TabNav />
+          <FinishQuestionSheet />
+        </>
       )}
       <PlacedToaster />
     </Router>

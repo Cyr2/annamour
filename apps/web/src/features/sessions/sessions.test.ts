@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiRequestError } from "../../api/http.ts";
 import {
   byMostRecent,
+  canMarkFinished,
   chosenEpisodeNote,
   companionsLabel,
   fanPosters,
@@ -109,6 +110,14 @@ describe("session progress", () => {
     expect(isFinished(session("A", { position: 7770 }))).toBe(true);
     expect(isFinished(session("A", { position: 7700 }))).toBe(false);
     expect(isFinished(session("A", { duration: undefined, position: 99999 }))).toBe(false);
+  });
+
+  it("offers to mark as over a séance left in its credits, on its last video only", () => {
+    expect(canMarkFinished(session("A", { position: 7620 }))).toBe(true);
+    expect(canMarkFinished(comedy)).toBe(false);
+    expect(canMarkFinished(session("A", { position: 0 }))).toBe(false);
+    expect(canMarkFinished(session("A", { duration: undefined }))).toBe(false);
+    expect(canMarkFinished(session("A", { episode: { index: 0, count: 2 } }))).toBe(false);
   });
 
   it("tells where we stopped and what is left", () => {

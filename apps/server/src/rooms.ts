@@ -386,6 +386,20 @@ export class Room {
     this.persistence.savePosition(this.positionAt(now), now);
   }
 
+  /**
+   * Someone left in the last minutes and says the video on screen is over: as
+   * if it had played to its end (a film becomes « vu », the séance reopens on
+   * what follows). Refused while someone is still watching it.
+   */
+  finishCurrent(now: number): boolean {
+    if (this.participants.size > 0) return false;
+    const duration = this.currentEpisode.imported.duration;
+    if (duration !== undefined) this.playback = { status: "paused", position: duration, at: now };
+    this.onEnded(this.progress.current, now);
+    this.moveTo(everyoneLeft(this.progress), now, "paused");
+    return true;
+  }
+
   closeAll(): void {
     for (const p of this.participants.values()) p.connection.close();
     this.participants.clear();

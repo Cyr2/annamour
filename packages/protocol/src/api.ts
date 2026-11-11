@@ -190,6 +190,8 @@ export const API = {
   session: "/api/me/sessions/:code",
   /** DELETE: the person who created a séance removes it for everyone. */
   sessionForEveryone: "/api/me/sessions/:code/everyone",
+  /** POST: the video on screen is over (left in its last minutes): as if it had played to its end. */
+  sessionFinished: "/api/me/sessions/:code/finished",
   logout: "/api/logout",
   passkeyRegisterOptions: "/api/passkey/register/options",
   passkeyRegisterVerify: "/api/passkey/register/verify",

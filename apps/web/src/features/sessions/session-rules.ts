@@ -56,6 +56,15 @@ export function isFinished(session: SessionSummary): boolean {
   return seanceFinished(spotOf(session));
 }
 
+/**
+ * « Marquer comme terminée » in its « ⋯ »: a séance on its last video, started
+ * and not yet over (left during the credits, before they counted).
+ */
+export function canMarkFinished(session: SessionSummary): boolean {
+  const { index, count } = session.episode;
+  return session.duration !== undefined && session.position > 0 && index >= count - 1 && !isFinished(session);
+}
+
 /** Between two videos: « Film suivant : Alien », or « Épisode suivant »; empty otherwise. */
 function nextLabel(session: SessionSummary): string {
   if (!atCredits(session) || isFinished(session)) return "";

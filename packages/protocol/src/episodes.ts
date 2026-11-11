@@ -116,6 +116,20 @@ export function atCredits(spot: SeanceSpot): boolean {
   return spot.duration !== undefined && spot.position >= spot.duration - CREDITS_SECONDS;
 }
 
+/** Longest stretch before the end where leaving asks « C'est fini ? »: long credits, a last scene skipped. */
+export const LAST_STRETCH_SECONDS = 15 * 60;
+
+/**
+ * Left close to the end, but before the credits counted it as watched: worth
+ * asking whether it is over. At most the last fifth, so a short episode asks
+ * only in its last minutes.
+ */
+export function inLastStretch(spot: SeanceSpot): boolean {
+  if (spot.duration === undefined || atCredits(spot)) return false;
+  const stretch = Math.min(LAST_STRETCH_SECONDS, spot.duration / 5);
+  return spot.position >= spot.duration - stretch;
+}
+
 /**
  * Watched to the end: its last film or episode reached its credits. Between
  * two, a séance is still under way. The salon and the séances' list both ask

@@ -140,3 +140,46 @@ describe("deleting a séance for everyone", () => {
     expect(await codes(darius.cookie)).toContain(room.code);
   });
 });
+
+describe("« Oui, c'est fini » after leaving in the credits", () => {
+  it("counts the film as watched to its end: the séance is over and the film « vu »", async () => {
+    const { app, account, seance, get, send } = setup();
+    const darius = await account("Darius");
+    await app.request(
+      WATCHLIST_API.list,
+      jsonRequest("POST", { title: INTERSTELLAR, shareWith: "everyone", want: true }, { cookie: darius.cookie }),
+    );
+    const room = seance(darius.id);
+
+    const finished = await send(apiPath(API.sessionFinished, { code: room.code }), darius.cookie, "POST");
+    expect(finished.status).toBe(204);
+    const listed = (await get<SessionList>(API.sessions, darius.cookie)).sessions[0];
+    expect(listed?.position).toBe(media.duration);
+    expect((await get<WatchlistResponse>(WATCHLIST_API.list, darius.cookie)).items[0]?.watchedAt).toBeDefined();
+  });
+
+  it("reopens a séance of several films on the next one", async () => {
+    const { account, seance, get, send, services } = setup();
+    const darius = await account("Darius");
+    const room = seance(darius.id);
+    services.store.addEpisode(room, undefined, media, { id: 7, type: "movie", title: "Dune" });
+
+    await send(apiPath(API.sessionFinished, { code: room.code }), darius.cookie, "POST");
+    const listed = (await get<SessionList>(API.sessions, darius.cookie)).sessions[0];
+    expect(listed?.episode.index).toBe(1);
+    expect(listed?.position).toBe(0);
+  });
+
+  it("waits while someone is still watching, and is refused for a séance that is not mine", async () => {
+    const { account, seance, send } = setup();
+    const darius = await account("Darius");
+    const annou = await account("Annou");
+    const room = seance(darius.id);
+    room.join("client-bbbb", "Léo", "mint", silent, 1000);
+
+    const busy = await send(apiPath(API.sessionFinished, { code: room.code }), darius.cookie, "POST");
+    expect(busy.status).toBe(409);
+    const notMine = await send(apiPath(API.sessionFinished, { code: room.code }), annou.cookie, "POST");
+    expect(notMine.status).toBe(404);
+  });
+});

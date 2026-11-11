@@ -123,3 +123,8 @@ export async function leaveSession(code: string): Promise<void> {
 export async function deleteSessionForEveryone(code: string): Promise<void> {
   await request(Ignored, apiPath(API.sessionForEveryone, { code }), { method: "DELETE" });
 }
+
+/** « Oui, c'est fini »: the video a séance stopped on counts as watched to its end. */
+export async function finishSession(code: string): Promise<void> {
+  await request(Ignored, apiPath(API.sessionFinished, { code }), { method: "POST" });
+}

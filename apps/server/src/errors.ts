@@ -66,6 +66,12 @@ export class TooManyEpisodesError extends UserFacingError {
   }
 }
 
+export class SeanceInUseError extends UserFacingError {
+  constructor() {
+    super("Quelqu'un regarde encore cette séance : elle se terminera quand tout le monde l'aura quittée.", 409);
+  }
+}
+
 export class UnknownTvCodeError extends UserFacingError {
   constructor() {
     super("Ce code ne correspond à aucune TV. Vérifie les 6 caractères affichés sur l'écran.", 404);
