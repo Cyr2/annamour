@@ -1,4 +1,8 @@
-import { NEXT_EPISODE_COUNTDOWN_MS } from "@annamour/protocol";
+import { CREDITS_COUNTDOWN_MS, NEXT_EPISODE_COUNTDOWN_MS } from "@annamour/protocol";
+
+/** The longest a countdown runs: one started at the end credits goes on here once the video ends. */
+const COUNTDOWN_SPAN_MS = Math.max(NEXT_EPISODE_COUNTDOWN_MS, CREDITS_COUNTDOWN_MS);
+
 import type { SyncClient } from "../../sync/SyncClient.ts";
 import { Progress } from "../../ui/Progress.tsx";
 import { useCountdown } from "./useCountdown.ts";
@@ -18,7 +22,7 @@ export function EpisodeCountdown({ until, client, onDone, next, titleId }: Episo
   const seconds = useCountdown(until, client, onDone);
   return (
     <div className="grid justify-items-center gap-4">
-      <Progress.Ring value={(seconds * 1000) / NEXT_EPISODE_COUNTDOWN_MS} label={`${seconds} s`} className="size-32">
+      <Progress.Ring value={(seconds * 1000) / COUNTDOWN_SPAN_MS} label={`${seconds} s`} className="size-32">
         <span aria-hidden className="font-rounded text-display font-black text-fg tabular-nums">
           {seconds}
         </span>
