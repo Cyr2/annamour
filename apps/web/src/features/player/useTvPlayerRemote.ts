@@ -2,7 +2,17 @@ import { type RefObject, useCallback, useEffect, useRef, useState } from "react"
 import { focusElement, primaryIn } from "../tv/focus-engine.ts";
 import { remoteKey } from "../tv/remote.ts";
 import { useTvBack } from "../tv/useTvBack.ts";
+import { SKIP_OFFER_ATTRIBUTE } from "./skip-rules.ts";
 import { SEEK_BADGE_MS, TV_BAR_HIDE_MS, tvPlayerAction } from "./tv-player-keys.ts";
+
+/**
+ * An offer over the film (« Passer l'intro », « Épisode suivant », see SkipLayer)
+ * holds the focus: OK and the side arrows are its, not the film's.
+ */
+function forOffer(key: string | null): boolean {
+  if (key !== "ok" && key !== "left" && key !== "right") return false;
+  return document.activeElement?.closest(`[${SKIP_OFFER_ATTRIBUTE}]`) != null;
+}
 
 export interface SeekFlash {
   delta: number;
@@ -56,16 +66,19 @@ export function useTvPlayerRemote({
     const onKey = (event: KeyboardEvent) => {
       const { shown: barShown } = latest.current;
       if (barShown) setActivity((n) => n + 1);
-      const action = tvPlayerAction(remoteKey(event.key), barShown);
+      const key = remoteKey(event.key);
+      const action = forOffer(key) ? null : tvPlayerAction(key, barShown);
       if (!action) return;
       event.preventDefault();
       event.stopPropagation();
+      perform(action);
+    };
+    const perform = (action: NonNullable<ReturnType<typeof tvPlayerAction>>) => {
       if (action.kind === "toggle") latest.current.toggle();
       if (action.kind === "showBar") setShown(true);
-      if (action.kind === "seek") {
-        latest.current.seekBy(action.delta);
-        setSeek({ delta: action.delta, id: performance.now() });
-      }
+      if (action.kind !== "seek") return;
+      latest.current.seekBy(action.delta);
+      setSeek({ delta: action.delta, id: performance.now() });
     };
     window.addEventListener("keydown", onKey, { capture: true });
     return () => window.removeEventListener("keydown", onKey, { capture: true });

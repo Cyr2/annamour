@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.ts";
 import { bridgeFetcher, NakaCatalog } from "./catalog/naka-catalog.ts";
+import { skipFetcher } from "./catalog/skip-sources.ts";
 import { tmdbFetcher } from "./catalog/tmdb.ts";
 import { loadConfig } from "./config.ts";
 import { describeMedia, ffmpegAudioEncoder, ffmpegAvailable, ffmpegEncoder, firstTimestamp } from "./media/ffmpeg.ts";
@@ -39,7 +40,7 @@ const services = createServices({
   relyingParty: config.relyingParty,
   mediaMaxBytes: config.mediaMaxGb * BYTES_PER_GB,
   ...(nakaBridge ? { catalog: new NakaCatalog(bridgeFetcher(nakaBridge.url, nakaBridge.secret)) } : {}),
-  ...(config.tmdbToken ? { tmdbFetch: tmdbFetcher(config.tmdbToken) } : {}),
+  ...(config.tmdbToken ? { tmdbFetch: tmdbFetcher(config.tmdbToken), skipFetch: skipFetcher } : {}),
   ...(transcoder
     ? {
         transcoder,

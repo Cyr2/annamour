@@ -63,6 +63,8 @@ export const TmdbTitle = z.object({
   keywordIds: z.array(z.number()),
   /** The saga it belongs to. */
   collectionId: z.number().optional(),
+  /** IMDb's id (« tt0903747 »), which IntroDB and SkipDB know titles by. */
+  imdbId: z.string().optional(),
   trailerUrl: z.string().optional(),
   recommendations: z.array(TmdbBrief),
 });
@@ -135,6 +137,13 @@ function peopleOf(raw: Record<string, unknown>) {
   };
 }
 
+/** IMDb's id, from `external_ids` (or the film's own `imdb_id`). */
+function imdbIdOf(raw: Record<string, unknown>): string | undefined {
+  const external = Raw.catch({}).parse(raw.external_ids ?? {});
+  const id = text(external.imdb_id) ?? text(raw.imdb_id);
+  return id && /^tt\d+$/.test(id) ? id : undefined;
+}
+
 const RawTranslations = z
   .object({
     translations: z.array(
@@ -178,6 +187,7 @@ export function toTmdbTitle(raw: unknown, type: CatalogMediaType): TmdbTitle | n
       seasons: number(parsed.data.number_of_seasons),
       ...peopleOf(parsed.data),
       keywordIds: keywordIdsOf(parsed.data),
+      imdbId: imdbIdOf(parsed.data),
       collectionId: number(Raw.catch({}).parse(parsed.data.belongs_to_collection ?? {}).id),
       trailerUrl: trailerOf(parsed.data),
       recommendations: RawList.parse(parsed.data.recommendations).results.flatMap((r) => briefOf(r, type) ?? []),
@@ -224,7 +234,7 @@ export class Tmdb {
     const key = `tmdb:title:${type}:${tmdbId}`;
     const kept = this.kept(key, TITLE_TTL_MS, TmdbTitle);
     if (kept) return kept;
-    const path = `${type}/${tmdbId}?language=fr-FR&include_video_language=fr,en&append_to_response=credits,keywords,videos,recommendations,translations`;
+    const path = `${type}/${tmdbId}?language=fr-FR&include_video_language=fr,en&append_to_response=credits,keywords,videos,recommendations,translations,external_ids`;
     const body = await this.call(path);
     const title = body === null ? null : toTmdbTitle(body, type);
     if (title) this.keep(key, title);

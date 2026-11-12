@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   atCredits,
+  CREDITS_COUNTDOWN_MS,
   canGoToEpisode,
   canRemoveEpisode,
+  creditsReached,
   declineNextEpisode,
   episodeAdded,
   episodeEnded,
@@ -78,6 +80,29 @@ describe("the end of an episode", () => {
   it("ignores the end of an episode nobody is on any more", () => {
     const progress = startProgress(1, 3);
     expect(episodeEnded(progress, 0, 1000)).toBe(progress);
+  });
+});
+
+describe("the end credits", () => {
+  it("start the next episode's countdown for everyone once, the credits still rolling", () => {
+    const rolling = creditsReached(startProgress(0, 2), 0, 1000);
+    expect(rolling).toMatchObject({ finished: false, countdownUntil: 1000 + CREDITS_COUNTDOWN_MS });
+    expect(creditsReached(rolling, 0, 4000)).toBe(rolling);
+  });
+
+  it("keep their countdown when the video then reaches its end", () => {
+    const rolling = creditsReached(startProgress(0, 2), 0, 1000);
+    expect(episodeEnded(rolling, 0, 5000)).toMatchObject({
+      finished: true,
+      countdownUntil: 1000 + CREDITS_COUNTDOWN_MS,
+    });
+  });
+
+  it("start nothing with nothing to follow, after « Regarder le générique », or for another episode", () => {
+    expect(creditsReached(startProgress(0, 1), 0, 1000).countdownUntil).toBeNull();
+    const watching = declineNextEpisode(startProgress(0, 2));
+    expect(creditsReached(watching, 0, 1000)).toBe(watching);
+    expect(creditsReached(startProgress(1, 3), 0, 1000).countdownUntil).toBeNull();
   });
 });
 

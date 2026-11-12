@@ -92,6 +92,23 @@ export function toCatalogEpisodes(body: unknown): CatalogEpisode[] {
   });
 }
 
+let sourceFieldsLogged = false;
+
+/**
+ * Logs once which fields Naka's sources answer has (names only, no values: its
+ * links carry tokens). Its own player skips intros: if the times are in there,
+ * they fit Naka's copy exactly, better than any public database.
+ */
+function logSourceFields(raw: unknown): void {
+  if (sourceFieldsLogged || typeof raw !== "object" || raw === null) return;
+  sourceFieldsLogged = true;
+  const top = Object.keys(raw);
+  const sources = "sources" in raw && Array.isArray(raw.sources) ? raw.sources : [];
+  const first = sources[0];
+  const inSource = typeof first === "object" && first !== null ? Object.keys(first) : [];
+  console.info("Naka sources fields:", top.join(", "), "| per source:", inSource.join(", "));
+}
+
 export class NakaCatalog implements Catalog {
   private readonly fetch: BridgeFetcher;
 
@@ -115,7 +132,9 @@ export class NakaCatalog implements Catalog {
       query.set("season", String(season));
       query.set("episode", String(episode));
     }
-    const body = NakaSources.safeParse(await this.json(`streaming/sources/${id}?${query}`));
+    const raw = await this.json(`streaming/sources/${id}?${query}`);
+    logSourceFields(raw);
+    const body = NakaSources.safeParse(raw);
     const source = body.success ? body.data.sources.find((s) => s.isHls !== false) : undefined;
     if (!source) throw new NoVideoError();
     return new URL(source.url, NAKA_ORIGIN);

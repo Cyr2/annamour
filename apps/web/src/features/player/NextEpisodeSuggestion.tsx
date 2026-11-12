@@ -3,7 +3,7 @@ import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchSeason } from "../../api/catalog.ts";
 
-interface Suggestion {
+export interface Suggestion {
   next: CatalogRef;
   /** The episode's own title, when Naka gives it. */
   title: string | undefined;
@@ -14,20 +14,30 @@ interface Suggestion {
  * Keyed on plain values: the room snapshot is rebuilt on every play or pause, and each new
  * object must not ask Naka for the season again.
  */
-function useNextEpisode(last: CatalogRef | undefined): Suggestion | null {
+export function useNextEpisode(last: CatalogRef | undefined): Suggestion | null {
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
   const id = last?.id;
   const title = last?.title;
   const season = last?.type === "tv" ? last.season : undefined;
   const episode = last?.type === "tv" ? last.episode : undefined;
   const posterUrl = last?.posterUrl;
+  const tmdbId = last?.tmdbId;
 
   useEffect(() => {
     setSuggestion(null);
     if (id === undefined || title === undefined || season === undefined || episode === undefined) return;
     const controller = new AbortController();
     // The series' poster goes along, for the séance's card once on this episode.
-    const current: CatalogRef = { id, type: "tv", title, season, episode, ...(posterUrl ? { posterUrl } : {}) };
+    const current: CatalogRef = {
+      id,
+      type: "tv",
+      title,
+      season,
+      episode,
+      ...(posterUrl ? { posterUrl } : {}),
+      // TMDB's number goes along too: the next episode's intro and credits are then found without guessing.
+      ...(tmdbId ? { tmdbId } : {}),
+    };
     fetchSeason(id, season, controller.signal).then(
       (episodes: CatalogEpisode[]) => {
         const next = nextCatalogEpisode(
@@ -42,7 +52,7 @@ function useNextEpisode(last: CatalogRef | undefined): Suggestion | null {
       () => undefined,
     );
     return () => controller.abort();
-  }, [id, title, season, episode, posterUrl]);
+  }, [id, title, season, episode, posterUrl, tmdbId]);
 
   return suggestion;
 }

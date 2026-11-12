@@ -16,7 +16,11 @@ interface CatalogPickerProps {
 }
 
 /** The poster goes along, so the séance can show it on « Ce soir ». */
-const posterOf = (title: CatalogTitle) => (title.posterUrl ? { posterUrl: title.posterUrl } : {});
+/** What goes along with the title picked: its poster (for the séance's card) and TMDB's number (for its intro). */
+const posterOf = (title: CatalogTitle) => ({
+  ...(title.posterUrl ? { posterUrl: title.posterUrl } : {}),
+  ...(title.tmdbId ? { tmdbId: title.tmdbId } : {}),
+});
 
 /** Type a title, pick it (and, for a series, its episode). Used to create a séance and to queue what follows. */
 export function CatalogPicker({ onPick, error, label = "Titre" }: CatalogPickerProps) {
