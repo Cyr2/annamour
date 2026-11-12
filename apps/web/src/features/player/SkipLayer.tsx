@@ -45,7 +45,8 @@ export function SkipLayer({ active, video, client }: SkipLayerProps) {
           key={offer.kind}
           ref={holder}
           {...{ [SKIP_OFFER_ATTRIBUTE]: true }}
-          className="safe-area pointer-events-auto absolute right-0 bottom-24 z-20 sm:bottom-28"
+          // Only the offer itself takes touches: its padded holder must not cover the timeline under it.
+          className="safe-area pointer-events-none absolute right-0 bottom-24 z-20 *:pointer-events-auto sm:bottom-28"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0, transition: spring.ui }}
           exit={{ opacity: 0, transition: exit.quick }}

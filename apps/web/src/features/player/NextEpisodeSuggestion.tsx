@@ -21,13 +21,23 @@ export function useNextEpisode(last: CatalogRef | undefined): Suggestion | null 
   const season = last?.type === "tv" ? last.season : undefined;
   const episode = last?.type === "tv" ? last.episode : undefined;
   const posterUrl = last?.posterUrl;
+  const tmdbId = last?.tmdbId;
 
   useEffect(() => {
     setSuggestion(null);
     if (id === undefined || title === undefined || season === undefined || episode === undefined) return;
     const controller = new AbortController();
     // The series' poster goes along, for the séance's card once on this episode.
-    const current: CatalogRef = { id, type: "tv", title, season, episode, ...(posterUrl ? { posterUrl } : {}) };
+    const current: CatalogRef = {
+      id,
+      type: "tv",
+      title,
+      season,
+      episode,
+      ...(posterUrl ? { posterUrl } : {}),
+      // TMDB's number goes along too: the next episode's intro and credits are then found without guessing.
+      ...(tmdbId ? { tmdbId } : {}),
+    };
     fetchSeason(id, season, controller.signal).then(
       (episodes: CatalogEpisode[]) => {
         const next = nextCatalogEpisode(
@@ -42,7 +52,7 @@ export function useNextEpisode(last: CatalogRef | undefined): Suggestion | null 
       () => undefined,
     );
     return () => controller.abort();
-  }, [id, title, season, episode, posterUrl]);
+  }, [id, title, season, episode, posterUrl, tmdbId]);
 
   return suggestion;
 }

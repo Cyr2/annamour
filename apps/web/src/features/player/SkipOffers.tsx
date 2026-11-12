@@ -67,7 +67,8 @@ export function CreditsCountdown({ next, until, client, onStart, onWatchCredits 
           </Progress.Ring>
         )}
       </div>
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      {/* Stacked, the main one on top: two long French labels never fit side by side on a card. */}
+      <div className="flex flex-col-reverse gap-2">
         <Button onClick={onWatchCredits}>Regarder le générique</Button>
         <Button variant="filled" icon={<Play />} onClick={onStart} data-tv-primary>
           Lancer maintenant

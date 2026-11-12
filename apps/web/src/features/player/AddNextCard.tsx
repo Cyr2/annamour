@@ -48,7 +48,8 @@ export function AddNextCard({ room, client, onDismiss }: AddNextCardProps) {
           {busy ? "On récupère la vidéo…" : "Il n'est pas encore dans la file"}
         </span>
       </div>
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      {/* Stacked, the main one on top: two long French labels never fit side by side on a card. */}
+      <div className="flex flex-col-reverse gap-2">
         <Button onClick={onDismiss}>Regarder le générique</Button>
         <Button variant="filled" icon={<Plus />} disabled={busy} onClick={() => void addAndStart(next)} data-tv-primary>
           Ajouter et lancer
