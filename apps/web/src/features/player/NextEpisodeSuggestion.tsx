@@ -3,7 +3,7 @@ import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchSeason } from "../../api/catalog.ts";
 
-interface Suggestion {
+export interface Suggestion {
   next: CatalogRef;
   /** The episode's own title, when Naka gives it. */
   title: string | undefined;
@@ -14,7 +14,7 @@ interface Suggestion {
  * Keyed on plain values: the room snapshot is rebuilt on every play or pause, and each new
  * object must not ask Naka for the season again.
  */
-function useNextEpisode(last: CatalogRef | undefined): Suggestion | null {
+export function useNextEpisode(last: CatalogRef | undefined): Suggestion | null {
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
   const id = last?.id;
   const title = last?.title;

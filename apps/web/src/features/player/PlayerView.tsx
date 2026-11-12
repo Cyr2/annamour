@@ -16,6 +16,7 @@ import { BlockedNotice, CenterPlay, PlayerError, ReadyBanner, VideoLoading, Wait
 import { PlayerTopBar } from "./PlayerTopBar.tsx";
 import { filmIsOn } from "./readying-rules.ts";
 import { SeekBadge } from "./SeekBadge.tsx";
+import { SkipLayer } from "./SkipLayer.tsx";
 import { TracksSheet } from "./TracksSheet.tsx";
 import { useEpisodeEndReport } from "./useEpisodeEndReport.ts";
 import { useControlsHidden, usePlaybackNotices, useTrackChoice, useVolumeOnVideo } from "./usePlayerEffects.ts";
@@ -153,6 +154,7 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
           onFullscreen={fullscreen}
         />
       </div>
+      <SkipLayer active={active} video={video} client={client} />
       <CenterPlay visible={active && !playing && !player.blocked && !over && calm} onPlay={() => controls.play()} />
       {tv ? <SeekBadge flash={remote.seek} /> : null}
       <WaitBanner members={loading} />
