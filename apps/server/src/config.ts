@@ -45,6 +45,8 @@ export interface ServerConfig {
   hevcFull: boolean;
   /** What the lighter qualities of every séance may take on disk together, in GB (MEDIA_MAX_GB). */
   mediaMaxGb: number;
+  /** TMDB's read access token (TMDB_TOKEN): synopses, ratings and taste-based suggestions; absent, none of those. */
+  tmdbToken: string | undefined;
 }
 
 const DEFAULT_TRANSCODE_WORKERS = 2;
@@ -106,6 +108,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     allowLocalMedia: allowLocalMedia(env, production),
     hevcFull: switchedOn(env.HEVC) && switchedOn(env.HEVC_FULL),
     mediaMaxGb: mediaMaxGb(env.MEDIA_MAX_GB),
+    tmdbToken: env.TMDB_TOKEN?.trim() || undefined,
   };
 }
 

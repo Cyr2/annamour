@@ -22,6 +22,8 @@ export const CatalogTitle = z.object({
   runtime: z.optional(z.number()),
   /** Seasons, for series. */
   seasons: z.optional(z.number()),
+  /** The same title at TMDB, where its synopsis, rating and kin are read (absent for titles kept before). */
+  tmdbId: z.optional(Positive),
 });
 export type CatalogTitle = z.infer<typeof CatalogTitle>;
 
@@ -96,4 +98,38 @@ export const CATALOG_API = {
   season: "/api/catalog/:id/seasons/:season",
   play: "/api/catalog/play",
   addEpisode: "/api/catalog/rooms/:code/episodes",
+  /** `?type=movie&title=Verity&year=2025[&tmdbId=…]`: what TMDB says of a title. */
+  details: "/api/catalog/details",
 } as const;
+
+/** What a title's sheet tells of it, from TMDB. */
+export const TitleDetails = z.object({
+  tmdbId: Positive,
+  overview: z.optional(z.string()),
+  tagline: z.optional(z.string()),
+  genres: z.array(z.string()),
+  /** TMDB's average out of 10, and from how many votes. */
+  voteAverage: z.optional(z.number()),
+  voteCount: z.optional(z.number()),
+  /** Minutes, for films. */
+  runtime: z.optional(z.number()),
+  seasons: z.optional(z.number()),
+  year: z.optional(z.number()),
+  directors: z.array(z.string()),
+  /** The first few actors, in billing order. */
+  cast: z.array(z.string()),
+  trailerUrl: z.optional(z.url({ protocol: /^https$/ })),
+});
+export type TitleDetails = z.infer<typeof TitleDetails>;
+
+/** Null when TMDB is not set up, or does not know the title. */
+export const TitleDetailsResponse = z.object({ details: z.nullable(TitleDetails) });
+export type TitleDetailsResponse = z.infer<typeof TitleDetailsResponse>;
+
+export const TitleDetailsQuery = z.object({
+  type: CatalogMediaType,
+  title: z.string().check(z.trim(), z.minLength(1), z.maxLength(200)),
+  year: z.optional(z.coerce.number().check(z.int(), z.positive())),
+  tmdbId: z.optional(z.coerce.number().check(z.int(), z.positive())),
+});
+export type TitleDetailsQuery = z.infer<typeof TitleDetailsQuery>;

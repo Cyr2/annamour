@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { Catalog } from "../catalog/naka-catalog.ts";
+import { Tmdb, type TmdbFetch } from "../catalog/tmdb.ts";
 import type { TimelineProbe } from "../media/timeline-probe.ts";
 import type { Transcoder } from "../media/transcoder.ts";
 import { RoomStore } from "../room-store.ts";
@@ -15,6 +16,7 @@ import { PlaybackStatsService } from "./playback-stats-service.ts";
 import { RatingService } from "./rating-service.ts";
 import { RoomService } from "./room-service.ts";
 import type { RandomInt } from "./secrets.ts";
+import { TasteService } from "./taste-service.ts";
 import { TvPairingService } from "./tv-pairing-service.ts";
 import { WatchlistService } from "./watchlist-service.ts";
 
@@ -39,6 +41,8 @@ export interface ServiceOptions {
   mediaMaxBytes?: number;
   /** Logs how each film's source audio lines up with its video. */
   timelineProbe?: TimelineProbe;
+  /** TMDB, for synopses, ratings and taste-based suggestions; absent, suggestions come from the list only. */
+  tmdbFetch?: TmdbFetch;
 }
 
 export interface Services {
@@ -54,6 +58,7 @@ export interface Services {
   lowQualities: LowQualityService;
   playbackStats: PlaybackStatsService;
   ratings: RatingService;
+  taste: TasteService;
   now: () => number;
 }
 
@@ -93,18 +98,24 @@ export function createServices(options: ServiceOptions): Services {
     // A queued episode is made ready behind the current one, so moving on to it starts at once.
     onEpisodeAdded: (code) => lowQualities.prepareNext(code),
   });
+  const catalog = new CatalogService({ catalog: options.catalog, rooms, now, cache: repositories.catalogCache });
+  const ratings = new RatingService({ repositories, now });
+  const tmdb = options.tmdbFetch
+    ? new Tmdb({ fetch: options.tmdbFetch, cache: repositories.catalogCache, now })
+    : undefined;
   return {
     store,
     history,
     rooms,
-    catalog: new CatalogService({ catalog: options.catalog, rooms, now }),
+    catalog,
+    taste: new TasteService({ tmdb, catalog, circles, watchlist, history, ratings, now }),
     accounts,
     tvPairings: new TvPairingService({ repositories, accounts, now, randomInt: options.tvCodeRandomInt }),
     passkeys: new PasskeyService({ repositories, relyingParty, now, webAuthn: options.webAuthn }),
     watchlist,
     circles,
     playbackStats: new PlaybackStatsService({ repositories, now }),
-    ratings: new RatingService({ repositories, now }),
+    ratings,
     lowQualities,
     now,
   };

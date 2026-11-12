@@ -32,6 +32,7 @@ export interface Catalog {
 
 const NakaTitle = z.object({
   id: z.number().int().positive(),
+  tmdbId: z.number().int().positive().nullish(),
   mediaType: z.enum(["movie", "tv"]),
   title: z.string(),
   releaseDate: z.string().nullish(),
@@ -65,6 +66,7 @@ export function toCatalogTitle(raw: unknown): CatalogTitle | null {
   if (t.posterPath) title.posterUrl = `${POSTER_BASE}${t.posterPath}`;
   if (t.mediaType === "movie" && t.runtime) title.runtime = t.runtime;
   if (t.mediaType === "tv" && t.numberOfSeasons) title.seasons = t.numberOfSeasons;
+  if (t.tmdbId) title.tmdbId = t.tmdbId;
   return title;
 }
 

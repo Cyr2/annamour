@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { AccountRepository } from "./account-repository.ts";
 import { AuthSessionRepository, LinkTokenRepository } from "./auth-repository.ts";
+import { CatalogCacheRepository } from "./catalog-cache-repository.ts";
 import { CircleRepository } from "./circle-repository.ts";
 import { ParticipationRepository } from "./participation-repository.ts";
 import { PasskeyRepository } from "./passkey-repository.ts";
@@ -23,6 +24,7 @@ export interface Repositories {
   watchlist: WatchlistRepository;
   playbackReports: PlaybackReportRepository;
   ratings: RatingRepository;
+  catalogCache: CatalogCacheRepository;
 }
 
 export function createRepositories(db: DatabaseSync): Repositories {
@@ -38,5 +40,6 @@ export function createRepositories(db: DatabaseSync): Repositories {
     watchlist: new WatchlistRepository(db),
     playbackReports: new PlaybackReportRepository(db),
     ratings: new RatingRepository(db),
+    catalogCache: new CatalogCacheRepository(db),
   };
 }

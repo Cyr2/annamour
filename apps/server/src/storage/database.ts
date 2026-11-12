@@ -184,6 +184,14 @@ const MIGRATIONS: readonly string[] = [
     PRIMARY KEY (account_id, title_type, title_id)
   );
   `,
+  // What TMDB and Naka answered about a title, kept a few days: suggestions read many titles, often the same.
+  `
+  CREATE TABLE catalog_cache (
+    key TEXT PRIMARY KEY,
+    body TEXT NOT NULL,
+    fetched_at INTEGER NOT NULL
+  );
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

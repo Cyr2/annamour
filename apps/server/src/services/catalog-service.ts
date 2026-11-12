@@ -1,13 +1,15 @@
 import {
   type AddCatalogEpisodeRequest,
   type CatalogEpisode,
-  type CatalogTitle,
+  CatalogTitle,
   catalogLabel,
   type PlayCatalogRequest,
 } from "@annamour/protocol";
+import { z } from "zod/mini";
 import { type Catalog, isCatalogPoster } from "../catalog/naka-catalog.ts";
 import { CatalogUnavailableError } from "../errors.ts";
 import type { Room } from "../rooms.ts";
+import type { CatalogCacheRepository } from "../storage/catalog-cache-repository.ts";
 import type { RoomService } from "./room-service.ts";
 
 /** A search is answered from memory for this long: typing again costs Naka nothing. */
@@ -19,6 +21,22 @@ export interface CatalogServiceOptions {
   catalog: Catalog | undefined;
   rooms: RoomService;
   now: () => number;
+  /** Keeps which catalog title answers to a TMDB title, so suggestions search Naka rarely. */
+  cache?: CatalogCacheRepository;
+}
+
+/** How long « Naka has it, as this title » (or does not) is trusted. */
+const NAKA_MATCH_TTL_MS = 3 * 24 * 60 * 60 * 1000;
+
+const KeptTitle = z.object({ title: z.nullable(CatalogTitle) });
+
+function parseKeptTitle(body: string): CatalogTitle | null {
+  try {
+    const parsed = z.safeParse(KeptTitle, JSON.parse(body));
+    return parsed.success ? parsed.data.title : null;
+  } catch {
+    return null;
+  }
 }
 
 /** The request as kept with the séance: its poster only when the catalog serves it. */
@@ -72,6 +90,36 @@ export class CatalogService {
     const { clientId, ...title } = request;
     const url = await this.catalog().videoUrl(title);
     return rooms.addEpisode(code, url, catalogLabel(title), withTrustedPoster(title), clientId);
+  }
+
+  /**
+   * The catalog's own title for one TMDB knows (to suggest only what can be
+   * played), or null when the catalog does not have it, cannot say, or is not set up.
+   */
+  async titleFor(wanted: {
+    type: CatalogTitle["type"];
+    tmdbId: number;
+    title: string;
+    year?: number;
+  }): Promise<CatalogTitle | null> {
+    if (!this.options.catalog) return null;
+    const key = `naka:${wanted.type}:${wanted.tmdbId}`;
+    const kept = this.options.cache?.get(key, this.options.now() - NAKA_MATCH_TTL_MS);
+    if (kept !== undefined) return parseKeptTitle(kept);
+    let titles: CatalogTitle[];
+    try {
+      titles = await this.search(wanted.title);
+    } catch {
+      return null;
+    }
+    const sameName = (title: CatalogTitle) =>
+      title.title.toLocaleLowerCase("fr") === wanted.title.toLocaleLowerCase("fr") && title.year === wanted.year;
+    const match =
+      titles.find((title) => title.type === wanted.type && title.tmdbId === wanted.tmdbId) ??
+      titles.find((title) => title.type === wanted.type && title.tmdbId === undefined && sameName(title)) ??
+      null;
+    this.options.cache?.put(key, JSON.stringify({ title: match }), this.options.now());
+    return match;
   }
 
   private catalog(): Catalog {

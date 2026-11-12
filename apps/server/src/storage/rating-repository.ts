@@ -48,6 +48,20 @@ export class RatingRepository {
       .run(accountId, type, id);
   }
 
+  /** Every avis of these people (a circle's, for its suggestions). */
+  byAccounts(accountIds: readonly string[]): TitleRating[] {
+    if (accountIds.length === 0) return [];
+    const rows = this.db
+      .prepare(
+        `SELECT r.account_id, a.name, a.color, r.title, r.rating, r.rated_at
+         FROM ratings r JOIN accounts a ON a.id = r.account_id
+         WHERE r.account_id IN (${accountIds.map(() => "?").join(", ")})
+         ORDER BY r.rated_at DESC`,
+      )
+      .all(...accountIds);
+    return this.toRatings(rows);
+  }
+
   /** Mine, and those of the people I share a circle or a séance with. */
   visibleTo(accountId: string): TitleRating[] {
     const rows = this.db
@@ -62,6 +76,10 @@ export class RatingRepository {
          ORDER BY r.rated_at DESC`,
       )
       .all({ me: accountId });
+    return this.toRatings(rows);
+  }
+
+  private toRatings(rows: unknown[]): TitleRating[] {
     return parseRows(RatingRow, rows).flatMap((row) => {
       const title = titleOf(row.title);
       if (!title) return [];
