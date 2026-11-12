@@ -14,6 +14,7 @@ import { CircleFilter } from "../list/CircleFilter.tsx";
 import { isFinished, isSameTitle, onePerTitle } from "../sessions/session-rules.ts";
 import { useSessions } from "../sessions/sessions.ts";
 import { useLoadSessions } from "../sessions/useLoadSessions.ts";
+import { SuggestionsShelf } from "../suggestions/SuggestionsShelf.tsx";
 import { AddToWatchlistSheet } from "../watchlist/AddToWatchlistSheet.tsx";
 import { useLoadWatchlist } from "../watchlist/useLoadWatchlist.ts";
 import { WatchlistItemSheet } from "../watchlist/WatchlistItemSheet.tsx";
@@ -68,6 +69,7 @@ export function TonightScreen() {
           loading={listLoading || sessionsLoading}
         />
         <OngoingShelf sessions={ongoing} />
+        <SuggestionsShelf circle={circle} onOpenItem={setOpenItem} />
         <WatchlistShelf circle={circle} title="Notre liste" />
         {/* Last and quiet: a séance mostly starts from a title of the list, or is joined from a link. */}
         <div className="grid grid-cols-2 gap-3">

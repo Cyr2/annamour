@@ -172,6 +172,18 @@ const MIGRATIONS: readonly string[] = [
     PRIMARY KEY (room_code, account_id)
   );
   `,
+  // « Ton avis » on a film or a series: one per person and title, the title kept as the catalog gave it.
+  `
+  CREATE TABLE ratings (
+    account_id TEXT NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    title_type TEXT NOT NULL,
+    title_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    rating TEXT NOT NULL,
+    rated_at INTEGER NOT NULL,
+    PRIMARY KEY (account_id, title_type, title_id)
+  );
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

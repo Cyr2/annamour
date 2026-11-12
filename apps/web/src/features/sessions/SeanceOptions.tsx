@@ -1,5 +1,5 @@
 import type { SessionSummary } from "@annamour/protocol";
-import { CircleCheck, Ellipsis, Link2, LogOut, Trash2 } from "lucide-react";
+import { CircleCheck, Ellipsis, Link2, LogOut, Smile, Trash2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { joinNames } from "../../lib/format.ts";
 import { Button } from "../../ui/controls.tsx";
@@ -7,8 +7,9 @@ import { IconButton } from "../../ui/IconButton.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { toast } from "../../ui/toast.ts";
 import { AccountRow } from "../profile/AccountRow.tsx";
+import { TitleRatings } from "../ratings/TitleRatings.tsx";
 import { copySeanceLink } from "./copy-seance-link.tsx";
-import { canMarkFinished, sessionTitle } from "./session-rules.ts";
+import { canMarkFinished, sessionTitle, titleToRateOf } from "./session-rules.ts";
 import { deleteSession, finishSession, leaveSession } from "./sessions.ts";
 
 interface SeanceOptionsProps {
@@ -26,11 +27,13 @@ interface SeanceOptionsProps {
  */
 export function SeanceOptions({ session, variant = "plain", className, onGone }: SeanceOptionsProps) {
   const [open, setOpen] = useState(false);
-  const [confirming, setConfirming] = useState(false);
+  const [view, setView] = useState<"menu" | "delete" | "rate">("menu");
+  const confirming = view === "delete";
   const title = sessionTitle(session);
+  const rated = titleToRateOf(session);
   const close = () => {
     setOpen(false);
-    setConfirming(false);
+    setView("menu");
   };
   const run = (work: Promise<void>, done: string) =>
     void work
@@ -50,17 +53,20 @@ export function SeanceOptions({ session, variant = "plain", className, onGone }:
         className={className}
       />
       <Sheet open={open} onClose={close} title={confirming ? "Supprimer pour tout le monde ?" : title}>
+        {view === "rate" && rated ? <TitleRatings title={rated} /> : null}
         {confirming ? (
           <ConfirmDelete
             session={session}
-            onCancel={() => setConfirming(false)}
+            onCancel={() => setView("menu")}
             onConfirm={() => {
               close();
               run(deleteSession(session.code), `« ${title} » est supprimée pour tout le monde`);
             }}
           />
-        ) : (
+        ) : null}
+        {view === "menu" ? (
           <div className="grid gap-1">
+            {rated ? row(<Smile />, "Ton avis", "Adoré, aimé, bof… les autres le voient", () => setView("rate")) : null}
             {/* The cards leave the code out to stay short: it is read here, to give it out loud. */}
             {row(<Link2 />, "Copier le lien", `Code : ${session.code} · pour inviter quelqu'un`, () => {
               close();
@@ -81,12 +87,12 @@ export function SeanceOptions({ session, variant = "plain", className, onGone }:
                   <Trash2 />,
                   "Supprimer pour tous",
                   "Tu l'as créée : elle disparaît pour tout le monde",
-                  () => setConfirming(true),
+                  () => setView("delete"),
                   true,
                 )
               : null}
           </div>
-        )}
+        ) : null}
       </Sheet>
     </>
   );

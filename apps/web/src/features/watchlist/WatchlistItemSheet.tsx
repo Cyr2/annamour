@@ -8,6 +8,7 @@ import { ThreadSpinner } from "../../ui/ThreadSpinner.tsx";
 import { toast } from "../../ui/toast.ts";
 import { describeTitle } from "../home/create/CatalogResults.tsx";
 import { EpisodePicker } from "../home/create/EpisodePicker.tsx";
+import { TitleRatings } from "../ratings/TitleRatings.tsx";
 import { ResumeSeanceAction } from "../sessions/ResumeSeanceAction.tsx";
 import { useSeanceOfTitle } from "../sessions/useSeanceOfTitle.ts";
 import { useLaunchTitle } from "./useLaunchTitle.ts";
@@ -84,6 +85,8 @@ function ItemBody({ item, me, onClose, onConfirmRemoval }: ItemBodyProps) {
           <WantToggle item={item} me={me} onToggle={(want) => void act(toggleWant(item.id, me, want))} />
         </div>
       </div>
+      {/* Once seen, each says how they found it; before, the avis of those who saw it elsewhere still help choose. */}
+      <TitleRatings title={item.title} askMine={item.watchedAt !== undefined} />
       <p role="alert" className="min-h-5 text-sm text-danger">
         {busy ? (
           <span className="flex items-center gap-3 text-fg-muted">
