@@ -8,6 +8,8 @@ import {
   type CreateRoomResponse,
   isRoomCode,
   PlayCatalogRequest,
+  TitleDetailsQuery,
+  type TitleDetailsResponse,
 } from "@annamour/protocol";
 import { Hono } from "hono";
 import { BadRequestError, NotFoundError, TooManyAttemptsError } from "../errors.ts";
@@ -25,7 +27,7 @@ function positiveInt(value: string): number | null {
 
 /** Search the catalog and start a séance on a title: for signed-in people only. */
 export function catalogRoutes({ services }: RouteDeps) {
-  const { catalog, accounts, circles, now } = services;
+  const { catalog, accounts, circles, taste, now } = services;
   const limiter = new RateLimiter(CATALOG_LIMIT);
   const routes = new Hono<AppEnv>();
 
@@ -40,6 +42,12 @@ export function catalogRoutes({ services }: RouteDeps) {
     const query = CatalogQuery.safeParse(c.req.query("q") ?? "");
     if (!query.success) throw new BadRequestError(SEARCH_HELP);
     return c.json({ titles: await catalog.search(query.data) } satisfies CatalogSearchResponse);
+  });
+
+  routes.get(CATALOG_API.details, async (c) => {
+    const query = TitleDetailsQuery.safeParse(c.req.query());
+    if (!query.success) throw new BadRequestError("Ce titre n'est pas lisible.");
+    return c.json({ details: await taste.details(query.data) } satisfies TitleDetailsResponse);
   });
 
   routes.get(CATALOG_API.season, async (c) => {

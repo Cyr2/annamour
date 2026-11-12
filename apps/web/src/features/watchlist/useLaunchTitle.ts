@@ -14,7 +14,11 @@ export function useLaunchTitle() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const launch = async (item: WatchlistItem, episode?: { season: number; episode: number }) => {
+  /** A title of the list, or any title for a circle (a suggestion). */
+  const launch = async (
+    item: Pick<WatchlistItem, "title" | "circleId">,
+    episode?: { season: number; episode: number },
+  ) => {
     const { id, type, title, posterUrl } = item.title;
     // The poster goes along, so the séance can show it on « Ce soir ».
     const base = { id, type, title, ...(posterUrl ? { posterUrl } : {}) };

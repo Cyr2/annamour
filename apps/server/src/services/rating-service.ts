@@ -28,6 +28,11 @@ export class RatingService {
     return this.repositories.ratings.visibleTo(accountId);
   }
 
+  /** Every avis of these people: a circle's, for its suggestions. */
+  byAccounts(accountIds: readonly string[]): TitleRating[] {
+    return this.repositories.ratings.byAccounts(accountIds);
+  }
+
   rate(accountId: string, title: CatalogTitle, rating: Rating): void {
     this.repositories.ratings.rate(accountId, withTrustedPoster(title), rating, this.now());
   }

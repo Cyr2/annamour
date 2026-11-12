@@ -184,6 +184,24 @@ const MIGRATIONS: readonly string[] = [
     PRIMARY KEY (account_id, title_type, title_id)
   );
   `,
+  // What TMDB and Naka answered about a title, kept a few days: suggestions read many titles, often the same.
+  `
+  CREATE TABLE catalog_cache (
+    key TEXT PRIMARY KEY,
+    body TEXT NOT NULL,
+    fetched_at INTEGER NOT NULL
+  );
+  `,
+  // « Pas pour nous » on a suggestion: the title leaves the circle's shelf for a while (key « movie:<tmdb> »).
+  `
+  CREATE TABLE suggestion_dismissals (
+    circle_id TEXT NOT NULL REFERENCES circles (id) ON DELETE CASCADE,
+    title_key TEXT NOT NULL,
+    account_id TEXT NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    dismissed_at INTEGER NOT NULL,
+    PRIMARY KEY (circle_id, title_key)
+  );
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

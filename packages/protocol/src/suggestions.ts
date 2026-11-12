@@ -1,7 +1,49 @@
-import type { Participant } from "./api.ts";
-import type { CatalogTitle } from "./catalog.ts";
+import { z } from "zod/mini";
+import { Participant } from "./api.ts";
+import { CatalogTitle } from "./catalog.ts";
 import type { Rating, TitleRating } from "./ratings.ts";
 import { catalogKey, type WatchlistItem } from "./watchlist.ts";
+
+/** Why a title is suggested, as the shelf says it. */
+export const SuggestionWhy = z.union([
+  /** « Parce que vous avez adoré Verity »: the group's titles TMDB recommends it from. */
+  z.object({ kind: z.literal("because"), titles: z.array(z.string()) }),
+  /** « Thriller, vos genres »: genres every taste leans to. */
+  z.object({ kind: z.literal("genres"), genres: z.array(z.string()) }),
+  /** « Du David Fincher »: a director every taste leans to. */
+  z.object({ kind: z.literal("director"), name: z.string() }),
+  z.object({ kind: z.literal("wants"), people: z.array(Participant) }),
+  z.object({ kind: z.enum(["loved", "liked"]), people: z.array(Participant) }),
+  /** « Très bien noté : 8,1 ». */
+  z.object({ kind: z.literal("acclaimed"), voteAverage: z.number() }),
+]);
+export type SuggestionWhy = z.infer<typeof SuggestionWhy>;
+
+export const GroupSuggestion = z.object({
+  title: CatalogTitle,
+  /** The circle's list item, when the title is in it. */
+  itemId: z.optional(z.string()),
+  /** Suits everyone's taste well: « Pile pour vous deux ». No numbers per person: they set people apart. */
+  perfect: z.boolean(),
+  /** Why, the most telling first: a card says the first, its sheet all of them. */
+  reasons: z.array(SuggestionWhy),
+});
+export type GroupSuggestion = z.infer<typeof GroupSuggestion>;
+
+export const SuggestionsResponse = z.object({ suggestions: z.array(GroupSuggestion) });
+export type SuggestionsResponse = z.infer<typeof SuggestionsResponse>;
+
+/** « Pas pour nous »: the title leaves the circle's suggestions for a while. */
+export const DismissSuggestionRequest = z.object({
+  type: z.enum(["movie", "tv"]),
+  tmdbId: z.number().check(z.int(), z.positive()),
+});
+export type DismissSuggestionRequest = z.infer<typeof DismissSuggestionRequest>;
+
+export const SUGGESTIONS_API = {
+  circle: "/api/me/circles/:id/suggestions",
+  dismiss: "/api/me/circles/:id/suggestions/dismiss",
+} as const;
 
 /*
  * « Pour ce soir »: what a circle could watch together, read only from what

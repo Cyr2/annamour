@@ -47,6 +47,7 @@ describe("the Naka catalog", () => {
         year: 2014,
         posterUrl: "https://image.tmdb.org/t/p/w342/poster.jpg",
         runtime: 169,
+        tmdbId: 157336,
       },
       { id: 91, type: "tv", title: "Euphoria", year: 2019, seasons: 3 },
     ]);
