@@ -25,7 +25,7 @@ export function WaitingNow({ sessions }: { sessions: readonly SessionSummary[] }
             <BubbleStack people={people} className="shrink-0" />
             <p className="grid min-w-0 flex-1 text-left">
               <span className="truncate text-sm font-semibold text-fg">{sessionTitle(session)}</span>
-              <span className="truncate text-xs text-fg-muted">{hereLine(session)}</span>
+              <span className="line-clamp-2 text-xs text-fg-muted">{hereLine(session)}</span>
             </p>
             <LinkButton
               href={sessionPath(session.code)}

@@ -21,7 +21,7 @@ export function RateQuestionSheet() {
             Comment tu as trouvé « {asked.title} » ? Les autres le verront, et vos idées pour ce soir en tiendront
             compte.
           </Sheet.Lede>
-          <TitleRatings title={asked} onRated={dismissRateQuestion} />
+          <TitleRatings title={asked} onRated={dismissRateQuestion} quietHeading />
           <Button onClick={dismissRateQuestion}>Plus tard</Button>
         </div>
       ) : null}

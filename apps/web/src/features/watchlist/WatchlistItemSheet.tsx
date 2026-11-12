@@ -89,7 +89,7 @@ function ItemBody({ item, me, onClose, onConfirmRemoval }: ItemBodyProps) {
       <TitleDetailsSection title={item.title} />
       {/* Once seen, each says how they found it; before, the avis of those who saw it elsewhere still help choose. */}
       <TitleRatings title={item.title} askMine={item.watchedAt !== undefined} />
-      <p role="alert" className="min-h-5 text-sm text-danger">
+      <p role="alert" className="text-sm text-danger empty:hidden">
         {busy ? (
           <span className="flex items-center gap-3 text-fg-muted">
             <ThreadSpinner /> On prépare la séance…

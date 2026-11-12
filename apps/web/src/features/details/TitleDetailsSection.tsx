@@ -47,7 +47,11 @@ export function TitleDetailsSection({ title }: { title: CatalogTitle }) {
   const people = peopleLine(details);
   const hasMore = Boolean(details.overview || people || details.trailerUrl);
   return (
-    <section aria-label={`À propos de « ${title.title} »`} className="grid gap-1 text-sm text-fg-muted">
+    // min-w-0 and one column: the truncated line must not widen the sheet past the screen.
+    <section
+      aria-label={`À propos de « ${title.title} »`}
+      className="grid min-w-0 grid-cols-1 gap-1 text-sm text-fg-muted"
+    >
       <div className="flex min-h-11 items-center gap-3">
         <p className="flex min-w-0 flex-1 items-center gap-1.5">
           {rating ? (

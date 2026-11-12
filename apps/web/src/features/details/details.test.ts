@@ -25,8 +25,8 @@ describe("what a title's sheet says of it", () => {
   });
 
   it("says its genres and length, or its seasons", () => {
-    expect(factsLine(gone)).toBe("Drame, thriller, mystère · 2 h 29");
-    expect(factsLine({ ...gone, runtime: undefined, seasons: 3 })).toBe("Drame, thriller, mystère · 3 saisons");
+    expect(factsLine(gone)).toBe("Drame, thriller · 2 h 29");
+    expect(factsLine({ ...gone, runtime: undefined, seasons: 3 })).toBe("Drame, thriller · 3 saisons");
     expect(factsLine({ ...gone, genres: [], runtime: undefined })).toBe("");
     expect(runtimeLabel(45)).toBe("45 min");
     expect(runtimeLabel(120)).toBe("2 h");
