@@ -62,11 +62,21 @@ export type Media = z.infer<typeof Media>;
 
 /** One video of a séance (see episodes.ts). The first one usually has no label: it is the séance itself. */
 export const EpisodeLabel = z.string().check(z.trim(), z.minLength(1), z.maxLength(40));
+/** Where a video's intro and end credits are, in seconds, when a source knows (see skips.ts). */
+export const SkipMarkers = z.object({
+  introStart: z.optional(z.number().check(z.gte(0))),
+  introEnd: z.optional(z.number().check(z.gte(0))),
+  creditsStart: z.optional(z.number().check(z.gte(0))),
+});
+export type SkipMarkers = z.infer<typeof SkipMarkers>;
+
 export const EpisodeInfo = z.object({
   label: z.optional(z.string()),
   duration: z.optional(z.number()),
   /** The catalog title it was made from, when it was not a pasted link: lets the PWA offer what follows. */
   catalog: z.optional(CatalogRef),
+  /** « Passer l'intro » and the end credits' card read these. */
+  skips: z.optional(SkipMarkers),
 });
 export type EpisodeInfo = z.infer<typeof EpisodeInfo>;
 export const EpisodeIndex = z.number().check(z.int(), z.gte(0));
@@ -120,6 +130,8 @@ export const ClientMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("react"), emoji: Reaction }),
   /** This device reached the end of `episode`. */
   z.object({ type: z.literal("ended"), episode: EpisodeIndex }),
+  /** This device reached the end credits of `episode`: the next one's countdown starts for everyone. */
+  z.object({ type: z.literal("credits"), episode: EpisodeIndex }),
   /** Move everyone from episode `from` to episode `to` (once, however many devices ask). */
   z.object({ type: z.literal("playEpisode"), from: EpisodeIndex, to: EpisodeIndex }),
   /** « Pas ce soir »: stop the countdown for everyone. */

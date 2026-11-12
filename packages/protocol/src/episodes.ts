@@ -31,11 +31,29 @@ export function hasNextEpisode(progress: EpisodeProgress): boolean {
   return progress.current + 1 < progress.count;
 }
 
-/** Someone reached the end of `episode`: if another one follows, its countdown starts. */
+/**
+ * Someone reached the end of `episode`: if another one follows, its countdown
+ * starts — or goes on, when it already started at the end credits.
+ */
 export function episodeEnded(progress: EpisodeProgress, episode: number, now: number): EpisodeProgress {
   if (episode !== progress.current || progress.finished) return progress;
   const countdown = hasNextEpisode(progress) && !progress.declined;
-  return { ...progress, finished: true, countdownUntil: countdown ? now + NEXT_EPISODE_COUNTDOWN_MS : null };
+  const until = progress.countdownUntil ?? now + NEXT_EPISODE_COUNTDOWN_MS;
+  return { ...progress, finished: true, countdownUntil: countdown ? until : null };
+}
+
+/** How long « Épisode suivant dans 10 s » lasts once the end credits start. */
+export const CREDITS_COUNTDOWN_MS = 10_000;
+
+/**
+ * Someone reached the end credits of `episode`: the next one's countdown starts
+ * for everyone, the credits still rolling (« Regarder le générique » stops it,
+ * as « Pas ce soir » does). Once, however many devices say so.
+ */
+export function creditsReached(progress: EpisodeProgress, episode: number, now: number): EpisodeProgress {
+  const already = progress.finished || progress.declined || progress.countdownUntil !== null;
+  if (episode !== progress.current || already || !hasNextEpisode(progress)) return progress;
+  return { ...progress, countdownUntil: now + CREDITS_COUNTDOWN_MS };
 }
 
 /**

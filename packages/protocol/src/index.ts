@@ -14,6 +14,7 @@ export * from "./ratings.ts";
 export * from "./readying.ts";
 export * from "./room-code.ts";
 export * from "./seance-report.ts";
+export * from "./skips.ts";
 export * from "./suggestions.ts";
 export * from "./taste.ts";
 export * from "./tv-pairing-code.ts";
