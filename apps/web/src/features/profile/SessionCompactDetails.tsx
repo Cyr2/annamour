@@ -2,7 +2,14 @@ import type { SessionSummary } from "@annamour/protocol";
 import { BubbleStack, type StackedPerson } from "../../ui/BubbleStack.tsx";
 import { EpisodeBars } from "../../ui/EpisodeBars.tsx";
 import { Progress } from "../../ui/Progress.tsx";
-import { isFinished, progressNote, progressOf, sessionTitle, whenAndWhoLabel } from "../sessions/session-rules.ts";
+import {
+  currentWatched,
+  isFinished,
+  progressNote,
+  progressOf,
+  sessionTitle,
+  whenAndWhoLabel,
+} from "../sessions/session-rules.ts";
 
 interface SessionCompactDetailsProps {
   session: SessionSummary;
@@ -34,14 +41,13 @@ export function SessionCompactDetails({ session, people, now }: SessionCompactDe
 /** The episodes' bars for a series, one bar otherwise; nothing to draw without a length. */
 function SessionProgress({ session }: { session: SessionSummary }) {
   const progress = progressOf(session);
-  const finished = isFinished(session);
   if (session.episode.count > 1) {
     return (
       <EpisodeBars
         count={session.episode.count}
         current={session.episode.index}
         progress={progress}
-        finished={finished}
+        finished={currentWatched(session)}
         className="min-w-0 flex-1"
       />
     );
@@ -51,7 +57,7 @@ function SessionProgress({ session }: { session: SessionSummary }) {
     <Progress.Bar
       value={progress}
       label={`${Math.round(progress * 100)} % regardé`}
-      done={finished}
+      done={isFinished(session)}
       className="min-w-0 flex-1"
     />
   );

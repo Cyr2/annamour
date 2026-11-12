@@ -13,19 +13,32 @@ const dune: RoomSnapshot = {
   countdownUntil: null,
 };
 
+const at = (position: number, episode = 0) => ({ episode, position });
+
 describe("« C'est fini ? » on leaving a salon", () => {
   it("is asked of whoever leaves alone with three minutes of credits left", () => {
-    expect(finishQuestion(dune, 8820, false)).toEqual({ code: "YWEK", title: "Dune", minutesLeft: 3, next: undefined });
+    expect(finishQuestion(dune, at(8820), false)).toEqual({
+      code: "YWEK",
+      title: "Dune",
+      minutesLeft: 3,
+      next: undefined,
+    });
   });
 
   it("names what the séance reopens on when another film follows", () => {
     const withAlien = { ...dune, episodes: [{}, { catalog: { id: 1, type: "movie", title: "Alien" } as const }] };
-    expect(finishQuestion(withAlien, 8820, false)?.next).toBe("Alien");
+    expect(finishQuestion(withAlien, at(8820), false)?.next).toBe("Alien");
   });
 
   it("waits for the last one out, and stays quiet mid-film or once the end counted", () => {
-    expect(finishQuestion(dune, 8820, true)).toBeNull();
-    expect(finishQuestion(dune, 4000, false)).toBeNull();
-    expect(finishQuestion({ ...dune, finished: true }, 8820, false)).toBeNull();
+    expect(finishQuestion(dune, at(8820), true)).toBeNull();
+    expect(finishQuestion(dune, at(4000), false)).toBeNull();
+    expect(finishQuestion({ ...dune, finished: true }, at(8820), false)).toBeNull();
+  });
+
+  it("stays quiet about an episode just started, however far the one before was watched", () => {
+    const series = { ...dune, episodes: [{ duration: 9000 }, { duration: 9000 }, { duration: 9000 }], current: 1 };
+    expect(finishQuestion(series, at(8820, 0), false)).toBeNull();
+    expect(finishQuestion(series, at(8820, 1), false)).not.toBeNull();
   });
 });

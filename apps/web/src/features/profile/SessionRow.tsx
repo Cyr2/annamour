@@ -14,6 +14,7 @@ import { SeanceOptions } from "../sessions/SeanceOptions.tsx";
 import { SeancePoster } from "../sessions/SeancePoster.tsx";
 import {
   companionsLabel,
+  currentWatched,
   isFinished,
   progressOf,
   relativeDay,
@@ -67,7 +68,7 @@ export function SessionDetails({ session, me, now }: Omit<SessionRowProps, "onRe
           count={session.episode.count}
           current={session.episode.index}
           progress={progress}
-          finished={isFinished(session)}
+          finished={currentWatched(session)}
           className="mt-1"
         />
       ) : progress === null ? null : (

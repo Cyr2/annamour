@@ -136,8 +136,12 @@ describe("a séance of episodes in my sessions", () => {
     episode: { index: 0, count: 1 },
   };
 
-  it("names the episode it is on", () => {
-    expect(sessionTitle({ ...base, episode: { index: 4, count: 5, label: "S2 · É5" } })).toBe("The Bear · S2 · É5");
+  it("is named after the series when it holds several episodes, its bars telling which one is on", () => {
+    expect(sessionTitle({ ...base, episode: { index: 3, count: 4, label: "S1 · É4" } })).toBe("The Bear");
+  });
+
+  it("names its episode when it holds only that one", () => {
+    expect(sessionTitle({ ...base, episode: { index: 0, count: 1, label: "S2 · É5" } })).toBe("The Bear · S2 · É5");
     expect(sessionTitle(base)).toBe("The Bear");
   });
 

@@ -6,6 +6,7 @@ import {
   canMarkFinished,
   chosenEpisodeNote,
   companionsLabel,
+  currentWatched,
   fanPosters,
   favoriteOf,
   isFinished,
@@ -110,6 +111,13 @@ describe("session progress", () => {
     expect(isFinished(session("A", { position: 7770 }))).toBe(true);
     expect(isFinished(session("A", { position: 7700 }))).toBe(false);
     expect(isFinished(session("A", { duration: undefined, position: 99999 }))).toBe(false);
+  });
+
+  it("ticks an episode left in its credits, though the séance goes on with the next", () => {
+    const series = (position: number) => session("S", { position, episode: { index: 1, count: 4 } });
+    expect(currentWatched(series(7800))).toBe(true);
+    expect(isFinished(series(7800))).toBe(false);
+    expect(currentWatched(series(4360))).toBe(false);
   });
 
   it("offers to mark as over a séance left in its credits, on its last video only", () => {

@@ -20,12 +20,14 @@ function useNextEpisode(last: CatalogRef | undefined): Suggestion | null {
   const title = last?.title;
   const season = last?.type === "tv" ? last.season : undefined;
   const episode = last?.type === "tv" ? last.episode : undefined;
+  const posterUrl = last?.posterUrl;
 
   useEffect(() => {
     setSuggestion(null);
     if (id === undefined || title === undefined || season === undefined || episode === undefined) return;
     const controller = new AbortController();
-    const current: CatalogRef = { id, type: "tv", title, season, episode };
+    // The series' poster goes along, for the séance's card once on this episode.
+    const current: CatalogRef = { id, type: "tv", title, season, episode, ...(posterUrl ? { posterUrl } : {}) };
     fetchSeason(id, season, controller.signal).then(
       (episodes: CatalogEpisode[]) => {
         const next = nextCatalogEpisode(
@@ -40,7 +42,7 @@ function useNextEpisode(last: CatalogRef | undefined): Suggestion | null {
       () => undefined,
     );
     return () => controller.abort();
-  }, [id, title, season, episode]);
+  }, [id, title, season, episode, posterUrl]);
 
   return suggestion;
 }

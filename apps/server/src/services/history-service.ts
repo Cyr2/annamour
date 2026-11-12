@@ -18,6 +18,24 @@ function queueOf(items: readonly QueuedItem[] | undefined, seanceTitle: string):
   return { queue: items.map(({ title, ...rest }) => ({ title: title ?? seanceTitle, ...rest })) };
 }
 
+/**
+ * The poster on a séance's card: its current title's, or for a series that of another of its
+ * episodes (those queued with « Épisode suivant » used to come without one).
+ */
+function posterOf(
+  posterUrl: string | undefined,
+  index: number,
+  items: readonly QueuedItem[] | undefined,
+): Pick<SessionSummary, "posterUrl"> {
+  const playing = items?.[index];
+  const poster =
+    posterUrl ??
+    (playing?.type === "tv"
+      ? items?.find((item) => item.type === "tv" && item.title === playing.title && item.posterUrl)?.posterUrl
+      : undefined);
+  return poster === undefined ? {} : { posterUrl: poster };
+}
+
 function circleOf(
   circleId: string | undefined,
   circle: SessionSummary["circle"],
@@ -73,7 +91,7 @@ export class HistoryService {
       },
       ...queueOf(queues.get(room.code), room.title),
       ...circleOf(room.circleId, circles.get(room.code)),
-      ...(room.posterUrl === undefined ? {} : { posterUrl: room.posterUrl }),
+      ...posterOf(room.posterUrl, room.episode.index, queues.get(room.code)),
       ...(room.catalog === undefined ? {} : { catalog: room.catalog }),
       ...(room.createdBy === accountId ? { createdByMe: true } : {}),
     }));

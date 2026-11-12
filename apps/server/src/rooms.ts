@@ -1,4 +1,5 @@
 import {
+  atCredits,
   awaitedLeads,
   type BubbleColor,
   type CatalogRef,
@@ -283,6 +284,8 @@ export class Room {
       this.resumeAfterBuffer = false;
       this.readying = null;
       this.saveNow(now);
+      // People leave during the credits, before the video's last image: that counts as watched to its end.
+      if (this.inCredits(now)) this.onEnded(this.progress.current, now);
       this.moveTo(everyoneLeft(this.progress), now, "paused");
       return;
     }
@@ -379,6 +382,11 @@ export class Room {
 
   positionAt(now: number): number {
     return positionAt(this.playback, now);
+  }
+
+  private inCredits(now: number): boolean {
+    const { current, count } = this.progress;
+    return atCredits({ position: this.positionAt(now), duration: this.imported.duration, index: current, count });
   }
 
   /** Persists where the video is right now. */
