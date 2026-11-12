@@ -26,14 +26,26 @@ export function dismissFinishQuestion(): void {
   useFinishQuestion.setState({ question: null });
 }
 
+/** How far this device watched, and in which of the séance's videos. */
+export interface WatchedTo {
+  episode: number;
+  position: number;
+}
+
 /**
- * The question for a salon being left at `position`, or null: not while
- * others stay (the last one out is asked), nor once the end already counted.
+ * The question for a salon being left, or null: not while others stay (the last
+ * one out is asked), nor once the end already counted, nor about a video other
+ * than the one on screen (an episode just started is not over).
  */
-export function finishQuestion(room: RoomSnapshot, position: number, othersStaying: boolean): FinishQuestion | null {
+export function finishQuestion(
+  room: RoomSnapshot,
+  { episode, position }: WatchedTo,
+  othersStaying: boolean,
+): FinishQuestion | null {
   const duration = room.media.duration;
   const spot = { position, duration, index: room.current, count: room.episodes.length };
-  if (othersStaying || room.finished || duration === undefined || !inLastStretch(spot)) return null;
+  if (othersStaying || room.finished || episode !== room.current) return null;
+  if (duration === undefined || !inLastStretch(spot)) return null;
   const next = room.episodes[room.current + 1];
   return {
     code: room.code,

@@ -22,10 +22,14 @@ const playing = (session: SessionSummary) => session.queue?.[session.episode.ind
 /** A séance of films one after the other (not the episodes of a series, nor links). */
 const isFilms = (session: SessionSummary) => session.queue?.every((item) => item.type === "movie") ?? false;
 
-/** « The Bear · S2 · É5 »: the séance, and the episode it is on when it has a name; for films, the one playing. */
+/**
+ * For films, the one playing. Otherwise the séance's name: « The Bear » for several
+ * episodes (its bars tell which one is on), « The Bear · S2 · É5 » for a single one.
+ */
 export function sessionTitle(session: SessionSummary): string {
   const film = playing(session);
-  return film?.type === "movie" ? film.title : episodeTitle(session.title, session.episode.label);
+  if (film?.type === "movie") return film.title;
+  return session.episode.count > 1 ? session.title : episodeTitle(session.title, session.episode.label);
 }
 
 /** « film 2 sur 3 », « épisode 5 sur 8 », or nothing for a séance of one video. */
@@ -50,6 +54,11 @@ const spotOf = (session: SessionSummary): SeanceSpot => ({
 
 /** The video playing reached its credits. */
 const atCredits = (session: SessionSummary) => videoAtCredits(spotOf(session));
+
+/** The video on screen reached its credits: ticked like those before it, even with more to come. */
+export function currentWatched(session: SessionSummary): boolean {
+  return atCredits(session);
+}
 
 /** Over once its last film or episode is (the same rule as the salon's « Revoir »). */
 export function isFinished(session: SessionSummary): boolean {
