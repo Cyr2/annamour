@@ -11,6 +11,7 @@ import {
   secondsLeft,
   seriesToMarkWatched,
   suggestedLabel,
+  titleToRate,
 } from "./episode-rules.ts";
 import { timelineKeyTarget } from "./seek.ts";
 
@@ -73,6 +74,15 @@ describe("what the end screen knows of a series", () => {
     expect(seriesToMarkWatched([{ ...listed, watchedAt: 1 }], { episodes: [episode(1)], current: 0 })).toBeUndefined();
     const film = { episodes: [{ catalog: { id: 136315, type: "movie", title: "Homonyme" } as const }], current: 0 };
     expect(seriesToMarkWatched([listed], film)).toBeUndefined();
+  });
+
+  it("asks « Ton avis » on a film at its end, on a series only after its last queued episode", () => {
+    const alien = { id: 7, type: "movie", title: "Alien", posterUrl: "https://image.tmdb.org/a.jpg" } as const;
+    expect(titleToRate({ episodes: [{ catalog: alien }, episode(1)], current: 0 }, "next-ready")).toEqual(alien);
+    expect(titleToRate({ episodes: [episode(1), episode(2)], current: 0 }, "countdown")).toBeUndefined();
+    expect(titleToRate({ episodes: [episode(1), episode(2)], current: 1 }, "nothing-next")).toEqual(bear);
+    expect(titleToRate({ episodes: [{}], current: 0 }, "nothing-next")).toBeUndefined();
+    expect(titleToRate({ episodes: [{ catalog: alien }], current: 0 }, null)).toBeUndefined();
   });
 });
 

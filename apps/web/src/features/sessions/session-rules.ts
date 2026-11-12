@@ -1,5 +1,6 @@
 import {
   type BubbleColor,
+  type CatalogTitle,
   catalogEpisodeLabel,
   episodeTitle,
   type SeanceSpot,
@@ -63,6 +64,14 @@ export function currentWatched(session: SessionSummary): boolean {
 /** Over once its last film or episode is (the same rule as the salon's « Revoir »). */
 export function isFinished(session: SessionSummary): boolean {
   return seanceFinished(spotOf(session));
+}
+
+/** What « Ton avis » in a finished séance's « ⋯ » is about: its last title, when the catalog named it. */
+export function titleToRateOf(session: SessionSummary): CatalogTitle | undefined {
+  if (!session.catalog || !isFinished(session)) return undefined;
+  const film = playing(session);
+  const title = film?.type === "movie" ? film.title : session.title;
+  return { ...session.catalog, title, ...(session.posterUrl ? { posterUrl: session.posterUrl } : {}) };
 }
 
 /**

@@ -1,4 +1,10 @@
-import { type EpisodeInfo, nextEpisodeLabel, type RoomSnapshot, type WatchlistItem } from "@annamour/protocol";
+import {
+  type CatalogTitle,
+  type EpisodeInfo,
+  nextEpisodeLabel,
+  type RoomSnapshot,
+  type WatchlistItem,
+} from "@annamour/protocol";
 
 /* What the player shows around episodes: the end screen, the countdown, the « Épisodes » list. */
 
@@ -61,6 +67,17 @@ export function seriesToMarkWatched(items: readonly WatchlistItem[], room: Episo
   const catalog = room.episodes[room.current]?.catalog;
   if (catalog?.type !== "tv" || room.current + 1 < room.episodes.length) return undefined;
   return items.find((item) => item.title.type === "tv" && item.title.id === catalog.id && !item.watchedAt);
+}
+
+/**
+ * What the end screen asks « Ton avis » on: the film just over, or the series
+ * once its last queued episode is; nothing between two episodes, nor for a link.
+ */
+export function titleToRate(room: EpisodesOf, end: EpisodeEnd): CatalogTitle | undefined {
+  const catalog = room.episodes[room.current]?.catalog;
+  if (!catalog || end === null || (catalog.type === "tv" && end !== "nothing-next")) return undefined;
+  const { id, type, title, posterUrl } = catalog;
+  return { id, type, title, ...(posterUrl ? { posterUrl } : {}) };
 }
 
 /** Only a series ends an episode: a film, or a video pasted by link, is simply over. */

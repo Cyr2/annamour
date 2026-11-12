@@ -24,6 +24,7 @@ import {
   sessionTitle,
   splitByStatus,
   stopLabel,
+  titleToRateOf,
   whenAndWhoLabel,
   whereAndWho,
   withPerson,
@@ -118,6 +119,19 @@ describe("session progress", () => {
     expect(currentWatched(series(7800))).toBe(true);
     expect(isFinished(series(7800))).toBe(false);
     expect(currentWatched(series(4360))).toBe(false);
+  });
+
+  it("asks « Ton avis » on a finished séance's last title, when the catalog named it", () => {
+    const over = { position: 7800, catalog: { id: 7, type: "movie" } as const, posterUrl: DUNE };
+    expect(titleToRateOf(session("A", { ...over, title: "Dune" }))).toEqual({
+      id: 7,
+      type: "movie",
+      title: "Dune",
+      posterUrl: DUNE,
+    });
+    expect(titleToRateOf(films({ ...over, episode: { index: 1, count: 2 } }))?.title).toBe("Alien");
+    expect(titleToRateOf(session("A", { ...over, position: 10 }))).toBeUndefined();
+    expect(titleToRateOf(session("A", { position: 7800 }))).toBeUndefined();
   });
 
   it("offers to mark as over a séance left in its credits, on its last video only", () => {

@@ -11,6 +11,7 @@ import { LeaveAction, TogetherActions } from "./EndActions.tsx";
 import { EpisodeCountdown } from "./EpisodeCountdown.tsx";
 import { type EpisodeEnd, endTitle, episodeName, onSeries } from "./episode-rules.ts";
 import { MarkSeriesWatched } from "./MarkSeriesWatched.tsx";
+import { RateWhatEnded } from "./RateWhatEnded.tsx";
 
 const TITLE_ID = "episode-end-title";
 
@@ -74,6 +75,7 @@ export function EpisodeEndScreen({ end, room, client, onWatchAgain, onAddNext }:
           onWatchAgain={onWatchAgain}
         />
         {end === "nothing-next" ? <MarkSeriesWatched room={room} /> : null}
+        <RateWhatEnded room={room} end={end} />
         <LeaveAction othersStay={room.members.length > 1} />
       </div>
       <KeepSeanceLink code={room.code} />

@@ -12,6 +12,7 @@ import { HistoryService } from "./history-service.ts";
 import { LowQualityService } from "./low-quality-service.ts";
 import { PasskeyService, type RelyingParty, type WebAuthn } from "./passkey-service.ts";
 import { PlaybackStatsService } from "./playback-stats-service.ts";
+import { RatingService } from "./rating-service.ts";
 import { RoomService } from "./room-service.ts";
 import type { RandomInt } from "./secrets.ts";
 import { TvPairingService } from "./tv-pairing-service.ts";
@@ -52,6 +53,7 @@ export interface Services {
   circles: CircleService;
   lowQualities: LowQualityService;
   playbackStats: PlaybackStatsService;
+  ratings: RatingService;
   now: () => number;
 }
 
@@ -102,6 +104,7 @@ export function createServices(options: ServiceOptions): Services {
     watchlist,
     circles,
     playbackStats: new PlaybackStatsService({ repositories, now }),
+    ratings: new RatingService({ repositories, now }),
     lowQualities,
     now,
   };
