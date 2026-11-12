@@ -9,6 +9,8 @@ import {
   type CatalogTitle,
   CreateRoomResponse,
   type PlayCatalogRequest,
+  type TitleDetails,
+  TitleDetailsResponse,
 } from "@annamour/protocol";
 import { request } from "./http.ts";
 import { inCircle } from "./rooms.ts";
@@ -19,6 +21,15 @@ export async function searchCatalog(query: string, signal?: AbortSignal): Promis
   const path = `${CATALOG_API.search}?${new URLSearchParams({ q: query })}`;
   const { titles } = await request(CatalogSearchResponse, path, signal ? { signal } : {});
   return titles;
+}
+
+/** What TMDB says of a title (synopsis, rating, people…), or null when nothing is known. */
+export async function fetchTitleDetails(title: CatalogTitle, signal?: AbortSignal): Promise<TitleDetails | null> {
+  const query = new URLSearchParams({ type: title.type, title: title.title });
+  if (title.year !== undefined) query.set("year", String(title.year));
+  if (title.tmdbId !== undefined) query.set("tmdbId", String(title.tmdbId));
+  const { details } = await request(TitleDetailsResponse, `${CATALOG_API.details}?${query}`, signal ? { signal } : {});
+  return details;
 }
 
 export async function fetchSeason(id: number, season: number, signal?: AbortSignal): Promise<CatalogEpisode[]> {

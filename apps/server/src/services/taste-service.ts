@@ -227,14 +227,12 @@ export class TasteService {
       }),
     );
     const suggestions: GroupSuggestion[] = [];
-    let lookups = 0;
+    const naka = { lookupsLeft: NAKA_LOOKUPS };
     for (const entry of ranked) {
       if (suggestions.length >= SHOWN) break;
       const item = listed.get(entry.key);
       const brief = briefs.get(entry.key);
-      if (!item && (!brief || lookups >= NAKA_LOOKUPS)) continue;
-      if (!item) lookups++;
-      const title = item?.title ?? (brief ? await this.options.catalog.titleFor(brief) : null);
+      const title = item?.title ?? (await this.onNaka(brief, naka));
       if (!title) continue;
       const wantedBy = candidates.find((c) => c.title.key === entry.key)?.wantedBy ?? [];
       suggestions.push({
@@ -248,6 +246,13 @@ export class TasteService {
       });
     }
     return suggestions;
+  }
+
+  /** The catalog's title for a TMDB one, within the refresh's budget of Naka searches. */
+  private async onNaka(brief: TmdbBrief | undefined, naka: { lookupsLeft: number }): Promise<CatalogTitle | null> {
+    if (!brief || naka.lookupsLeft <= 0) return null;
+    naka.lookupsLeft--;
+    return this.options.catalog.titleFor(brief);
   }
 
   private briefsByKey(resolved: Map<string, TmdbTitle>): Map<string, TmdbBrief> {

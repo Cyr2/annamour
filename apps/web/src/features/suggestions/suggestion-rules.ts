@@ -1,34 +1,7 @@
-import {
-  type Circle,
-  type CircleTaste,
-  catalogKey,
-  type Participant,
-  type SessionSummary,
-  type SuggestionReason,
-  type TitleRating,
-  type WatchlistItem,
-} from "@annamour/protocol";
+import type { GroupSuggestion, Participant, SuggestionWhy } from "@annamour/protocol";
 import { joinNames } from "../../lib/format.ts";
-import { isFinished } from "../sessions/session-rules.ts";
 
-/** What a circle's suggestions are read from: its people, its list, their avis, what it already watched. */
-export function circleTaste(
-  circle: Circle,
-  items: readonly WatchlistItem[],
-  ratings: readonly TitleRating[],
-  sessions: readonly SessionSummary[],
-): CircleTaste {
-  const watched = new Set<string>();
-  for (const session of sessions)
-    if (session.circleId === circle.id && session.catalog && isFinished(session))
-      watched.add(catalogKey(session.catalog));
-  return {
-    members: circle.members,
-    items: items.filter((item) => item.circleId === circle.id),
-    ratings,
-    watched,
-  };
-}
+/* How « Pour vous ce soir » says why a title is there, and how well it suits each person. */
 
 const VERBS = {
   wants: { me: "Tu en as envie", one: "en a envie", withMe: "en avez envie", many: "en ont envie" },
@@ -36,12 +9,37 @@ const VERBS = {
   liked: { me: "Tu as aimé", one: "a aimé", withMe: "avez aimé", many: "ont aimé" },
 } as const;
 
-/** « Annou a adoré », « Toi et Annou en avez envie », « Léo et Inès ont aimé »: why a title is suggested. */
-export function reasonLine({ kind, people }: SuggestionReason, me: string): string {
+function peopleLine(kind: keyof typeof VERBS, people: readonly Participant[], me: string): string {
   const verbs = VERBS[kind];
-  const others = people.filter((person: Participant) => person.accountId !== me).map((person) => person.name);
-  const withMe = others.length < people.length;
+  const others = people.filter((person) => person.accountId !== me).map((person) => person.name);
   if (others.length === 0) return verbs.me;
-  if (withMe) return `Toi et ${joinNames(others)} ${verbs.withMe}`;
+  if (others.length < people.length) return `Toi et ${joinNames(others)} ${verbs.withMe}`;
   return `${joinNames(others)} ${others.length > 1 ? verbs.many : verbs.one}`;
+}
+
+/**
+ * « Annou a adoré », « Toi et Annou en avez envie », « Dans la lignée de Gone Girl »,
+ * « Thriller et drame, vos genres », « Très bien noté : 8,1 sur 10 ».
+ */
+export function reasonLine(reason: SuggestionWhy, me: string): string {
+  switch (reason.kind) {
+    case "wants":
+    case "loved":
+    case "liked":
+      return peopleLine(reason.kind, reason.people, me);
+    case "because":
+      return `Dans la lignée de ${joinNames(reason.titles)}`;
+    case "genres": {
+      const genres = joinNames(reason.genres);
+      return `${genres.charAt(0).toLocaleUpperCase("fr")}${genres.slice(1)}, vos genres`;
+    }
+    case "acclaimed":
+      return `Très bien noté : ${reason.voteAverage.toLocaleString("fr-FR")} sur 10`;
+  }
+}
+
+/** « Toi 92 % · Anna 85 % », me first; empty when the suggestion did not come from tastes. */
+export function matchLine(suggestion: GroupSuggestion, me: string): string {
+  const sorted = [...suggestion.matches].sort((a, b) => Number(b.by.accountId === me) - Number(a.by.accountId === me));
+  return sorted.map(({ by, match }) => `${by.accountId === me ? "Toi" : by.name} ${match} %`).join(" · ");
 }

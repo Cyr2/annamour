@@ -16,7 +16,7 @@ import { describe, expect, it } from "vitest";
 import type { Catalog } from "../src/catalog/naka-catalog.ts";
 import type { TmdbFetch } from "../src/catalog/tmdb.ts";
 import { jsonRequest, media, sessionCookieOf, testApp } from "./helpers.ts";
-import { GONE_GIRL } from "./tmdb.test.ts";
+import { GONE_GIRL } from "./tmdb-fixtures.ts";
 
 // TMDB, as far as these tests go: two films the couple loved, and what TMDB recommends from them.
 const brief = (id: number, title: string, genres: number[], extra: object = {}) => ({
