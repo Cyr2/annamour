@@ -60,6 +60,20 @@ describe("a séance created for a circle", () => {
     expect((await sessions(annou.cookie)).map((session) => session.code)).toContain(code);
   });
 
+  it("tells the others who is waiting in its salon right now, never me", async () => {
+    const { services, sessions, darius, annou, forTheCircle } = await setup();
+    const code = forTheCircle();
+    const room = services.store.get(code);
+    const silent = { send: () => {}, close: () => {} };
+    room?.join("client-darius", "Darius", "peach", silent, 2000, darius.id);
+    room?.join("client-tablet", "Darius", "peach", silent, 2000, darius.id);
+
+    expect((await sessions(annou.cookie)).find((s) => s.code === code)?.here).toEqual([
+      { name: "Darius", color: "peach" },
+    ]);
+    expect((await sessions(darius.cookie)).find((s) => s.code === code)?.here).toBeUndefined();
+  });
+
   it("can be marked finished by anyone of the circle", async () => {
     const { services, annou, forTheCircle } = await setup();
     const code = forTheCircle();

@@ -61,6 +61,17 @@ export function currentWatched(session: SessionSummary): boolean {
   return atCredits(session);
 }
 
+/** The séances someone is in right now (me apart), the latest first: « Rejoindre » on « Ce soir ». */
+export function waitingSeances(sessions: readonly SessionSummary[]): SessionSummary[] {
+  return byMostRecent(sessions.filter((session) => session.here?.length));
+}
+
+/** « Darius est dans le salon », « Anna et Léo sont dans le salon ». */
+export function hereLine(session: SessionSummary): string {
+  const names = (session.here ?? []).map((person) => person.name);
+  return `${joinNames(names)} ${names.length > 1 ? "sont" : "est"} dans le salon`;
+}
+
 /** Over once its last film or episode is (the same rule as the salon's « Revoir »). */
 export function isFinished(session: SessionSummary): boolean {
   return seanceFinished(spotOf(session));

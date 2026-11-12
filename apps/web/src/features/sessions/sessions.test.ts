@@ -9,6 +9,7 @@ import {
   currentWatched,
   fanPosters,
   favoriteOf,
+  hereLine,
   isFinished,
   latestUnfinished,
   onePerTitle,
@@ -25,6 +26,7 @@ import {
   splitByStatus,
   stopLabel,
   titleToRateOf,
+  waitingSeances,
   whenAndWhoLabel,
   whereAndWho,
   withPerson,
@@ -119,6 +121,21 @@ describe("session progress", () => {
     expect(currentWatched(series(7800))).toBe(true);
     expect(isFinished(series(7800))).toBe(false);
     expect(currentWatched(series(4360))).toBe(false);
+  });
+
+  it("lists the séances someone waits in, the latest first, and says who", () => {
+    const quiet = session("A", { lastUsedAt: 9 });
+    const darius = session("B", { lastUsedAt: 1, here: [{ name: "Darius", color: "peach" }] });
+    const two = session("C", {
+      lastUsedAt: 5,
+      here: [
+        { name: "Anna", color: "rose" },
+        { name: "Léo", color: "mint" },
+      ],
+    });
+    expect(waitingSeances([quiet, darius, two]).map((s) => s.code)).toEqual(["C", "B"]);
+    expect(hereLine(darius)).toBe("Darius est dans le salon");
+    expect(hereLine(two)).toBe("Anna et Léo sont dans le salon");
   });
 
   it("asks « Ton avis » on a finished séance's last title, when the catalog named it", () => {

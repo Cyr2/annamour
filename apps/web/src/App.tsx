@@ -5,6 +5,7 @@ import { AccountGate } from "./features/account/AccountGate.tsx";
 import { SeanceGate } from "./features/account/SeanceGate.tsx";
 import { HomeScreen } from "./features/home/HomeScreen.tsx";
 import { TabNav, useTabBarShown } from "./features/nav/TabNav.tsx";
+import { RateQuestionSheet } from "./features/ratings/RateQuestionSheet.tsx";
 import { FinishQuestionSheet } from "./features/sessions/FinishQuestionSheet.tsx";
 import { TonightScreen } from "./features/tonight/TonightScreen.tsx";
 import { useTv } from "./features/tv/tv-context.ts";
@@ -103,6 +104,7 @@ export function App() {
         <>
           <TabNav />
           <FinishQuestionSheet />
+          <RateQuestionSheet />
         </>
       )}
       <PlacedToaster />

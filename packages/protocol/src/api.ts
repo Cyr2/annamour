@@ -98,6 +98,8 @@ export const SessionSummary = z.object({
   catalog: z.optional(z.object({ id: CatalogId, type: CatalogMediaType })),
   /** The current episode's poster, for a séance started from the catalog; absent for a pasted link. */
   posterUrl: z.optional(z.url({ protocol: /^https$/ })),
+  /** Who is in its salon right now, me left out: « Darius vous attend, Rejoindre ». */
+  here: z.optional(z.array(z.object({ name: Name, color: BubbleColor }))),
 });
 export type SessionSummary = z.infer<typeof SessionSummary>;
 export const SessionList = z.object({ sessions: z.array(SessionSummary) });

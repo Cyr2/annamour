@@ -12,10 +12,12 @@ interface TitleRatingsProps {
   /** Watched: asks for my avis. Otherwise only the avis already given show (none: nothing). */
   askMine?: boolean;
   className?: string;
+  /** Called once my avis is given (not when taken back). */
+  onRated?: () => void;
 }
 
 /** « Ton avis » on a title, then each other person's, with their bubble: « Annou a adoré 😍 ». */
-export function TitleRatings({ title, askMine = true, className }: TitleRatingsProps) {
+export function TitleRatings({ title, askMine = true, className, onRated }: TitleRatingsProps) {
   const headingId = useId();
   const account = useAccount((state) => state.account);
   const ratings = useRatings((state) => state.ratings);
@@ -39,9 +41,10 @@ export function TitleRatings({ title, askMine = true, className }: TitleRatingsP
         <RatingPicker
           value={mine}
           label={`Ton avis sur « ${title.title} »`}
-          onChange={(rating) =>
-            void setMyRating(me, title, rating ?? null).catch((failure: Error) => toast({ message: failure.message }))
-          }
+          onChange={(rating) => {
+            if (rating) onRated?.();
+            void setMyRating(me, title, rating ?? null).catch((failure: Error) => toast({ message: failure.message }));
+          }}
         />
       ) : null}
       {others.length ? (

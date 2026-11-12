@@ -1,5 +1,6 @@
-import { inLastStretch, type RoomSnapshot } from "@annamour/protocol";
+import { type CatalogTitle, inLastStretch, type RoomSnapshot } from "@annamour/protocol";
 import { create } from "zustand";
+import { titleToRate } from "../player/episode-rules.ts";
 
 /*
  * Leaving a salon in the last minutes of a video, before the credits counted
@@ -14,6 +15,8 @@ export interface FinishQuestion {
   minutesLeft: number;
   /** What the séance reopens on once this one is over, when something follows. */
   next: string | undefined;
+  /** What « Oui, c'est fini » then asks an avis on: the film, or the series after its last queued episode. */
+  rate?: CatalogTitle;
 }
 
 export const useFinishQuestion = create<{ question: FinishQuestion | null }>()(() => ({ question: null }));
@@ -47,10 +50,12 @@ export function finishQuestion(
   if (othersStaying || room.finished || episode !== room.current) return null;
   if (duration === undefined || !inLastStretch(spot)) return null;
   const next = room.episodes[room.current + 1];
+  const rate = titleToRate(room, next ? "next-ready" : "nothing-next");
   return {
     code: room.code,
     title: room.media.title,
     minutesLeft: Math.max(1, Math.round((duration - position) / 60)),
     next: next?.catalog?.title ?? next?.label,
+    ...(rate ? { rate } : {}),
   };
 }

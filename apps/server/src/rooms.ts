@@ -389,6 +389,18 @@ export class Room {
     return atCredits({ position: this.positionAt(now), duration: this.imported.duration, index: current, count });
   }
 
+  /** Who is in the salon now, but `accountId` (whichever of their devices is there), each person once. */
+  presentBesides(accountId: string): { name: string; color: BubbleColor }[] {
+    const seen = new Set<string>();
+    return [...this.participants.values()].flatMap((p) => {
+      if (p.linkDown || (p.accountId !== undefined && p.accountId === accountId)) return [];
+      const who = p.accountId ?? p.clientId;
+      if (seen.has(who)) return [];
+      seen.add(who);
+      return [{ name: p.name, color: p.color }];
+    });
+  }
+
   /** Persists where the video is right now. */
   saveNow(now: number): void {
     this.persistence.savePosition(this.positionAt(now), now);

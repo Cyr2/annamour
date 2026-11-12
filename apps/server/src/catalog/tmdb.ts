@@ -135,6 +135,21 @@ function peopleOf(raw: Record<string, unknown>) {
   };
 }
 
+const RawTranslations = z
+  .object({
+    translations: z.array(
+      z.object({ iso_639_1: z.string(), data: z.object({ overview: z.string().optional() }).catch({}) }),
+    ),
+  })
+  .catch({ translations: [] });
+
+/** The synopsis in French, or in English when TMDB has none in French. */
+function overviewOf(raw: Record<string, unknown>): string | undefined {
+  const translations = RawTranslations.parse(raw.translations).translations;
+  const inLanguage = (language: string) => text(translations.find((t) => t.iso_639_1 === language)?.data.overview);
+  return text(raw.overview) ?? inLanguage("fr") ?? inLanguage("en");
+}
+
 /** Films list their keywords under `keywords`, series under `results`. */
 function keywordIdsOf(raw: Record<string, unknown>): number[] {
   const keywords = RawKeywords.parse(raw.keywords);
@@ -157,7 +172,7 @@ export function toTmdbTitle(raw: unknown, type: CatalogMediaType): TmdbTitle | n
       type,
       genreIds: genres.map((genre) => genre.id),
       genres,
-      overview: text(parsed.data.overview),
+      overview: overviewOf(parsed.data),
       tagline: text(parsed.data.tagline),
       runtime: number(parsed.data.runtime),
       seasons: number(parsed.data.number_of_seasons),
@@ -209,7 +224,7 @@ export class Tmdb {
     const key = `tmdb:title:${type}:${tmdbId}`;
     const kept = this.kept(key, TITLE_TTL_MS, TmdbTitle);
     if (kept) return kept;
-    const path = `${type}/${tmdbId}?language=fr-FR&include_video_language=fr,en&append_to_response=credits,keywords,videos,recommendations`;
+    const path = `${type}/${tmdbId}?language=fr-FR&include_video_language=fr,en&append_to_response=credits,keywords,videos,recommendations,translations`;
     const body = await this.call(path);
     const title = body === null ? null : toTmdbTitle(body, type);
     if (title) this.keep(key, title);

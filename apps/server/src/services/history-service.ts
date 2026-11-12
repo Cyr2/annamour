@@ -36,6 +36,9 @@ function posterOf(
   return poster === undefined ? {} : { posterUrl: poster };
 }
 
+/** Who waits in the salon, only when someone does. */
+const hereOf = (here: SessionSummary["here"]): Pick<SessionSummary, "here"> => (here?.length ? { here } : {});
+
 function circleOf(
   circleId: string | undefined,
   circle: SessionSummary["circle"],
@@ -94,6 +97,7 @@ export class HistoryService {
       ...posterOf(room.posterUrl, room.episode.index, queues.get(room.code)),
       ...(room.catalog === undefined ? {} : { catalog: room.catalog }),
       ...(room.createdBy === accountId ? { createdByMe: true } : {}),
+      ...hereOf(this.store.presentBesides(room.code, accountId)),
     }));
   }
 
