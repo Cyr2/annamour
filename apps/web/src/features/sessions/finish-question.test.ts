@@ -25,6 +25,14 @@ describe("« C'est fini ? » on leaving a salon", () => {
     });
   });
 
+  it("says which title « Oui, c'est fini » then asks an avis on", () => {
+    const fromCatalog = {
+      ...dune,
+      episodes: [{ duration: 9000, catalog: { id: 438631, type: "movie", title: "Dune" } as const }],
+    };
+    expect(finishQuestion(fromCatalog, at(8820), false)?.rate).toEqual({ id: 438631, type: "movie", title: "Dune" });
+  });
+
   it("names what the séance reopens on when another film follows", () => {
     const withAlien = { ...dune, episodes: [{}, { catalog: { id: 1, type: "movie", title: "Alien" } as const }] };
     expect(finishQuestion(withAlien, at(8820), false)?.next).toBe("Alien");

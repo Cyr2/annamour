@@ -12,10 +12,14 @@ interface TitleRatingsProps {
   /** Watched: asks for my avis. Otherwise only the avis already given show (none: nothing). */
   askMine?: boolean;
   className?: string;
+  /** Called once my avis is given (not when taken back). */
+  onRated?: () => void;
+  /** The sheet around already says « Ton avis ? »: the heading stays for screen readers only. */
+  quietHeading?: boolean;
 }
 
 /** « Ton avis » on a title, then each other person's, with their bubble: « Annou a adoré 😍 ». */
-export function TitleRatings({ title, askMine = true, className }: TitleRatingsProps) {
+export function TitleRatings({ title, askMine = true, className, onRated, quietHeading = false }: TitleRatingsProps) {
   const headingId = useId();
   const account = useAccount((state) => state.account);
   const ratings = useRatings((state) => state.ratings);
@@ -32,16 +36,17 @@ export function TitleRatings({ title, askMine = true, className }: TitleRatingsP
 
   return (
     <section aria-labelledby={headingId} className={cx("text-left", className)}>
-      <h3 id={headingId} className="mb-2 text-sm font-semibold text-fg">
+      <h3 id={headingId} className={quietHeading ? "sr-only" : "mb-2 text-sm font-semibold text-fg"}>
         {asking ? "Ton avis" : "Leurs avis"}
       </h3>
       {asking ? (
         <RatingPicker
           value={mine}
           label={`Ton avis sur « ${title.title} »`}
-          onChange={(rating) =>
-            void setMyRating(me, title, rating ?? null).catch((failure: Error) => toast({ message: failure.message }))
-          }
+          onChange={(rating) => {
+            if (rating) onRated?.();
+            void setMyRating(me, title, rating ?? null).catch((failure: Error) => toast({ message: failure.message }));
+          }}
         />
       ) : null}
       {others.length ? (

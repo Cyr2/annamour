@@ -23,6 +23,7 @@ import { useWatchlist } from "../watchlist/watchlist.ts";
 import { OngoingShelf } from "./OngoingShelf.tsx";
 import { TonightCard } from "./TonightCard.tsx";
 import { TonightHero } from "./TonightHero.tsx";
+import { WaitingNow } from "./WaitingNow.tsx";
 
 /**
  * « Ce soir », the home screen: the red thread and « Une soirée ensemble »,
@@ -60,6 +61,8 @@ export function TonightScreen() {
     <div className="safe-area mx-auto flex min-h-dvh w-full max-w-[1240px] flex-col">
       <main className="mx-auto grid w-full max-w-[760px] content-start gap-6 py-6">
         <TonightHero circle={circle} />
+        {/* Whatever circle is shown: someone waiting in a salon comes first. */}
+        <WaitingNow sessions={sessions} />
         <CircleFilter centered />
         <TonightCard
           pick={pick}

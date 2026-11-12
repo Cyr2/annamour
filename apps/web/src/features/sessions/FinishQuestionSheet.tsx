@@ -3,6 +3,8 @@ import { useRef } from "react";
 import { Button } from "../../ui/controls.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { toast } from "../../ui/toast.ts";
+import { useAccount } from "../account/account.ts";
+import { askRatingIfNone } from "../ratings/rate-question.ts";
 import { dismissFinishQuestion, type FinishQuestion, useFinishQuestion } from "./finish-question.ts";
 import { finishSession } from "./sessions.ts";
 
@@ -18,11 +20,13 @@ export function FinishQuestionSheet() {
     if (!asked) return;
     dismissFinishQuestion();
     void finishSession(asked.code)
-      .then(() =>
+      .then(() => {
         toast({
           message: asked.next ? `La séance reprendra sur « ${asked.next} »` : `« ${asked.title} » est terminée`,
-        }),
-      )
+        });
+        const me = useAccount.getState().account?.id;
+        if (asked.rate && me) void askRatingIfNone(asked.rate, me);
+      })
       .catch((failure: Error) => toast({ message: failure.message }));
   };
 

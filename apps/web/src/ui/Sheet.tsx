@@ -1,13 +1,14 @@
-import { AnimatePresence, m } from "motion/react";
+import { AnimatePresence, m, useDragControls } from "motion/react";
 import { type ReactNode, useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { exit, spring } from "../lib/motion.ts";
 import { cx } from "./cx.ts";
+import { LayoutMotion } from "./LayoutMotion.tsx";
 import { useVisibleArea } from "./useVisibleArea.ts";
 
 /*
- * A bottom sheet: slides up over a scrim, closes on Escape or a tap outside,
- * and gives focus back to whatever opened it.
+ * A bottom sheet: slides up over a scrim, closes on Escape, a tap outside or
+ * pulled down by its top, and gives focus back to whatever opened it.
  *
  *   <Sheet open={open} onClose={close} title="Nouvelle séance">
  *     <Sheet.Lede>…</Sheet.Lede>
@@ -27,19 +28,27 @@ const FOCUSABLE = "input, button:not([disabled]), [href], select, textarea, [tab
 
 function SheetRoot({ open, onClose, title, children }: SheetProps) {
   return createPortal(
-    <AnimatePresence>
-      {open ? (
-        <SheetPanel onClose={onClose} title={title}>
-          {children}
-        </SheetPanel>
-      ) : null}
-    </AnimatePresence>,
+    // The full engine has the drag that pulls a sheet down: loaded with the first sheet, not at launch.
+    <LayoutMotion>
+      <AnimatePresence>
+        {open ? (
+          <SheetPanel onClose={onClose} title={title}>
+            {children}
+          </SheetPanel>
+        ) : null}
+      </AnimatePresence>
+    </LayoutMotion>,
     document.body,
   );
 }
 
+/** Pulled down this far (px), or flicked this fast (px/s), a sheet closes. */
+const DISMISS_DISTANCE = 120;
+const DISMISS_SPEED = 600;
+
 function SheetPanel({ onClose, title, children }: Omit<SheetProps, "open">) {
   const titleId = useId();
+  const drag = useDragControls();
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -94,11 +103,26 @@ function SheetPanel({ onClose, title, children }: Omit<SheetProps, "open">) {
         initial={{ y: "105%" }}
         animate={{ y: 0, transition: spring.ui }}
         exit={{ y: "105%", transition: exit.sheet }}
+        // Pulled down by its handle or its title, like a native sheet: far or fast enough closes it,
+        // otherwise it springs back. Its content keeps scrolling: only the top starts the drag.
+        drag="y"
+        dragListener={false}
+        dragControls={drag}
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0, bottom: 1 }}
+        onDragEnd={(_event, info) => {
+          if (info.offset.y > DISMISS_DISTANCE || info.velocity.y > DISMISS_SPEED) onClose();
+        }}
       >
-        <div aria-hidden className="mx-auto mb-2 h-[5px] w-9 shrink-0 rounded-full bg-fill-strong" />
-        <h2 id={titleId} className="type-heading text-[1.625rem] leading-tight">
-          {title}
-        </h2>
+        <div
+          className="-mx-6 -mt-2.5 touch-none px-6 pt-2.5 sm:-mx-8 sm:px-8"
+          onPointerDown={(event) => drag.start(event)}
+        >
+          <div aria-hidden className="mx-auto mb-4 h-[5px] w-9 shrink-0 rounded-full bg-fill-strong" />
+          <h2 id={titleId} className="type-heading text-[1.625rem] leading-tight">
+            {title}
+          </h2>
+        </div>
         {children}
       </m.div>
     </div>

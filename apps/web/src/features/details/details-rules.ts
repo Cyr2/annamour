@@ -14,6 +14,12 @@ export function ratingLine({ voteAverage, voteCount }: TitleDetails): string {
   return `${average} sur 10 · ${votes} vote${voteCount > 1 ? "s" : ""}`;
 }
 
+/** « 7,9 » for a title with a few votes, else nothing: the sheet's one-line summary starts with it. */
+export function shortRating({ voteAverage, voteCount }: TitleDetails): string {
+  if (voteAverage === undefined || !voteCount || voteCount < 10) return "";
+  return voteAverage.toLocaleString("fr-FR", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+}
+
 /** « 2 h 29 », « 45 min ». */
 export function runtimeLabel(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
@@ -23,7 +29,8 @@ export function runtimeLabel(minutes: number): string {
 
 /** « Drame, thriller · 2 h 29 », « Drame · 3 saisons ». */
 export function factsLine(details: TitleDetails): string {
-  const genres = details.genres.slice(0, 3).join(", ");
+  // Two genres: with the length, the line still fits a phone.
+  const genres = details.genres.slice(0, 2).join(", ");
   const length = details.runtime
     ? runtimeLabel(details.runtime)
     : details.seasons
