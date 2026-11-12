@@ -33,10 +33,11 @@ const brief = (id: number, title: string, genres: number[], extra: object = {}) 
 const PRISONERS = brief(146233, "Prisoners", [18, 53, 80], { vote_average: 8.1, vote_count: 12000 });
 const ZODIAC = brief(1949, "Zodiac", [80, 9648, 53]);
 const NOTTING_HILL = brief(509, "Coup de foudre à Notting Hill", [35, 10749, 18]);
+const TOMORROW = brief(777, "Demain", [80, 53], { release_date: "2099-01-01", vote_average: 9, vote_count: 9000 });
 const SE7EN = {
   ...brief(807, "Seven", [80, 9648, 53]),
   genres: [{ id: 80, name: "Crime" }],
-  recommendations: { results: [PRISONERS, ZODIAC] },
+  recommendations: { results: [PRISONERS, ZODIAC, TOMORROW] },
 };
 const GONE = { ...GONE_GIRL, recommendations: { results: [PRISONERS, NOTTING_HILL] } };
 const TMDB: Record<string, unknown> = {
@@ -44,6 +45,7 @@ const TMDB: Record<string, unknown> = {
   "movie/210577": GONE,
   "movie/146233": { ...PRISONERS, genres: [{ id: 53, name: "Thriller" }] },
   "movie/509": { ...NOTTING_HILL, genres: [] },
+  "movie/777": { ...TOMORROW, genres: [{ id: 53, name: "Thriller" }] },
   "search/movie": { results: [{ id: 210577, title: "Gone Girl" }] },
 };
 const tmdbFetch: TmdbFetch = async (path) => {
@@ -56,6 +58,7 @@ const naka: Catalog = {
   search: async (query) =>
     [
       { id: 900, type: "movie", title: "Prisoners", tmdbId: 146233 },
+      { id: 902, type: "movie", title: "Demain", tmdbId: 777 },
       { id: 901, type: "movie", title: "Coup de foudre à Notting Hill", tmdbId: 509 },
     ].filter((title) => title.title.toLowerCase().includes(query.toLowerCase())) as CatalogTitle[],
   season: async () => [],
@@ -65,7 +68,9 @@ const naka: Catalog = {
 const film = (id: number, title: string, tmdbId: number) => ({ id, type: "movie", title, tmdbId }) as const;
 
 async function setup(withTmdb = true) {
-  const { app, services } = testApp({ now: () => 1000, catalog: naka, ...(withTmdb ? { tmdbFetch } : {}) });
+  // A real date: films out in 2015 are out, one dated 2099 is not.
+  const now = Date.parse("2026-11-12T20:00:00Z");
+  const { app, services } = testApp({ now: () => now, catalog: naka, ...(withTmdb ? { tmdbFetch } : {}) });
   async function account(name: string) {
     const response = await app.request(API.createAccount, jsonRequest("POST", { name, color: "peach" }));
     const { account } = (await response.json()) as CreateAccountResponse;
@@ -104,10 +109,14 @@ describe("« Pour vous ce soir »", () => {
     expect(titles).not.toContain("Zodiac");
     const [prisoners] = list;
     expect(prisoners?.title).toMatchObject({ id: 900, tmdbId: 146233 });
-    expect(prisoners?.matches.map((m) => m.by.name)).toEqual(["Darius", "Anna"]);
+    expect(typeof prisoners?.perfect).toBe("boolean");
     const because = prisoners?.reasons.find((reason) => reason.kind === "because");
-    expect(because && "titles" in because ? [...because.titles].sort() : []).toEqual(["Gone Girl", "Seven"]);
+    expect(because && "titles" in because ? because.titles : []).toEqual([
+      expect.stringMatching(/^(Gone Girl|Seven)$/),
+    ]);
     expect(prisoners?.reasons).toContainEqual({ kind: "acclaimed", voteAverage: 8.1 });
+    // Announced but not out yet: not for tonight.
+    expect(titles).not.toContain("Demain");
     // Each loved one the other has not seen is a fine idea too.
     expect(list.find((s) => s.title.title === "Gone Girl")).toBeUndefined();
   });
@@ -132,6 +141,17 @@ describe("« Pour vous ce soir »", () => {
     expect(notting?.reasons[0]).toMatchObject({ kind: "wants", people: [{ name: "Anna" }] });
   });
 
+  it("drops a title someone says « Pas pour nous » to, for this circle", async () => {
+    const { app, darius, anna, circleId, rate, suggestions } = await setup();
+    await rate(darius.cookie, film(10, "Seven", 807), "loved");
+    expect((await suggestions()).list.map((s) => s.title.title)).toContain("Prisoners");
+    const dismiss = (body: object, cookie = anna.cookie) =>
+      app.request(apiPath(SUGGESTIONS_API.dismiss, { id: circleId }), jsonRequest("POST", body, { cookie }));
+    expect((await dismiss({ type: "movie", tmdbId: 146233 })).status).toBe(204);
+    expect((await suggestions()).list.map((s) => s.title.title)).not.toContain("Prisoners");
+    expect((await dismiss({ type: "movie" })).status).toBe(400);
+  });
+
   it("is only for the circle's people", async () => {
     const { app, suggestions } = await setup();
     const response = await app.request(API.createAccount, jsonRequest("POST", { name: "Léo", color: "mint" }));
@@ -146,7 +166,7 @@ describe("« Pour vous ce soir »", () => {
       jsonRequest("POST", { title, shareWith: "everyone", want: true, circleId }, { cookie: anna.cookie }),
     );
     const [only] = (await suggestions()).list;
-    expect(only).toMatchObject({ matches: [], reasons: [{ kind: "wants" }] });
+    expect(only).toMatchObject({ perfect: false, reasons: [{ kind: "wants" }] });
   });
 });
 

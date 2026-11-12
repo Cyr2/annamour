@@ -192,6 +192,16 @@ const MIGRATIONS: readonly string[] = [
     fetched_at INTEGER NOT NULL
   );
   `,
+  // « Pas pour nous » on a suggestion: the title leaves the circle's shelf for a while (key « movie:<tmdb> »).
+  `
+  CREATE TABLE suggestion_dismissals (
+    circle_id TEXT NOT NULL REFERENCES circles (id) ON DELETE CASCADE,
+    title_key TEXT NOT NULL,
+    account_id TEXT NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    dismissed_at INTEGER NOT NULL,
+    PRIMARY KEY (circle_id, title_key)
+  );
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

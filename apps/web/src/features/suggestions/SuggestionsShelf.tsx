@@ -6,7 +6,7 @@ import { loadRatings } from "../ratings/ratings.ts";
 import { ShelfPlaceholder } from "../watchlist/ShelfPlaceholder.tsx";
 import { useWatchlist } from "../watchlist/watchlist.ts";
 import { SuggestionSheet } from "./SuggestionSheet.tsx";
-import { matchLine, reasonLine } from "./suggestion-rules.ts";
+import { perfectLabel, reasonLine } from "./suggestion-rules.ts";
 import { useSuggestions } from "./useSuggestions.ts";
 
 const TITLE = "Pour vous ce soir";
@@ -19,13 +19,13 @@ interface SuggestionsShelfProps {
 
 /**
  * « Pour vous ce soir »: what the circle shown could watch together, from each
- * one's tastes, with how well it suits each (« Toi 92 % · Anna 85 % ») and why.
+ * one's tastes, with why (« Parce que vous avez aimé Gone Girl ») and a mark when it suits everyone.
  * Nothing without a circle, nor when there is nothing to suggest yet.
  */
 export function SuggestionsShelf({ circle, onOpenItem }: SuggestionsShelfProps) {
   const me = useAccount((s) => s.account?.id ?? "");
   const items = useWatchlist((s) => s.items);
-  const suggestions = useSuggestions(circle?.id ?? null);
+  const { suggestions, refresh } = useSuggestions(circle?.id ?? null);
   const [open, setOpen] = useState<GroupSuggestion | null>(null);
   const headingId = useId();
   useEffect(() => {
@@ -49,8 +49,8 @@ export function SuggestionsShelf({ circle, onOpenItem }: SuggestionsShelfProps) 
       </h2>
       <ul className="flex gap-3 overflow-x-auto py-3 [scrollbar-width:none]">
         {suggestions.map((suggestion) => {
-          const why = suggestion.reasons[0] ? reasonLine(suggestion.reasons[0], me) : "";
-          const match = matchLine(suggestion, me);
+          const why = suggestion.reasons[0] ? reasonLine(suggestion.reasons[0], me, suggestion.title.type) : "";
+          const match = suggestion.perfect ? perfectLabel(circle.members.length) : "";
           return (
             <li key={`${suggestion.title.type}:${suggestion.title.id}`} className="w-[7.5rem] shrink-0">
               <button
@@ -70,7 +70,7 @@ export function SuggestionsShelf({ circle, onOpenItem }: SuggestionsShelfProps) 
           );
         })}
       </ul>
-      <SuggestionSheet suggestion={open} circle={circle} me={me} onClose={() => setOpen(null)} />
+      <SuggestionSheet suggestion={open} circle={circle} me={me} onClose={() => setOpen(null)} onDismissed={refresh} />
     </section>
   );
 }

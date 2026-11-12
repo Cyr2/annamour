@@ -12,6 +12,7 @@ const API = "https://api.themoviedb.org/3/";
 const POSTER_BASE = "https://image.tmdb.org/t/p/w342";
 const TITLE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const FIND_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const LIST_TTL_MS = 24 * 60 * 60 * 1000;
 /** Calls to TMDB at once: well within what it allows, and gentle on the server. */
 const PARALLEL_CALLS = 4;
 const CAST_SHOWN = 4;
@@ -43,6 +44,8 @@ export const TmdbBrief = z.object({
   voteAverage: z.number().optional(),
   voteCount: z.number().optional(),
   posterUrl: z.string().optional(),
+  /** « 2026-03-04 »: a film not out yet is not suggested. */
+  releaseDate: z.string().optional(),
 });
 export type TmdbBrief = z.infer<typeof TmdbBrief>;
 
@@ -54,7 +57,12 @@ export const TmdbTitle = z.object({
   runtime: z.number().optional(),
   seasons: z.number().optional(),
   directors: z.array(z.string()),
+  directorIds: z.array(z.number()),
   cast: z.array(z.string()),
+  castIds: z.array(z.number()),
+  keywordIds: z.array(z.number()),
+  /** The saga it belongs to. */
+  collectionId: z.number().optional(),
   trailerUrl: z.string().optional(),
   recommendations: z.array(TmdbBrief),
 });
@@ -62,7 +70,13 @@ export type TmdbTitle = z.infer<typeof TmdbTitle>;
 
 const Raw = z.record(z.string(), z.unknown());
 const RawList = z.object({ results: z.array(Raw).catch([]) }).catch({ results: [] });
-const RawPerson = z.object({ name: z.string(), job: z.string().optional() });
+const RawPerson = z.object({ id: z.number().optional(), name: z.string(), job: z.string().optional() });
+const RawKeywords = z
+  .object({
+    keywords: z.array(z.object({ id: z.number() })).optional(),
+    results: z.array(z.object({ id: z.number() })).optional(),
+  })
+  .catch({});
 const RawVideo = z.object({ site: z.string(), key: z.string(), type: z.string(), iso_639_1: z.string().nullish() });
 
 const text = (value: unknown) => (typeof value === "string" && value.trim() ? value.trim() : undefined);
@@ -89,6 +103,7 @@ function briefOf(raw: Record<string, unknown>, fallbackType: CatalogMediaType): 
       voteAverage: number(raw.vote_average),
       voteCount: number(raw.vote_count),
       posterUrl: poster ? `${POSTER_BASE}${poster}` : undefined,
+      releaseDate: text(raw.release_date) ?? text(raw.first_air_date),
     }),
   );
   return brief.success ? brief.data : null;
@@ -101,17 +116,29 @@ function trailerOf(raw: Record<string, unknown>): string | undefined {
   return trailer ? `https://www.youtube.com/watch?v=${encodeURIComponent(trailer.key)}` : undefined;
 }
 
-function peopleOf(raw: Record<string, unknown>): { directors: string[]; cast: string[] } {
+function peopleOf(raw: Record<string, unknown>) {
   const credits = z
     .object({ cast: z.array(RawPerson).catch([]), crew: z.array(RawPerson).catch([]) })
     .catch({ cast: [], crew: [] })
     .parse(raw.credits);
   const creators = z.array(RawPerson).catch([]).parse(raw.created_by);
-  const directors = credits.crew.filter((person) => person.job === "Director").map((person) => person.name);
+  const makers = [...credits.crew.filter((person) => person.job === "Director"), ...creators]
+    .filter((person, index, all) => all.findIndex((other) => other.name === person.name) === index)
+    .slice(0, 2);
+  const cast = credits.cast.slice(0, CAST_SHOWN);
+  const ids = (people: z.infer<typeof RawPerson>[]) => people.flatMap((person) => person.id ?? []);
   return {
-    directors: [...new Set([...directors, ...creators.map((person) => person.name)])].slice(0, 2),
-    cast: credits.cast.slice(0, CAST_SHOWN).map((person) => person.name),
+    directors: makers.map((person) => person.name),
+    directorIds: ids(makers),
+    cast: cast.map((person) => person.name),
+    castIds: ids(cast),
   };
+}
+
+/** Films list their keywords under `keywords`, series under `results`. */
+function keywordIdsOf(raw: Record<string, unknown>): number[] {
+  const keywords = RawKeywords.parse(raw.keywords);
+  return (keywords.keywords ?? keywords.results ?? []).map((keyword) => keyword.id);
 }
 
 /** A title's details as TMDB answers them (`append_to_response=credits,videos,recommendations`). */
@@ -135,6 +162,8 @@ export function toTmdbTitle(raw: unknown, type: CatalogMediaType): TmdbTitle | n
       runtime: number(parsed.data.runtime),
       seasons: number(parsed.data.number_of_seasons),
       ...peopleOf(parsed.data),
+      keywordIds: keywordIdsOf(parsed.data),
+      collectionId: number(Raw.catch({}).parse(parsed.data.belongs_to_collection ?? {}).id),
       trailerUrl: trailerOf(parsed.data),
       recommendations: RawList.parse(parsed.data.recommendations).results.flatMap((r) => briefOf(r, type) ?? []),
     }),
@@ -180,11 +209,26 @@ export class Tmdb {
     const key = `tmdb:title:${type}:${tmdbId}`;
     const kept = this.kept(key, TITLE_TTL_MS, TmdbTitle);
     if (kept) return kept;
-    const path = `${type}/${tmdbId}?language=fr-FR&include_video_language=fr,en&append_to_response=credits,videos,recommendations`;
+    const path = `${type}/${tmdbId}?language=fr-FR&include_video_language=fr,en&append_to_response=credits,keywords,videos,recommendations`;
     const body = await this.call(path);
     const title = body === null ? null : toTmdbTitle(body, type);
     if (title) this.keep(key, title);
     return title;
+  }
+
+  /**
+   * A list of titles, kept a day: `discover/movie?with_genres=53|18…` (titles like
+   * a taste), `movie/top_rated` or `trending/all/week` (for a group that said little yet).
+   */
+  async list(path: string, type: CatalogMediaType): Promise<TmdbBrief[]> {
+    const key = `tmdb:list:${path}`;
+    const kept = this.kept(key, LIST_TTL_MS, z.array(TmdbBrief));
+    if (kept) return kept;
+    const body = await this.call(`${path}${path.includes("?") ? "&" : "?"}language=fr-FR`);
+    if (body === null) return [];
+    const briefs = RawList.parse(body).results.flatMap((raw) => briefOf(raw, type) ?? []);
+    this.keep(key, briefs);
+    return briefs;
   }
 
   /** TMDB's number for a title known only by its name (and year), or null. */

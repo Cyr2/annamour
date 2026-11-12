@@ -2,42 +2,53 @@ import {
   type CatalogMediaType,
   type CatalogTitle,
   catalogKey,
+  type DismissSuggestionRequest,
   type GroupSuggestion,
+  keywordIdf,
   mergeCandidates,
   type Participant,
+  preRank,
   type RankedTitle,
   rankForGroup,
-  type SuggestionWhy,
   suggestForCircle,
   type TasteCandidate,
-  type TastePerson,
-  type TasteTitle,
   type TitleDetails,
   type TitleDetailsQuery,
-  tasteProfile,
+  USUAL_AVERAGE,
 } from "@annamour/protocol";
 import type { Tmdb, TmdbBrief, TmdbTitle } from "../catalog/tmdb.ts";
-import { TMDB_GENRES } from "../catalog/tmdb-genres.ts";
 import { NotFoundError } from "../errors.ts";
+import type { DismissalRepository } from "../storage/dismissal-repository.ts";
 import type { CatalogService } from "./catalog-service.ts";
 import type { CircleService } from "./circle-service.ts";
 import type { HistoryService } from "./history-service.ts";
 import type { RatingService } from "./rating-service.ts";
 import { type CircleSignals, circleSignals } from "./taste-signals.ts";
+import {
+  discoverPath,
+  excludedOf,
+  FEW_AVIS,
+  keyOf,
+  peopleOf,
+  reasonsOf,
+  seedsOf,
+  tasteOf,
+  unreleased,
+} from "./taste-steps.ts";
 import type { WatchlistService } from "./watchlist-service.ts";
 
 /** Suggestions shown. */
 const SHOWN = 10;
 /** Ranked before checking which Naka has: some will be missing. */
 const RANKED = 24;
+/** Candidates read in full (keywords, people, saga) after a first cheap sort. */
+const SHORTLIST = 40;
 /** Naka searches one refresh may make, to stay gentle on it. */
-const NAKA_LOOKUPS = 14;
-/** Titles whose TMDB recommendations feed the candidates, the most loved first. */
-const SEEDS = 15;
+const NAKA_LOOKUPS = 15;
 /** A circle's suggestions are kept this long while nothing it said changes. */
-const MEMO_MS = 30 * 60 * 1000;
-const ACCLAIMED = { average: 7.5, votes: 500 } as const;
-const SEED_STRENGTH: Record<string, number> = { loved: 3, liked: 2, wants: 1 };
+const MEMO_MS = 6 * 60 * 60 * 1000;
+/** « Pas pour nous » holds this long. */
+const DISMISS_MS = 180 * 24 * 60 * 60 * 1000;
 
 export interface TasteServiceOptions {
   tmdb: Tmdb | undefined;
@@ -46,41 +57,14 @@ export interface TasteServiceOptions {
   watchlist: WatchlistService;
   history: HistoryService;
   ratings: RatingService;
+  dismissals: DismissalRepository;
   now: () => number;
 }
 
-const keyOf = (type: CatalogMediaType, tmdbId: number) => `${type}:${tmdbId}`;
-const tasteOf = (title: TmdbBrief): TasteTitle => ({
-  key: keyOf(title.type, title.tmdbId),
-  genres: title.genreIds,
-  ...(title.language ? { language: title.language } : {}),
-  ...(title.year !== undefined ? { year: title.year } : {}),
-  ...(title.voteAverage !== undefined ? { voteAverage: title.voteAverage } : {}),
-  ...(title.voteCount !== undefined ? { voteCount: title.voteCount } : {}),
-});
-
-/** TMDB's key of a title the circle spoke of, once resolved. */
-function tmdbKeyOf(title: CatalogTitle, resolved: ReadonlyMap<string, TmdbTitle>): string | undefined {
-  const found = resolved.get(catalogKey(title));
-  return found ? keyOf(found.type, found.tmdbId) : undefined;
-}
-
-/**
- * Left out: what the circle watched together, what someone did not like or
- * found bof, and what everyone already gave an avis on. A title only some of
- * them saw (and liked) stays: it is a fine idea for the others.
- */
-function excludedOf(signals: CircleSignals, resolved: ReadonlyMap<string, TmdbTitle>): Set<string> {
-  const excluded = new Set<string>();
-  const raters = new Map<string, Set<string>>();
-  for (const { accountId, title, signal } of signals.signals) {
-    const key = tmdbKeyOf(title, resolved);
-    if (!key || signal === "wants") continue;
-    if (signal === "watched" || signal === "disliked" || signal === "meh") excluded.add(key);
-    else raters.set(key, (raters.get(key) ?? new Set()).add(accountId));
-  }
-  for (const [key, people] of raters) if (people.size >= signals.members.length) excluded.add(key);
-  return excluded;
+interface Gathered {
+  signals: CircleSignals;
+  resolved: Map<string, TmdbTitle>;
+  dismissed: { titleKey: string; accountId: string }[];
 }
 
 /** « Pour vous ce soir » and a title's details: what TMDB adds to the catalog. */
@@ -112,26 +96,46 @@ export class TasteService {
     };
   }
 
+  /** « Pas pour nous »: the title leaves the circle's suggestions for six months, and tells the taste of who said it. */
+  dismiss(accountId: string, circleId: string, { type, tmdbId }: DismissSuggestionRequest): void {
+    this.circleOf(accountId, circleId);
+    this.options.dismissals.dismiss(circleId, keyOf(type, tmdbId), accountId, this.options.now());
+    this.memo.delete(circleId);
+  }
+
   /** What the circle could watch tonight, from its people's tastes (its list only, without TMDB). */
   async forCircle(accountId: string, circleId: string): Promise<GroupSuggestion[]> {
-    const circle = this.options.circles.list(accountId).find((candidate) => candidate.id === circleId);
-    if (!circle) throw new NotFoundError("Ce cercle n'est pas dans les tiens.");
+    const circle = this.circleOf(accountId, circleId);
     const signals = this.signalsOf(accountId, circle.id, circle.members);
+    const dismissed = this.options.dismissals.since(circleId, this.options.now() - DISMISS_MS);
     if (!this.options.tmdb) return this.fromList(signals);
-    const signature = JSON.stringify(signals.signals.map((s) => [s.accountId, catalogKey(s.title), s.signal]));
+    const signature = JSON.stringify([
+      signals.signals.map((s) => [s.accountId, catalogKey(s.title), s.signal]),
+      dismissed.map((d) => d.titleKey),
+    ]);
     const kept = this.memo.get(circleId);
     if (kept && kept.signature === signature && this.options.now() - kept.at < MEMO_MS) return kept.suggestions;
-    const suggestions = await this.fromTastes(signals);
+    const resolved = await this.resolveAll([
+      ...signals.signals.map((s) => s.title),
+      ...signals.toWatch.map((i) => i.title),
+      ...signals.started,
+    ]);
+    const suggestions = await this.fromTastes({ signals, resolved, dismissed });
     this.memo.set(circleId, { at: this.options.now(), signature, suggestions });
     return suggestions;
+  }
+
+  private circleOf(accountId: string, circleId: string) {
+    const circle = this.options.circles.list(accountId).find((candidate) => candidate.id === circleId);
+    if (!circle) throw new NotFoundError("Ce cercle n'est pas dans les tiens.");
+    return circle;
   }
 
   private signalsOf(accountId: string, circleId: string, members: Participant[]): CircleSignals {
     const { watchlist, history, ratings } = this.options;
     const items = watchlist.list(accountId).filter((item) => item.circleId === circleId);
     const sessions = history.list(accountId).filter((session) => session.circleId === circleId);
-    const memberRatings = ratings.byAccounts(members.map((member) => member.accountId));
-    return circleSignals(members, memberRatings, items, sessions);
+    return circleSignals(members, ratings.byAccounts(members.map((member) => member.accountId)), items, sessions);
   }
 
   /** Without TMDB: the list's wishes and the avis given, as before. */
@@ -141,28 +145,105 @@ export class TasteService {
     return suggestForCircle({ members, items: toWatch, ratings, watched }).map(({ title, itemId, reasons }) => ({
       title,
       ...(itemId ? { itemId } : {}),
-      matches: [],
+      perfect: false,
       reasons,
     }));
   }
 
-  private async fromTastes(signals: CircleSignals): Promise<GroupSuggestion[]> {
-    const resolved = await this.resolveAll([
-      ...signals.signals.map((s) => s.title),
-      ...signals.toWatch.map((i) => i.title),
-    ]);
-    const people: TastePerson[] = signals.members.map((member) => ({
-      accountId: member.accountId,
-      profile: tasteProfile(
-        signals.signals.flatMap((s) => {
-          const found = resolved.get(catalogKey(s.title));
-          return s.accountId === member.accountId && found ? [{ title: tasteOf(found), signal: s.signal }] : [];
-        }),
-      ),
-    }));
-    const candidates = this.candidatesOf(signals, resolved);
-    const ranked = rankForGroup(people, candidates, excludedOf(signals, resolved), RANKED);
-    return this.available(ranked, signals, resolved, candidates);
+  private async fromTastes(gathered: Gathered): Promise<GroupSuggestion[]> {
+    const { signals, resolved } = gathered;
+    const now = this.options.now();
+    const dismissedTitles = await this.dismissedTitles(gathered.dismissed);
+    const excluded = excludedOf(
+      signals,
+      resolved,
+      gathered.dismissed.map((d) => d.titleKey),
+    );
+    const roughPeople = peopleOf(signals, resolved, dismissedTitles, new Map(), now);
+    const rough = await this.roughCandidates(gathered, roughPeople);
+    const shortlist = preRank(roughPeople, rough.candidates, excluded, SHORTLIST);
+    const full = await this.readInFull(shortlist, resolved);
+    const candidates = full.filter((c) => !unreleased(c.details ?? {}, now)).map((c) => c.candidate);
+    const idf = keywordIdf([...[...resolved.values()].map(tasteOf), ...candidates.map((c) => c.title)]);
+    const people = peopleOf(signals, resolved, dismissedTitles, idf, now);
+    const averages = candidates.flatMap((c) => c.title.voteAverage ?? []);
+    const usualAverage = averages.length ? averages.reduce((a, b) => a + b, 0) / averages.length : USUAL_AVERAGE;
+    const ranked = rankForGroup(people, candidates, excluded, RANKED, { idf, usualAverage });
+    const details = new Map(full.flatMap((c) => (c.details ? [[c.candidate.title.key, c.details] as const] : [])));
+    return this.available(ranked, gathered, { details, briefs: rough.briefs }, candidates);
+  }
+
+  private async dismissedTitles(dismissed: Gathered["dismissed"]) {
+    const { tmdb } = this.options;
+    if (!tmdb) return [];
+    const found = await Promise.all(
+      dismissed.map(async ({ titleKey, accountId }) => {
+        const [type, id] = titleKey.split(":");
+        const title = type === "movie" || type === "tv" ? await tmdb.title(type, Number(id)) : null;
+        return title ? [{ title, accountId }] : [];
+      }),
+    );
+    return found.flat();
+  }
+
+  /** The list, the titles loved by some, TMDB's recommendations from the favourites, and a « discover » on the group's taste. */
+  private async roughCandidates(
+    gathered: Gathered,
+    people: Parameters<typeof discoverPath>[0],
+  ): Promise<{ candidates: TasteCandidate[]; briefs: Map<string, TmdbBrief> }> {
+    const { signals, resolved } = gathered;
+    const listed = signals.toWatch.flatMap((item) => {
+      const found = resolved.get(catalogKey(item.title));
+      return found ? [{ title: tasteOf(found), seeds: [], wantedBy: item.wantedBy }] : [];
+    });
+    // Loved or liked by some of them elsewhere: worth watching with the others.
+    const lovedElsewhere = signals.signals.flatMap(({ title, signal }) => {
+      const found = signal === "loved" || signal === "liked" ? resolved.get(catalogKey(title)) : undefined;
+      return found ? [{ title: tasteOf(found), seeds: [], wantedBy: [] }] : [];
+    });
+    const seeds = seedsOf(signals, resolved);
+    const recommended = seeds.flatMap(({ title, weight }) =>
+      title.recommendations.map((brief) => ({
+        title: tasteOf(brief),
+        seeds: [{ key: keyOf(title.type, title.tmdbId), weight }],
+        wantedBy: [],
+      })),
+    );
+    const found = await this.discovered(signals, people);
+    const discovered = found.map((brief) => ({ title: tasteOf(brief), seeds: [], wantedBy: [] }));
+    // Their posters and ratings, for the titles whose full details are not read.
+    const briefs = new Map(
+      [...seeds.flatMap(({ title }) => title.recommendations), ...found].map((b) => [keyOf(b.type, b.tmdbId), b]),
+    );
+    return { candidates: mergeCandidates([...listed, ...lovedElsewhere, ...recommended, ...discovered]), briefs };
+  }
+
+  /** « Discover » on the group's taste; for a circle that said little yet, the best rated and the trending. */
+  private async discovered(signals: CircleSignals, people: Parameters<typeof discoverPath>[0]): Promise<TmdbBrief[]> {
+    const { tmdb } = this.options;
+    if (!tmdb) return [];
+    const avis = signals.signals.filter((s) => ["loved", "liked", "meh", "disliked"].includes(s.signal)).length;
+    const kinds: CatalogMediaType[] = signals.signals.some((s) => s.title.type === "tv") ? ["movie", "tv"] : ["movie"];
+    const paths = kinds.flatMap((kind) => discoverPath(people, kind) ?? []);
+    if (avis < FEW_AVIS) paths.push("movie/top_rated", "trending/all/week");
+    const lists = await Promise.all(paths.map((path) => tmdb.list(path, path.includes("/tv") ? "tv" : "movie")));
+    return lists.flat();
+  }
+
+  /** The shortlist read in full from TMDB: keywords, people, saga, release date. */
+  private async readInFull(shortlist: readonly TasteCandidate[], resolved: ReadonlyMap<string, TmdbTitle>) {
+    const byKey = new Map([...resolved.values()].map((title) => [keyOf(title.type, title.tmdbId), title]));
+    return Promise.all(
+      shortlist.map(async (candidate) => {
+        const [type, id] = candidate.title.key.split(":");
+        const known = byKey.get(candidate.title.key);
+        const details =
+          known ??
+          (type === "movie" || type === "tv" ? await this.options.tmdb?.title(type, Number(id)) : null) ??
+          undefined;
+        return { candidate: details ? { ...candidate, title: tasteOf(details) } : candidate, details };
+      }),
+    );
   }
 
   /** TMDB's details of every title the circle spoke of, by the catalog's key. */
@@ -181,45 +262,13 @@ export class TasteService {
     return tmdbId === null ? null : tmdb.title(title.type, tmdbId);
   }
 
-  /** The circle's list, and what TMDB recommends from the titles its people loved, liked or want. */
-  private candidatesOf(signals: CircleSignals, resolved: Map<string, TmdbTitle>): TasteCandidate[] {
-    const strength = new Map<string, number>();
-    for (const { title, signal } of signals.signals) {
-      const key = catalogKey(title);
-      strength.set(key, (strength.get(key) ?? 0) + (SEED_STRENGTH[signal] ?? 0));
-    }
-    const seeds = [...strength]
-      .filter(([, value]) => value > 0)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, SEEDS)
-      .flatMap(([key]) => resolved.get(key) ?? []);
-    const recommended = seeds.flatMap((seed) =>
-      seed.recommendations.map((brief) => ({
-        title: tasteOf(brief),
-        seeds: [keyOf(seed.type, seed.tmdbId)],
-        wantedBy: [],
-      })),
-    );
-    const listed = signals.toWatch.flatMap((item) => {
-      const found = resolved.get(catalogKey(item.title));
-      return found ? [{ title: tasteOf(found), seeds: [], wantedBy: item.wantedBy }] : [];
-    });
-    // Loved or liked by some of them elsewhere: worth watching again, with the others.
-    const lovedElsewhere = signals.signals.flatMap(({ title, signal }) => {
-      const found = signal === "loved" || signal === "liked" ? resolved.get(catalogKey(title)) : undefined;
-      return found ? [{ title: tasteOf(found), seeds: [], wantedBy: [] }] : [];
-    });
-    return mergeCandidates([...listed, ...lovedElsewhere, ...recommended]);
-  }
-
   /** The ranked titles Naka has, with their catalog title and why they are there. */
   private async available(
     ranked: readonly RankedTitle[],
-    signals: CircleSignals,
-    resolved: Map<string, TmdbTitle>,
+    { signals, resolved }: Gathered,
+    { details, briefs }: { details: ReadonlyMap<string, TmdbTitle>; briefs: ReadonlyMap<string, TmdbBrief> },
     candidates: readonly TasteCandidate[],
   ): Promise<GroupSuggestion[]> {
-    const briefs = this.briefsByKey(resolved);
     const listed = new Map(
       signals.toWatch.flatMap((item) => {
         const found = resolved.get(catalogKey(item.title));
@@ -231,18 +280,23 @@ export class TasteService {
     for (const entry of ranked) {
       if (suggestions.length >= SHOWN) break;
       const item = listed.get(entry.key);
-      const brief = briefs.get(entry.key);
+      const full = details.get(entry.key);
+      const brief = full ?? briefs.get(entry.key);
       const title = item?.title ?? (await this.onNaka(brief, naka));
       if (!title) continue;
       const wantedBy = candidates.find((c) => c.title.key === entry.key)?.wantedBy ?? [];
       suggestions.push({
         title: { ...title, ...(brief?.posterUrl && !title.posterUrl ? { posterUrl: brief.posterUrl } : {}) },
         ...(item ? { itemId: item.id } : {}),
-        matches: entry.matches.flatMap(({ accountId, match }) => {
-          const by = signals.members.find((member) => member.accountId === accountId);
-          return by ? [{ by, match }] : [];
+        perfect: entry.perfect,
+        reasons: reasonsOf(entry, {
+          members: signals.members,
+          signals: signals.signals,
+          resolved,
+          full,
+          brief,
+          wantedBy,
         }),
-        reasons: this.reasonsOf(entry, brief, resolved, signals, wantedBy),
       });
     }
     return suggestions;
@@ -253,42 +307,5 @@ export class TasteService {
     if (!brief || naka.lookupsLeft <= 0) return null;
     naka.lookupsLeft--;
     return this.options.catalog.titleFor(brief);
-  }
-
-  private briefsByKey(resolved: Map<string, TmdbTitle>): Map<string, TmdbBrief> {
-    const briefs = new Map<string, TmdbBrief>();
-    for (const title of resolved.values()) {
-      briefs.set(keyOf(title.type, title.tmdbId), title);
-      for (const brief of title.recommendations) briefs.set(keyOf(brief.type, brief.tmdbId), brief);
-    }
-    return briefs;
-  }
-
-  private reasonsOf(
-    entry: RankedTitle,
-    brief: TmdbBrief | undefined,
-    resolved: Map<string, TmdbTitle>,
-    { members, signals }: CircleSignals,
-    wantedBy: readonly string[],
-  ): SuggestionWhy[] {
-    const reasons: SuggestionWhy[] = [];
-    const wanting = members.filter((member) => wantedBy.includes(member.accountId));
-    if (wanting.length) reasons.push({ kind: "wants", people: wanting });
-    for (const kind of ["loved", "liked"] as const) {
-      const ids = signals
-        .filter((s) => s.signal === kind && tmdbKeyOf(s.title, resolved) === entry.key)
-        .map((s) => s.accountId);
-      const people = members.filter((member) => ids.includes(member.accountId));
-      if (people.length) reasons.push({ kind, people });
-    }
-    const byKey = new Map([...resolved.values()].map((title) => [keyOf(title.type, title.tmdbId), title.title]));
-    const seedTitles = entry.seeds.flatMap((seed) => byKey.get(seed) ?? []).slice(0, 2);
-    if (seedTitles.length) reasons.push({ kind: "because", titles: seedTitles });
-    const genres = [...new Set(entry.sharedGenres.flatMap((id) => TMDB_GENRES[id] ?? []))].slice(0, 2);
-    if (genres.length) reasons.push({ kind: "genres", genres });
-    const average = brief?.voteAverage;
-    if (average !== undefined && average >= ACCLAIMED.average && (brief?.voteCount ?? 0) >= ACCLAIMED.votes)
-      reasons.push({ kind: "acclaimed", voteAverage: Math.round(average * 10) / 10 });
-    return reasons;
   }
 }

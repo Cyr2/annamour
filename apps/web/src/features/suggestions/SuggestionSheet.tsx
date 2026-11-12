@@ -1,6 +1,7 @@
 import type { Circle, GroupSuggestion } from "@annamour/protocol";
-import { Play, Plus } from "lucide-react";
+import { EyeOff, Play, Plus } from "lucide-react";
 import { useState } from "react";
+import { dismissSuggestion } from "../../api/suggestions.ts";
 import { Button } from "../../ui/controls.tsx";
 import { Poster } from "../../ui/Poster.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
@@ -13,34 +14,45 @@ import { EpisodePicker } from "../home/create/EpisodePicker.tsx";
 import { TitleRatings } from "../ratings/TitleRatings.tsx";
 import { useLaunchTitle } from "../watchlist/useLaunchTitle.ts";
 import { addTitle } from "../watchlist/watchlist.ts";
-import { matchLine, reasonLine } from "./suggestion-rules.ts";
+import { perfectLabel, reasonLine } from "./suggestion-rules.ts";
 
 interface SuggestionSheetProps {
   suggestion: GroupSuggestion | null;
   circle: Circle;
   me: string;
   onClose: () => void;
+  /** « Pas pour nous » was said: the shelf asks again. */
+  onDismissed: () => void;
 }
 
 /**
- * A suggestion not in the circle's list: how well it suits each one and why,
- * what TMDB says of it, the avis given on it, then « Lancer » or « Ajouter à Notre liste ».
+ * A suggestion not in the circle's list: why it is there (and whether it suits
+ * everyone), what TMDB says of it, the avis given on it, then « Lancer »,
+ * « Ajouter à Notre liste » or « Pas pour nous ».
  */
-export function SuggestionSheet({ suggestion, circle, me, onClose }: SuggestionSheetProps) {
+export function SuggestionSheet({ suggestion, circle, me, onClose, onDismissed }: SuggestionSheetProps) {
   return (
     <Sheet open={suggestion !== null} onClose={onClose} title={suggestion?.title.title ?? ""}>
-      {suggestion ? <SuggestionBody suggestion={suggestion} circle={circle} me={me} onClose={onClose} /> : null}
+      {suggestion ? (
+        <SuggestionBody suggestion={suggestion} circle={circle} me={me} onClose={onClose} onDismissed={onDismissed} />
+      ) : null}
     </Sheet>
   );
 }
 
-function SuggestionBody({ suggestion, circle, me, onClose }: SuggestionSheetProps & { suggestion: GroupSuggestion }) {
+function SuggestionBody({
+  suggestion,
+  circle,
+  me,
+  onClose,
+  onDismissed,
+}: SuggestionSheetProps & { suggestion: GroupSuggestion }) {
   const [adding, setAdding] = useState(false);
   const [pickingEpisode, setPickingEpisode] = useState(false);
   const { launch, busy, error } = useLaunchTitle();
   const { title } = suggestion;
   const forCircle = { title, circleId: circle.id };
-  const match = matchLine(suggestion, me);
+  const match = suggestion.perfect ? perfectLabel(circle.members.length) : "";
 
   const add = async () => {
     setAdding(true);
@@ -52,6 +64,17 @@ function SuggestionBody({ suggestion, circle, me, onClose }: SuggestionSheetProp
       toast({ message: failure instanceof Error ? failure.message : "Réessaie dans un instant." });
     } finally {
       setAdding(false);
+    }
+  };
+
+  const dismiss = async (tmdbId: number) => {
+    try {
+      await dismissSuggestion(circle.id, { type: title.type, tmdbId });
+      toast({ message: `« ${title.title} » ne sera plus proposé` });
+      onDismissed();
+      onClose();
+    } catch (failure) {
+      toast({ message: failure instanceof Error ? failure.message : "Réessaie dans un instant." });
     }
   };
 
@@ -74,7 +97,7 @@ function SuggestionBody({ suggestion, circle, me, onClose }: SuggestionSheetProp
           {match ? <p className="font-semibold text-accent">{match}</p> : null}
           {suggestion.reasons.map((reason) => (
             <p key={reason.kind} className="text-fg">
-              {reasonLine(reason, me)}
+              {reasonLine(reason, me, title.type)}
             </p>
           ))}
         </div>
@@ -103,6 +126,11 @@ function SuggestionBody({ suggestion, circle, me, onClose }: SuggestionSheetProp
         <Button icon={<Plus />} disabled={adding} onClick={() => void add()}>
           {adding ? "Ajout…" : `Ajouter à Notre liste · ${circleShortName(circle, me)}`}
         </Button>
+        {title.tmdbId !== undefined ? (
+          <Button icon={<EyeOff />} onClick={() => title.tmdbId !== undefined && void dismiss(title.tmdbId)}>
+            Pas pour nous
+          </Button>
+        ) : null}
       </div>
     </div>
   );

@@ -1,12 +1,12 @@
-import type { GroupSuggestion, Participant, SuggestionWhy } from "@annamour/protocol";
+import type { CatalogMediaType, Participant, SuggestionWhy } from "@annamour/protocol";
 import { joinNames } from "../../lib/format.ts";
 
-/* How « Pour vous ce soir » says why a title is there, and how well it suits each person. */
+/* How « Pour vous ce soir » says why a title is there. */
 
 const VERBS = {
   wants: { me: "Tu en as envie", one: "en a envie", withMe: "en avez envie", many: "en ont envie" },
-  loved: { me: "Tu as adoré", one: "a adoré", withMe: "avez adoré", many: "ont adoré" },
-  liked: { me: "Tu as aimé", one: "a aimé", withMe: "avez aimé", many: "ont aimé" },
+  loved: { me: "Tu l'as adoré", one: "l'a adoré", withMe: "l'avez adoré", many: "l'ont adoré" },
+  liked: { me: "Tu l'as aimé", one: "l'a aimé", withMe: "l'avez aimé", many: "l'ont aimé" },
 } as const;
 
 function peopleLine(kind: keyof typeof VERBS, people: readonly Participant[], me: string): string {
@@ -17,29 +17,31 @@ function peopleLine(kind: keyof typeof VERBS, people: readonly Participant[], me
   return `${joinNames(others)} ${others.length > 1 ? verbs.many : verbs.one}`;
 }
 
+const capitalized = (text: string) => `${text.charAt(0).toLocaleUpperCase("fr")}${text.slice(1)}`;
+
 /**
- * « Annou a adoré », « Toi et Annou en avez envie », « Dans la lignée de Gone Girl »,
- * « Thriller et drame, vos genres », « Très bien noté : 8,1 sur 10 ».
+ * « Anna l'a adoré », « Toi et Anna en avez envie », « Parce que vous avez aimé
+ * Gone Girl », « Réalisé par David Fincher », « Thriller, votre genre »,
+ * « Très bien noté : 8,1 sur 10 ».
  */
-export function reasonLine(reason: SuggestionWhy, me: string): string {
+export function reasonLine(reason: SuggestionWhy, me: string, type: CatalogMediaType = "movie"): string {
   switch (reason.kind) {
     case "wants":
     case "loved":
     case "liked":
       return peopleLine(reason.kind, reason.people, me);
     case "because":
-      return `Dans la lignée de ${joinNames(reason.titles)}`;
-    case "genres": {
-      const genres = joinNames(reason.genres);
-      return `${genres.charAt(0).toLocaleUpperCase("fr")}${genres.slice(1)}, vos genres`;
-    }
+      return `Parce que vous avez aimé ${joinNames(reason.titles)}`;
+    case "director":
+      return `${type === "tv" ? "Créé" : "Réalisé"} par ${reason.name}`;
+    case "genres":
+      return `${capitalized(joinNames(reason.genres))}, ${reason.genres.length > 1 ? "vos genres" : "votre genre"}`;
     case "acclaimed":
       return `Très bien noté : ${reason.voteAverage.toLocaleString("fr-FR")} sur 10`;
   }
 }
 
-/** « Toi 92 % · Anna 85 % », me first; empty when the suggestion did not come from tastes. */
-export function matchLine(suggestion: GroupSuggestion, me: string): string {
-  const sorted = [...suggestion.matches].sort((a, b) => Number(b.by.accountId === me) - Number(a.by.accountId === me));
-  return sorted.map(({ by, match }) => `${by.accountId === me ? "Toi" : by.name} ${match} %`).join(" · ");
+/** « Pile pour vous deux », or for a bigger circle « Pile pour vous ». */
+export function perfectLabel(members: number): string {
+  return members === 2 ? "Pile pour vous deux" : "Pile pour vous";
 }

@@ -3,6 +3,7 @@ import { AccountRepository } from "./account-repository.ts";
 import { AuthSessionRepository, LinkTokenRepository } from "./auth-repository.ts";
 import { CatalogCacheRepository } from "./catalog-cache-repository.ts";
 import { CircleRepository } from "./circle-repository.ts";
+import { DismissalRepository } from "./dismissal-repository.ts";
 import { ParticipationRepository } from "./participation-repository.ts";
 import { PasskeyRepository } from "./passkey-repository.ts";
 import { PlaybackReportRepository } from "./playback-report-repository.ts";
@@ -25,6 +26,7 @@ export interface Repositories {
   playbackReports: PlaybackReportRepository;
   ratings: RatingRepository;
   catalogCache: CatalogCacheRepository;
+  dismissals: DismissalRepository;
 }
 
 export function createRepositories(db: DatabaseSync): Repositories {
@@ -41,5 +43,6 @@ export function createRepositories(db: DatabaseSync): Repositories {
     playbackReports: new PlaybackReportRepository(db),
     ratings: new RatingRepository(db),
     catalogCache: new CatalogCacheRepository(db),
+    dismissals: new DismissalRepository(db),
   };
 }
