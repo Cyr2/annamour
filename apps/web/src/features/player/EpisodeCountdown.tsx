@@ -1,8 +1,7 @@
 import { NEXT_EPISODE_COUNTDOWN_MS } from "@annamour/protocol";
-import { useEffect, useRef, useState } from "react";
 import type { SyncClient } from "../../sync/SyncClient.ts";
 import { Progress } from "../../ui/Progress.tsx";
-import { secondsLeft } from "./episode-rules.ts";
+import { useCountdown } from "./useCountdown.ts";
 
 interface EpisodeCountdownProps {
   /** Server time at which the next episode starts. */
@@ -14,30 +13,9 @@ interface EpisodeCountdownProps {
   titleId: string;
 }
 
-const TICK_MS = 250;
-
 /** The ring that empties until the next episode, on the shared clock so every screen counts together. */
 export function EpisodeCountdown({ until, client, onDone, next, titleId }: EpisodeCountdownProps) {
-  const serverNow = () => client?.serverNow() ?? Date.now();
-  const [seconds, setSeconds] = useState(() => secondsLeft(until, serverNow()));
-  // The latest callback, without restarting the clock each render.
-  const done = useRef(onDone);
-  done.current = onDone;
-
-  useEffect(() => {
-    let asked = false;
-    const tick = () => {
-      const left = secondsLeft(until, client?.serverNow() ?? Date.now());
-      setSeconds(left);
-      if (left > 0 || asked) return;
-      asked = true;
-      done.current();
-    };
-    tick();
-    const timer = setInterval(tick, TICK_MS);
-    return () => clearInterval(timer);
-  }, [until, client]);
-
+  const seconds = useCountdown(until, client, onDone);
   return (
     <div className="grid justify-items-center gap-4">
       <Progress.Ring value={(seconds * 1000) / NEXT_EPISODE_COUNTDOWN_MS} label={`${seconds} s`} className="size-32">
