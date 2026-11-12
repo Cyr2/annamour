@@ -1,6 +1,6 @@
 import type { TitleDetails } from "@annamour/protocol";
 import { describe, expect, it } from "vitest";
-import { factsLine, peopleLine, ratingLine, runtimeLabel } from "./details-rules.ts";
+import { factsLine, peopleLine, ratingLine, runtimeLabel, shortRating } from "./details-rules.ts";
 
 const gone: TitleDetails = {
   tmdbId: 210577,
@@ -17,6 +17,11 @@ describe("what a title's sheet says of it", () => {
     expect(ratingLine(gone)).toBe("7,9 sur 10 · 19 000 votes");
     expect(ratingLine({ ...gone, voteCount: 3 })).toBe("");
     expect(ratingLine({ ...gone, voteAverage: undefined })).toBe("");
+  });
+
+  it("starts its one-line summary with the rating alone, when it has enough votes", () => {
+    expect(shortRating(gone)).toBe("7,9");
+    expect(shortRating({ ...gone, voteCount: 2 })).toBe("");
   });
 
   it("says its genres and length, or its seasons", () => {

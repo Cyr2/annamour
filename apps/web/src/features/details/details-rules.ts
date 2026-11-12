@@ -14,6 +14,12 @@ export function ratingLine({ voteAverage, voteCount }: TitleDetails): string {
   return `${average} sur 10 · ${votes} vote${voteCount > 1 ? "s" : ""}`;
 }
 
+/** « 7,9 » for a title with a few votes, else nothing: the sheet's one-line summary starts with it. */
+export function shortRating({ voteAverage, voteCount }: TitleDetails): string {
+  if (voteAverage === undefined || !voteCount || voteCount < 10) return "";
+  return voteAverage.toLocaleString("fr-FR", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+}
+
 /** « 2 h 29 », « 45 min ». */
 export function runtimeLabel(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;

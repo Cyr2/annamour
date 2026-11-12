@@ -52,6 +52,10 @@ export function UsScreen() {
             <PlayerChoiceCard />
           </section>
         ) : null}
+        {/* TMDB asks to be named where its data is used; here rather than on every sheet. */}
+        <p className="px-1 text-center text-xs text-pretty text-fg-muted">
+          Synopsis, notes et idées pour ce soir viennent de TMDB, qui n'approuve ni ne certifie Annamour.
+        </p>
       </main>
       <BrandFooter />
       <NameCircleSheet open={creating} onClose={() => setCreating(false)} />
