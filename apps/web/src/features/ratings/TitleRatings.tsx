@@ -1,6 +1,7 @@
 import { type CatalogTitle, myRating, type Participant, RATING_WORDS, ratingsOf } from "@annamour/protocol";
 import { useEffect, useId } from "react";
 import { BubbleStack } from "../../ui/BubbleStack.tsx";
+import { cx } from "../../ui/cx.ts";
 import { RatingPicker } from "../../ui/RatingPicker.tsx";
 import { toast } from "../../ui/toast.ts";
 import { useAccount } from "../account/account.ts";
@@ -30,7 +31,7 @@ export function TitleRatings({ title, askMine = true, className }: TitleRatingsP
   if (!asking && others.length === 0) return null;
 
   return (
-    <section aria-labelledby={headingId} className={className}>
+    <section aria-labelledby={headingId} className={cx("text-left", className)}>
       <h3 id={headingId} className="mb-2 text-sm font-semibold text-fg">
         {asking ? "Ton avis" : "Leurs avis"}
       </h3>

@@ -1,5 +1,5 @@
 import { type Circle, type Suggestion, suggestForCircle, type WatchlistItem } from "@annamour/protocol";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { Poster } from "../../ui/Poster.tsx";
 import { useAccount } from "../account/account.ts";
 import { loadRatings, useRatings } from "../ratings/ratings.ts";
@@ -25,6 +25,7 @@ export function SuggestionsShelf({ circle, onOpenItem }: SuggestionsShelfProps) 
   const ratings = useRatings((s) => s.ratings);
   const sessions = useSessions((s) => s.sessions);
   const [open, setOpen] = useState<Suggestion | null>(null);
+  const headingId = useId();
   useEffect(() => {
     void loadRatings();
   }, []);
@@ -41,8 +42,8 @@ export function SuggestionsShelf({ circle, onOpenItem }: SuggestionsShelfProps) 
   };
 
   return (
-    <section className="grid w-full gap-1 text-left" aria-labelledby="suggestions-title">
-      <h2 id="suggestions-title" className="type-heading px-1">
+    <section className="grid w-full gap-1 text-left" aria-labelledby={headingId}>
+      <h2 id={headingId} className="type-heading px-1">
         Idées pour ce soir
       </h2>
       <ul className="flex gap-3 overflow-x-auto py-3 [scrollbar-width:none]">
@@ -53,7 +54,7 @@ export function SuggestionsShelf({ circle, onOpenItem }: SuggestionsShelfProps) 
               <button
                 type="button"
                 onClick={() => pick(suggestion)}
-                aria-label={`${suggestion.title.title} : ${why}`}
+                aria-label={`${suggestion.title.title} : ${why}`}
                 className="am-press grid w-full cursor-pointer gap-2 rounded-control text-left"
               >
                 <Poster title={suggestion.title} size="card" />

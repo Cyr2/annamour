@@ -53,7 +53,12 @@ export function SeanceOptions({ session, variant = "plain", className, onGone }:
         className={className}
       />
       <Sheet open={open} onClose={close} title={confirming ? "Supprimer pour tout le monde ?" : title}>
-        {view === "rate" && rated ? <TitleRatings title={rated} /> : null}
+        {view === "rate" && rated ? (
+          <div className="grid gap-5">
+            <TitleRatings title={rated} />
+            <Button onClick={() => setView("menu")}>Retour</Button>
+          </div>
+        ) : null}
         {confirming ? (
           <ConfirmDelete
             session={session}

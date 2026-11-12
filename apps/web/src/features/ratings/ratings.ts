@@ -1,4 +1,4 @@
-import type { CatalogTitle, Participant, Rating, TitleRating } from "@annamour/protocol";
+import { type CatalogTitle, catalogKey, type Participant, type Rating, type TitleRating } from "@annamour/protocol";
 import { create } from "zustand";
 import { errorMessage } from "../../api/http.ts";
 import * as api from "../../api/ratings.ts";
@@ -36,19 +36,28 @@ export function loadRatings(): Promise<void> {
 const isMine = (rating: TitleRating, me: string, title: Pick<CatalogTitle, "type" | "id">) =>
   rating.by.accountId === me && rating.title.type === title.type && rating.title.id === title.id;
 
+/** The last change asked per title: an older answer arriving late must not undo a newer choice. */
+const latest = new Map<string, number>();
+let changes = 0;
+
 /**
  * Gives, changes or (with null) takes back my avis at once, and puts the
  * previous one back if the server refuses (throwing the message to show).
  */
 export async function setMyRating(me: Participant, title: CatalogTitle, rating: Rating | null): Promise<void> {
-  const before = useRatings.getState().ratings;
-  const others = before.filter((existing) => !isMine(existing, me.accountId, title));
-  const mine = rating ? [{ by: me, title, rating, ratedAt: Date.now() }] : [];
-  useRatings.setState({ ratings: [...mine, ...others] });
+  const key = catalogKey(title);
+  const change = ++changes;
+  latest.set(key, change);
+  const before = useRatings.getState().ratings.find((existing) => isMine(existing, me.accountId, title));
+  const mineNow = (mine: TitleRating | undefined) => {
+    const others = useRatings.getState().ratings.filter((existing) => !isMine(existing, me.accountId, title));
+    useRatings.setState({ ratings: mine ? [mine, ...others] : others });
+  };
+  mineNow(rating ? { by: me, title, rating, ratedAt: Date.now() } : undefined);
   try {
     await (rating ? api.rateTitle(title, rating) : api.unrateTitle(title));
   } catch (error) {
-    useRatings.setState({ ratings: before });
+    if (latest.get(key) === change) mineNow(before);
     throw new Error(errorMessage(error));
   }
 }

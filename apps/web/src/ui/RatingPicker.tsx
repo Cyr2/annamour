@@ -29,7 +29,7 @@ export function RatingPicker({ value, onChange, label, disabled = false }: Ratin
             onClick={() => onChange(chosen ? undefined : rating)}
             className={cx(
               "grid min-h-11 justify-items-center gap-1 rounded-control px-1 py-2 text-xs font-semibold transition-colors",
-              "focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-60",
+              "disabled:opacity-60",
               chosen ? "bg-accent-soft text-fg ring-2 ring-accent" : "bg-fill-soft text-fg-muted hover:bg-fill-hover",
             )}
           >

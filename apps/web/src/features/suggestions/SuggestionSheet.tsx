@@ -54,7 +54,7 @@ export function SuggestionSheet({ suggestion, circle, me, onClose }: SuggestionS
           </div>
           <TitleRatings title={suggestion.title} askMine={false} />
           <Button variant="filled" size="large" icon={<Plus />} disabled={busy} onClick={() => void add(suggestion)}>
-            Ajouter à Notre liste · {circleShortName(circle, me)}
+            {busy ? "Ajout…" : `Ajouter à Notre liste · ${circleShortName(circle, me)}`}
           </Button>
         </div>
       ) : null}
