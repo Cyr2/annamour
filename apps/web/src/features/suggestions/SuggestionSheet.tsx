@@ -49,6 +49,7 @@ function SuggestionBody({
 }: SuggestionSheetProps & { suggestion: GroupSuggestion }) {
   const [adding, setAdding] = useState(false);
   const [pickingEpisode, setPickingEpisode] = useState(false);
+  const [dismissing, setDismissing] = useState(false);
   const { launch, busy, error } = useLaunchTitle();
   const { title } = suggestion;
   const forCircle = { title, circleId: circle.id };
@@ -68,6 +69,7 @@ function SuggestionBody({
   };
 
   const dismiss = async (tmdbId: number) => {
+    setDismissing(true);
     try {
       await dismissSuggestion(circle.id, { type: title.type, tmdbId });
       toast({ message: `« ${title.title} » ne sera plus proposé` });
@@ -75,6 +77,7 @@ function SuggestionBody({
       onClose();
     } catch (failure) {
       toast({ message: failure instanceof Error ? failure.message : "Réessaie dans un instant." });
+      setDismissing(false);
     }
   };
 
@@ -119,6 +122,7 @@ function SuggestionBody({
           size="large"
           icon={<Play />}
           disabled={busy}
+          data-tv-primary
           onClick={() => (title.type === "tv" ? setPickingEpisode(true) : void launch(forCircle))}
         >
           Lancer une séance
@@ -127,7 +131,11 @@ function SuggestionBody({
           {adding ? "Ajout…" : `Ajouter à Notre liste · ${circleShortName(circle, me)}`}
         </Button>
         {title.tmdbId !== undefined ? (
-          <Button icon={<EyeOff />} onClick={() => title.tmdbId !== undefined && void dismiss(title.tmdbId)}>
+          <Button
+            icon={<EyeOff />}
+            disabled={dismissing}
+            onClick={() => title.tmdbId !== undefined && void dismiss(title.tmdbId)}
+          >
             Pas pour nous
           </Button>
         ) : null}

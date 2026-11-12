@@ -3,6 +3,7 @@ import { useEffect, useId, useState } from "react";
 import { Poster } from "../../ui/Poster.tsx";
 import { useAccount } from "../account/account.ts";
 import { loadRatings } from "../ratings/ratings.ts";
+import { FIRST_ROW } from "../watchlist/PosterCard.tsx";
 import { ShelfPlaceholder } from "../watchlist/ShelfPlaceholder.tsx";
 import { useWatchlist } from "../watchlist/watchlist.ts";
 import { SuggestionSheet } from "./SuggestionSheet.tsx";
@@ -44,11 +45,14 @@ export function SuggestionsShelf({ circle, onOpenItem }: SuggestionsShelfProps) 
 
   return (
     <section className="grid w-full gap-1 text-left" aria-labelledby={headingId}>
-      <h2 id={headingId} className="type-heading px-1">
-        {TITLE}
-      </h2>
+      {/* The same height as its placeholder: the page does not move when the suggestions arrive. */}
+      <div className="flex min-h-11 items-center px-1">
+        <h2 id={headingId} className="type-heading">
+          {TITLE}
+        </h2>
+      </div>
       <ul className="flex gap-3 overflow-x-auto py-3 [scrollbar-width:none]">
-        {suggestions.map((suggestion) => {
+        {suggestions.map((suggestion, index) => {
           const why = suggestion.reasons[0] ? reasonLine(suggestion.reasons[0], me, suggestion.title.type) : "";
           const match = suggestion.perfect ? perfectLabel(circle.members.length) : "";
           return (
@@ -59,7 +63,7 @@ export function SuggestionsShelf({ circle, onOpenItem }: SuggestionsShelfProps) 
                 aria-label={[suggestion.title.title, match, why].filter(Boolean).join(", ")}
                 className="am-press grid w-full cursor-pointer gap-2 rounded-control text-left"
               >
-                <Poster title={suggestion.title} size="card" />
+                <Poster title={suggestion.title} size="card" priority={index < FIRST_ROW} />
                 <span className="grid gap-0.5 px-0.5">
                   <span className="truncate text-sm font-semibold text-fg">{suggestion.title.title}</span>
                   {match ? <span className="truncate text-xs font-semibold text-accent">{match}</span> : null}

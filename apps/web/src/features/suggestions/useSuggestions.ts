@@ -21,6 +21,12 @@ export function useSuggestions(circleId: string | null): {
     s.items.map((i) => `${i.id}${i.wantedBy.length}${i.watchedAt ?? ""}`).join(),
   );
 
+  // Another circle: its placeholder, not the previous circle's suggestions, until its own arrive.
+  useEffect(() => {
+    void circleId;
+    setSuggestions(null);
+  }, [circleId]);
+
   useEffect(() => {
     if (!circleId) return setSuggestions([]);
     // Read so the effect runs again when they change.

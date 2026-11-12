@@ -37,7 +37,7 @@ export function reasonLine(reason: SuggestionWhy, me: string, type: CatalogMedia
     case "genres":
       return `${capitalized(joinNames(reason.genres))}, ${reason.genres.length > 1 ? "vos genres" : "votre genre"}`;
     case "acclaimed":
-      return `Très bien noté : ${reason.voteAverage.toLocaleString("fr-FR")} sur 10`;
+      return `Très bien noté : ${reason.voteAverage.toLocaleString("fr-FR")} sur 10`;
   }
 }
 

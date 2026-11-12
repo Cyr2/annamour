@@ -28,7 +28,7 @@ describe("why a title is suggested", () => {
     expect(reasonLine({ kind: "genres", genres: ["thriller", "drame"] }, "darius")).toBe(
       "Thriller et drame, vos genres",
     );
-    expect(reasonLine({ kind: "acclaimed", voteAverage: 8.1 }, "darius")).toBe("Très bien noté : 8,1 sur 10");
+    expect(reasonLine({ kind: "acclaimed", voteAverage: 8.1 }, "darius")).toBe("Très bien noté : 8,1 sur 10");
   });
 
   it("marks a title that suits everyone", () => {

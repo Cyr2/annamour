@@ -1,6 +1,6 @@
 import type { CatalogTitle, TitleDetails } from "@annamour/protocol";
 import { Clapperboard, Star } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { fetchTitleDetails } from "../../api/catalog.ts";
 import { factsLine, OVERVIEW_FOLD, peopleLine, ratingLine } from "./details-rules.ts";
 
@@ -36,6 +36,7 @@ function useTitleDetails({ id, type, title, year, tmdbId }: CatalogTitle): Title
 export function TitleDetailsSection({ title }: { title: CatalogTitle }) {
   const details = useTitleDetails(title);
   const [unfolded, setUnfolded] = useState(false);
+  const overviewId = useId();
   if (details === undefined)
     return <div aria-busy="true" className="min-h-24 animate-pulse rounded-control bg-fill-soft" />;
   if (details === null) return null;
@@ -54,13 +55,16 @@ export function TitleDetailsSection({ title }: { title: CatalogTitle }) {
       ) : null}
       {facts ? <p>{facts}</p> : null}
       {details.overview ? (
-        <p className={long && !unfolded ? "line-clamp-4 text-fg" : "text-fg"}>{details.overview}</p>
+        <p id={overviewId} className={long && !unfolded ? "line-clamp-4 text-fg" : "text-fg"}>
+          {details.overview}
+        </p>
       ) : null}
       {long ? (
         <button
           type="button"
           onClick={() => setUnfolded(!unfolded)}
           aria-expanded={unfolded}
+          aria-controls={overviewId}
           className="min-h-11 justify-self-start font-semibold text-accent"
         >
           {unfolded ? "Replier" : "Lire la suite"}
@@ -76,14 +80,18 @@ export function TitleDetailsSection({ title }: { title: CatalogTitle }) {
         >
           <Clapperboard aria-hidden className="size-4" />
           Bande-annonce
+          <span className="sr-only"> (nouvel onglet)</span>
         </a>
       ) : null}
-      <p className="text-xs text-fg-subtle">
-        Infos{" "}
-        <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer" className="underline">
-          TMDB
-        </a>
-      </p>
+      <a
+        href="https://www.themoviedb.org/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex min-h-11 items-center justify-self-start text-xs text-fg-muted"
+      >
+        Infos&nbsp;: <span className="ml-1 underline">TMDB</span>
+        <span className="sr-only"> (nouvel onglet)</span>
+      </a>
     </section>
   );
 }

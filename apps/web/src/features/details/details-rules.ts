@@ -16,9 +16,9 @@ export function ratingLine({ voteAverage, voteCount }: TitleDetails): string {
 
 /** « 2 h 29 », « 45 min ». */
 export function runtimeLabel(minutes: number): string {
-  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 60) return `${minutes} min`;
   const rest = minutes % 60;
-  return `${Math.floor(minutes / 60)} h${rest ? ` ${String(rest).padStart(2, "0")}` : ""}`;
+  return `${Math.floor(minutes / 60)} h${rest ? ` ${String(rest).padStart(2, "0")}` : ""}`;
 }
 
 /** « Drame, thriller · 2 h 29 », « Drame · 3 saisons ». */
