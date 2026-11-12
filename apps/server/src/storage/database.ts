@@ -163,6 +163,15 @@ const MIGRATIONS: readonly string[] = [
   ALTER TABLE circles ADD COLUMN reunited_by TEXT REFERENCES accounts (id) ON DELETE SET NULL;
   ALTER TABLE circles ADD COLUMN reunited_at INTEGER;
   `,
+  // A séance made for a circle shows to all its people before they enter it; who removes one they never
+  // entered is kept here (a participation would make them a companion « qui a quitté la séance »).
+  `
+  CREATE TABLE room_dismissals (
+    room_code TEXT NOT NULL REFERENCES rooms (code) ON DELETE CASCADE,
+    account_id TEXT NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    PRIMARY KEY (room_code, account_id)
+  );
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;
