@@ -107,7 +107,7 @@ function SuggestionBody({
       </div>
       <TitleDetailsSection title={title} />
       <TitleRatings title={title} askMine={false} />
-      <p role="alert" className="min-h-5 text-sm text-danger">
+      <p role="alert" className="text-sm text-danger empty:hidden">
         {busy ? (
           <span className="flex items-center gap-3 text-fg-muted">
             <ThreadSpinner /> On prépare la séance…

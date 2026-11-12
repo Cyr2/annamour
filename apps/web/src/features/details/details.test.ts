@@ -1,6 +1,6 @@
 import type { TitleDetails } from "@annamour/protocol";
 import { describe, expect, it } from "vitest";
-import { factsLine, peopleLine, ratingLine, runtimeLabel } from "./details-rules.ts";
+import { factsLine, peopleLine, ratingLine, runtimeLabel, shortRating } from "./details-rules.ts";
 
 const gone: TitleDetails = {
   tmdbId: 210577,
@@ -19,9 +19,14 @@ describe("what a title's sheet says of it", () => {
     expect(ratingLine({ ...gone, voteAverage: undefined })).toBe("");
   });
 
+  it("starts its one-line summary with the rating alone, when it has enough votes", () => {
+    expect(shortRating(gone)).toBe("7,9");
+    expect(shortRating({ ...gone, voteCount: 2 })).toBe("");
+  });
+
   it("says its genres and length, or its seasons", () => {
-    expect(factsLine(gone)).toBe("Drame, thriller, mystère · 2 h 29");
-    expect(factsLine({ ...gone, runtime: undefined, seasons: 3 })).toBe("Drame, thriller, mystère · 3 saisons");
+    expect(factsLine(gone)).toBe("Drame, thriller · 2 h 29");
+    expect(factsLine({ ...gone, runtime: undefined, seasons: 3 })).toBe("Drame, thriller · 3 saisons");
     expect(factsLine({ ...gone, genres: [], runtime: undefined })).toBe("");
     expect(runtimeLabel(45)).toBe("45 min");
     expect(runtimeLabel(120)).toBe("2 h");

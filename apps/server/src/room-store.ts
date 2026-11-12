@@ -1,4 +1,4 @@
-import { type CatalogRef, generateRoomCode, ROOM_RETENTION_MS } from "@annamour/protocol";
+import { type BubbleColor, type CatalogRef, generateRoomCode, ROOM_RETENTION_MS } from "@annamour/protocol";
 import type { ImportedMedia } from "./hls.ts";
 import { Room, type RoomPersistence } from "./rooms.ts";
 import type { RoomRepository } from "./storage/room-repository.ts";
@@ -101,6 +101,11 @@ export class RoomStore {
   /** Where a room in memory is right now; undefined when it is only on disk. */
   livePosition(code: string, now: number): number | undefined {
     return this.live.get(code)?.positionAt(now);
+  }
+
+  /** Who is in a room's salon right now, `accountId` left out; empty when nobody is (or it is only on disk). */
+  presentBesides(code: string, accountId: string): { name: string; color: BubbleColor }[] {
+    return this.live.get(code)?.presentBesides(accountId) ?? [];
   }
 
   /** Number of rooms currently in memory. */

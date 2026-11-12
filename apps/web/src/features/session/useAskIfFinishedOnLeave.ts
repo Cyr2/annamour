@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { type RoomState, useRoom } from "../../sync/room.ts";
 import { useAccount } from "../account/account.ts";
+import { askRatingIfNone, titleToRateOnLeave } from "../ratings/rate-question.ts";
 import { askIfFinished, finishQuestion, type WatchedTo } from "../sessions/finish-question.ts";
 
 /**
@@ -34,6 +35,10 @@ export function useAskIfFinishedOnLeave(video: HTMLVideoElement | null) {
       if (!last.room || watched === null || useAccount.getState().status !== "member") return;
       const othersStaying = last.members.some((member) => member.id !== last.you);
       askIfFinished(finishQuestion(last.room, watched, othersStaying));
+      // Left once it was over (during the credits, mostly): « Ton avis ? » on the next screen.
+      const toRate = titleToRateOnLeave(last.room, watched);
+      const me = useAccount.getState().account?.id;
+      if (toRate && me) void askRatingIfNone(toRate, me);
     };
   }, []);
 }

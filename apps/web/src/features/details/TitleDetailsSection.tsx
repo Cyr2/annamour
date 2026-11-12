@@ -1,8 +1,9 @@
 import type { CatalogTitle, TitleDetails } from "@annamour/protocol";
-import { Clapperboard, Star } from "lucide-react";
+import { ChevronDown, Clapperboard, Star } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { fetchTitleDetails } from "../../api/catalog.ts";
-import { factsLine, OVERVIEW_FOLD, peopleLine, ratingLine } from "./details-rules.ts";
+import { cx } from "../../ui/cx.ts";
+import { factsLine, peopleLine, ratingLine, shortRating } from "./details-rules.ts";
 
 /** Details already read in this visit: opening a sheet again asks nothing. */
 const known = new Map<string, TitleDetails | null>();
@@ -29,48 +30,65 @@ function useTitleDetails({ id, type, title, year, tmdbId }: CatalogTitle): Title
 }
 
 /**
- * What TMDB says of a title, in its sheet: the synopsis (folded when long), its
- * rating, genres and length, who made it and who plays in it, its trailer.
- * Nothing when TMDB does not know it; its room is kept while it loads.
+ * What TMDB says of a title, kept short in its sheet: one line (rating, genres,
+ * length), then « Détails » unfolds the synopsis, who made it and plays in it,
+ * and the trailer. Nothing when TMDB does not know it.
  */
 export function TitleDetailsSection({ title }: { title: CatalogTitle }) {
   const details = useTitleDetails(title);
-  const [unfolded, setUnfolded] = useState(false);
-  const overviewId = useId();
-  if (details === undefined)
-    return <div aria-busy="true" className="min-h-24 animate-pulse rounded-control bg-fill-soft" />;
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  // Its one line's room is kept while it loads: the sheet does not jump.
+  if (details === undefined) return <p aria-busy="true" className="min-h-11" />;
   if (details === null) return null;
 
-  const rating = ratingLine(details);
+  const rating = shortRating(details);
   const facts = factsLine(details);
   const people = peopleLine(details);
-  const long = (details.overview?.length ?? 0) > OVERVIEW_FOLD;
+  const hasMore = Boolean(details.overview || people || details.trailerUrl);
   return (
-    <section aria-label={`À propos de « ${title.title} »`} className="grid gap-2 text-sm text-fg-muted">
-      {rating ? (
-        <p className="flex items-center gap-1.5 text-fg">
-          <Star aria-hidden className="size-4 fill-current text-accent" />
-          {rating}
+    // min-w-0 and one column: the truncated line must not widen the sheet past the screen.
+    <section
+      aria-label={`À propos de « ${title.title} »`}
+      className="grid min-w-0 grid-cols-1 gap-1 text-sm text-fg-muted"
+    >
+      <div className="flex min-h-11 items-center gap-3">
+        <p className="flex min-w-0 flex-1 items-center gap-1.5">
+          {rating ? (
+            <>
+              <Star aria-hidden className="size-4 shrink-0 fill-current text-accent" />
+              <span className="font-semibold text-fg">{rating}</span>
+              <span className="sr-only"> sur 10</span>
+              {facts ? <span aria-hidden>·</span> : null}
+            </>
+          ) : null}
+          <span className="truncate">{facts}</span>
         </p>
-      ) : null}
-      {facts ? <p>{facts}</p> : null}
-      {details.overview ? (
-        <p id={overviewId} className={long && !unfolded ? "line-clamp-4 text-fg" : "text-fg"}>
-          {details.overview}
-        </p>
-      ) : null}
-      {long ? (
-        <button
-          type="button"
-          onClick={() => setUnfolded(!unfolded)}
-          aria-expanded={unfolded}
-          aria-controls={overviewId}
-          className="min-h-11 justify-self-start font-semibold text-accent"
-        >
-          {unfolded ? "Replier" : "Lire la suite"}
-        </button>
-      ) : null}
+        {hasMore ? (
+          <button
+            type="button"
+            onClick={() => setOpen(!open)}
+            aria-expanded={open}
+            aria-controls={panelId}
+            className="flex min-h-11 shrink-0 items-center gap-1 font-semibold text-accent"
+          >
+            Détails
+            <ChevronDown aria-hidden className={cx("size-4 transition-transform", open && "rotate-180")} />
+          </button>
+        ) : null}
+      </div>
+      {open ? <DetailsPanel id={panelId} details={details} people={people} /> : null}
+    </section>
+  );
+}
+
+function DetailsPanel({ id, details, people }: { id: string; details: TitleDetails; people: string }) {
+  const votes = ratingLine(details);
+  return (
+    <div id={id} className="grid gap-2 pb-1">
+      {details.overview ? <p className="text-fg">{details.overview}</p> : null}
       {people ? <p>{people}</p> : null}
+      {votes ? <p>Note TMDB&nbsp;: {votes}</p> : null}
       {details.trailerUrl ? (
         <a
           href={details.trailerUrl}
@@ -83,15 +101,6 @@ export function TitleDetailsSection({ title }: { title: CatalogTitle }) {
           <span className="sr-only"> (nouvel onglet)</span>
         </a>
       ) : null}
-      <a
-        href="https://www.themoviedb.org/"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex min-h-11 items-center justify-self-start text-xs text-fg-muted"
-      >
-        Infos&nbsp;: <span className="ml-1 underline">TMDB</span>
-        <span className="sr-only"> (nouvel onglet)</span>
-      </a>
-    </section>
+    </div>
   );
 }

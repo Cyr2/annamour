@@ -34,6 +34,12 @@ describe("TMDB", () => {
     expect(title?.recommendations.map((r) => r.title)).toEqual(["Prisoners"]);
   });
 
+  it("tells the synopsis in English when TMDB has none in French", () => {
+    const translations = { translations: [{ iso_639_1: "en", data: { overview: "A wife goes missing." } }] };
+    expect(toTmdbTitle({ ...GONE_GIRL, overview: "", translations }, "movie")?.overview).toBe("A wife goes missing.");
+    expect(toTmdbTitle({ ...GONE_GIRL, overview: "", translations: "nope" }, "movie")?.overview).toBeUndefined();
+  });
+
   it("names a series' creators and counts its seasons", () => {
     const series = {
       id: 1,
