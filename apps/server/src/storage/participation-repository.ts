@@ -3,6 +3,7 @@ import { BubbleColor, type CatalogRef, type SessionParticipant } from "@annamour
 import { z } from "zod";
 import { parseCatalog } from "./room-repository.ts";
 import { changedRows, parseRows } from "./rows.ts";
+import { VISIBLE_ROOMS } from "./visible-rooms.ts";
 
 export interface JoinedRoom {
   code: string;
@@ -96,23 +97,29 @@ export class ParticipationRepository {
       .run();
   }
 
-  /** Returns false when this account never was in that room. */
+  /** Returns false when this account does not see that room among its séances. */
   hide(roomCode: string, accountId: string): boolean {
     const result = this.db
       .prepare("UPDATE participations SET hidden = 1 WHERE room_code = ? AND account_id = ?")
       .run(roomCode, accountId);
-    return changedRows(result) > 0;
+    if (changedRows(result) > 0) return true;
+    // A séance of one of its circles that it never entered.
+    if (!this.includes(roomCode, accountId)) return false;
+    this.db
+      .prepare("INSERT OR IGNORE INTO room_dismissals (room_code, account_id) VALUES (?, ?)")
+      .run(roomCode, accountId);
+    return true;
   }
 
-  /** This account is in that room and still lists it. */
+  /** This account sees that room among its séances. */
   includes(roomCode: string, accountId: string): boolean {
     const row = this.db
-      .prepare("SELECT 1 FROM participations WHERE room_code = ? AND account_id = ? AND hidden = 0")
-      .get(roomCode, accountId);
+      .prepare(`SELECT 1 FROM (${VISIBLE_ROOMS}) visible WHERE visible.code = :code`)
+      .get({ me: accountId, code: roomCode });
     return row !== undefined;
   }
 
-  /** Rooms this account joined and did not hide, most recently used first. */
+  /** The séances this account sees (see VISIBLE_ROOMS), most recently used first. */
   visibleRooms(accountId: string): JoinedRoom[] {
     const rows = this.db
       .prepare(
@@ -126,11 +133,11 @@ export class ParticipationRepository {
             WHERE e.room_code = r.code
               AND (SELECT COUNT(*) FROM room_episodes b WHERE b.room_code = e.room_code AND b.id < e.id) = r.current_episode
            ) AS episode_catalog
-         FROM participations p JOIN rooms r ON r.code = p.room_code
-         WHERE p.account_id = ? AND p.hidden = 0
-         ORDER BY r.last_used_at DESC`,
+         FROM rooms r
+         WHERE r.code IN (${VISIBLE_ROOMS})
+         ORDER BY r.last_used_at DESC, r.rowid`,
       )
-      .all(accountId);
+      .all({ me: accountId });
     return parseRows(JoinedRoomRow, rows).map((row) => ({
       code: row.code,
       title: row.title,
@@ -165,10 +172,10 @@ export class ParticipationRepository {
     const rows = this.db
       .prepare(
         `SELECT e.room_code, e.label, e.catalog FROM room_episodes e
-         WHERE e.room_code IN (SELECT room_code FROM participations WHERE account_id = ? AND hidden = 0)
+         WHERE e.room_code IN (${VISIBLE_ROOMS})
          ORDER BY e.room_code, e.id`,
       )
-      .all(accountId);
+      .all({ me: accountId });
     const byRoom = new Map<string, QueuedItem[]>();
     for (const row of parseRows(QueueRow, rows)) {
       const list = byRoom.get(row.room_code) ?? [];
@@ -183,11 +190,10 @@ export class ParticipationRepository {
       .prepare(
         `SELECT p.room_code, a.id AS account_id, a.name, a.color, p.hidden
          FROM participations p JOIN accounts a ON a.id = p.account_id
-         WHERE p.account_id <> ?
-           AND p.room_code IN (SELECT room_code FROM participations WHERE account_id = ? AND hidden = 0)
+         WHERE p.account_id <> :me AND p.room_code IN (${VISIBLE_ROOMS})
          ORDER BY p.rowid`,
       )
-      .all(accountId, accountId);
+      .all({ me: accountId });
     const byRoom = new Map<string, SessionParticipant[]>();
     for (const row of parseRows(CompanionRow, rows)) {
       const list = byRoom.get(row.room_code) ?? [];

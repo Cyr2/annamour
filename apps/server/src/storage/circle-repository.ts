@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { BubbleColor, type Circle, type SeanceCircle } from "@annamour/protocol";
 import { z } from "zod";
 import { changedRows, parseOptionalRow, parseRows } from "./rows.ts";
+import { VISIBLE_ROOMS } from "./visible-rooms.ts";
 
 const CircleRow = z.object({
   id: z.string(),
@@ -172,15 +173,14 @@ export class CircleRepository {
       this.db
         .prepare(
           `SELECT c.id, c.name, c.reunited_by, rb.name AS reunited_by_name, rb.color AS reunited_by_color, c.reunited_at,
-             (SELECT COUNT(*) FROM rooms r JOIN participations p ON p.room_code = r.code
-              WHERE r.circle_id = c.id AND p.account_id = me.account_id AND p.hidden = 0) AS evenings,
-             (SELECT MAX(r.last_used_at) FROM rooms r JOIN participations p ON p.room_code = r.code
-              WHERE r.circle_id = c.id AND p.account_id = me.account_id AND p.hidden = 0) AS last_used_at
-           FROM circles c JOIN circle_members me ON me.circle_id = c.id AND me.account_id = ?
+             (SELECT COUNT(*) FROM rooms r WHERE r.circle_id = c.id AND r.code IN (${VISIBLE_ROOMS})) AS evenings,
+             (SELECT MAX(r.last_used_at) FROM rooms r
+              WHERE r.circle_id = c.id AND r.code IN (${VISIBLE_ROOMS})) AS last_used_at
+           FROM circles c JOIN circle_members me ON me.circle_id = c.id AND me.account_id = :me
            LEFT JOIN accounts rb ON rb.id = c.reunited_by
            ORDER BY me.position IS NULL, me.position, last_used_at IS NULL, last_used_at DESC, c.created_at DESC`,
         )
-        .all(accountId),
+        .all({ me: accountId }),
     );
     const members = parseRows(
       MemberRow,
