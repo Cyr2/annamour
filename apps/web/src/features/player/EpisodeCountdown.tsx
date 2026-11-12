@@ -1,11 +1,10 @@
 import { CREDITS_COUNTDOWN_MS, NEXT_EPISODE_COUNTDOWN_MS } from "@annamour/protocol";
-
-/** The longest a countdown runs: one started at the end credits goes on here once the video ends. */
-const COUNTDOWN_SPAN_MS = Math.max(NEXT_EPISODE_COUNTDOWN_MS, CREDITS_COUNTDOWN_MS);
-
 import type { SyncClient } from "../../sync/SyncClient.ts";
 import { Progress } from "../../ui/Progress.tsx";
 import { useCountdown } from "./useCountdown.ts";
+
+/** The longest a countdown runs: one started at the end credits goes on here once the video ends. */
+const COUNTDOWN_SPAN_MS = Math.max(NEXT_EPISODE_COUNTDOWN_MS, CREDITS_COUNTDOWN_MS);
 
 interface EpisodeCountdownProps {
   /** Server time at which the next episode starts. */
