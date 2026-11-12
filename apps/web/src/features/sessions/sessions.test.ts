@@ -36,7 +36,9 @@ vi.mock("../../api/accounts.ts", () => ({
   deleteSessionForEveryone: vi.fn(),
 }));
 const api = await import("../../api/accounts.ts");
-const { deleteSession, leaveSession, loadSessions, resetSessions, useSessions } = await import("./sessions.ts");
+const { deleteSession, leaveSession, loadSessions, reloadSessions, resetSessions, useSessions } = await import(
+  "./sessions.ts"
+);
 
 const anna = { accountId: "anna", name: "Anna", color: "lilac" } as const;
 const leo = { accountId: "leo", name: "Léo", color: "butter" } as const;
@@ -262,6 +264,19 @@ describe("sessions store", () => {
     expect(api.fetchSessions).toHaveBeenCalledTimes(1);
     expect(useSessions.getState()).toMatchObject({ status: "ready", error: null });
     expect(useSessions.getState().sessions.map((s) => s.code)).toEqual(["YWEK", "BXFW"]);
+  });
+
+  it("reads the list again after one already on its way, which may predate entering a salon", async () => {
+    let answerFirst: (sessions: SessionSummary[]) => void = () => {};
+    vi.mocked(api.fetchSessions)
+      .mockImplementationOnce(() => new Promise((resolve) => (answerFirst = resolve)))
+      .mockResolvedValueOnce([friday, episode]);
+    const first = loadSessions();
+    const fresh = reloadSessions();
+    answerFirst([friday]);
+    await Promise.all([first, fresh]);
+    expect(api.fetchSessions).toHaveBeenCalledTimes(2);
+    expect(useSessions.getState().sessions.map((s) => s.code)).toEqual(["YWEK", "QHMP"]);
   });
 
   it("explains a failed first load, and keeps the list when a refresh fails", async () => {

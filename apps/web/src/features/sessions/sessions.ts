@@ -44,6 +44,16 @@ export function loadSessions(): Promise<void> {
   return inFlight;
 }
 
+/**
+ * Reads the history again even if a read is on its way: that one may have
+ * left before something changed (entering a salon records the séance), and
+ * sharing it would show the list from before.
+ */
+export async function reloadSessions(): Promise<void> {
+  await inFlight?.catch(() => undefined);
+  await loadSessions();
+}
+
 /** Takes a séance out of the list at once, and puts it back if the server refuses (throwing the message to show). */
 async function removeAtOnce(code: string, work: (code: string) => Promise<void>): Promise<void> {
   const removed = useSessions.getState().sessions.find((session) => session.code === code);
