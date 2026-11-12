@@ -19,9 +19,9 @@ export function useLaunchTitle() {
     item: Pick<WatchlistItem, "title" | "circleId">,
     episode?: { season: number; episode: number },
   ) => {
-    const { id, type, title, posterUrl } = item.title;
-    // The poster goes along, so the séance can show it on « Ce soir ».
-    const base = { id, type, title, ...(posterUrl ? { posterUrl } : {}) };
+    const { id, type, title, posterUrl, tmdbId } = item.title;
+    // The poster goes along, so the séance can show it on « Ce soir »; TMDB's number, so its intro is found.
+    const base = { id, type, title, ...(posterUrl ? { posterUrl } : {}), ...(tmdbId ? { tmdbId } : {}) };
     const play: PlayCatalogRequest = episode ? { ...base, ...episode } : base;
     setBusy(true);
     setError(null);

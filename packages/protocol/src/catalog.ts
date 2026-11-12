@@ -48,6 +48,8 @@ export const PlayCatalogRequest = z
     episode: z.optional(Positive),
     /** The title's poster, kept with the séance so « On reprend » can show it (the server keeps only the catalog's own). */
     posterUrl: z.optional(z.url({ protocol: /^https$/ })),
+    /** The title at TMDB: where its intro and credits are looked up without guessing by name. */
+    tmdbId: z.optional(Positive),
   })
   .check(
     z.refine((r) => {

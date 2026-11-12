@@ -6,6 +6,7 @@ import {
   type ClientMessage,
   canGoToEpisode,
   canRemoveEpisode,
+  creditsReached,
   type DeviceLead,
   declineNextEpisode,
   deviceNames,
@@ -34,6 +35,7 @@ import {
   readyingFrom,
   readyToStart,
   type ServerMessage,
+  type SkipMarkers,
   seek,
   startProgress,
 } from "@annamour/protocol";
@@ -48,6 +50,8 @@ export interface Episode {
   imported: ImportedMedia;
   /** The catalog title it was made from; absent for a pasted link. */
   catalog?: CatalogRef | undefined;
+  /** Its intro and end credits, once a source told them (see SkipService); kept in memory only. */
+  skips?: SkipMarkers | undefined;
 }
 
 /** What the room keeps on disk as it changes. */
@@ -170,6 +174,21 @@ export class Room {
     return this.episodes.find((episode) => episode.id === id);
   }
 
+  /** The episodes made from the catalog whose intro and credits are not known yet: what SkipService looks up. */
+  episodesWithoutSkips(): { id: number; catalog: CatalogRef; duration: number | undefined }[] {
+    return this.episodes.flatMap(({ id, catalog, skips, imported }) =>
+      catalog && !skips ? [{ id, catalog, duration: imported.duration }] : [],
+    );
+  }
+
+  /** An episode's intro and credits are known: everyone's player can offer to skip them. */
+  setSkips(episodeId: number, skips: SkipMarkers): void {
+    const episode = this.episodeById(episodeId);
+    if (!episode) return;
+    episode.skips = skips;
+    this.broadcastRoom();
+  }
+
   /** The id the next added episode gets: ids only grow, a removed one is never given again. */
   get nextEpisodeId(): number {
     return this.episodeIds;
@@ -199,10 +218,11 @@ export class Room {
       media: this.media,
       playback: this.playback,
       members: this.members(),
-      episodes: this.episodes.map(({ label, imported, catalog }) => ({
+      episodes: this.episodes.map(({ label, imported, catalog, skips }) => ({
         ...(label ? { label } : {}),
         ...(imported.duration ? { duration: imported.duration } : {}),
         ...(catalog ? { catalog } : {}),
+        ...(skips ? { skips } : {}),
       })),
       current: this.progress.current,
       finished: this.progress.finished,
@@ -415,12 +435,15 @@ export class Room {
 
   private handleEpisodeMessage(
     memberId: string,
-    message: Extract<ClientMessage, { type: "ended" | "playEpisode" | "declineNext" | "removeEpisode" }>,
+    message: Extract<ClientMessage, { type: "ended" | "credits" | "playEpisode" | "declineNext" | "removeEpisode" }>,
     now: number,
   ): void {
     switch (message.type) {
       case "ended":
         this.onEnded(message.episode, now);
+        return;
+      case "credits":
+        this.setProgress(creditsReached(this.progress, message.episode, now));
         return;
       case "playEpisode":
         if (canGoToEpisode(this.progress, message.from, message.to))

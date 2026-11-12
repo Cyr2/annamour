@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { Catalog } from "../catalog/naka-catalog.ts";
+import { type SkipFetch, SkipSources } from "../catalog/skip-sources.ts";
 import { Tmdb, type TmdbFetch } from "../catalog/tmdb.ts";
 import type { TimelineProbe } from "../media/timeline-probe.ts";
 import type { Transcoder } from "../media/transcoder.ts";
@@ -16,6 +17,7 @@ import { PlaybackStatsService } from "./playback-stats-service.ts";
 import { RatingService } from "./rating-service.ts";
 import { RoomService } from "./room-service.ts";
 import type { RandomInt } from "./secrets.ts";
+import { SkipService } from "./skip-service.ts";
 import { TasteService } from "./taste-service.ts";
 import { TvPairingService } from "./tv-pairing-service.ts";
 import { WatchlistService } from "./watchlist-service.ts";
@@ -43,6 +45,8 @@ export interface ServiceOptions {
   timelineProbe?: TimelineProbe;
   /** TMDB, for synopses, ratings and taste-based suggestions; absent, suggestions come from the list only. */
   tmdbFetch?: TmdbFetch;
+  /** The public databases of intro and credits times; absent, nothing is skipped (tests stay offline). */
+  skipFetch?: SkipFetch;
 }
 
 export interface Services {
@@ -59,8 +63,12 @@ export interface Services {
   playbackStats: PlaybackStatsService;
   ratings: RatingService;
   taste: TasteService;
+  skips: SkipService;
   now: () => number;
 }
+
+/** Without the skip databases: every lookup answers « not found ». */
+const noSkipFetch: SkipFetch = async () => ({ status: 404, body: "" });
 
 /** Wires every service to one database: the single place where dependencies are chosen. */
 export function createServices(options: ServiceOptions): Services {
@@ -86,6 +94,17 @@ export function createServices(options: ServiceOptions): Services {
     ...(options.timelineProbe ? { probe: options.timelineProbe } : {}),
     ...(options.mediaMaxBytes ? { maxBytes: options.mediaMaxBytes } : {}),
   });
+  const tmdb = options.tmdbFetch
+    ? new Tmdb({ fetch: options.tmdbFetch, cache: repositories.catalogCache, now })
+    : undefined;
+  const skips = new SkipService({
+    store,
+    tmdb: options.skipFetch ? tmdb : undefined,
+    sources: new SkipSources({ fetch: options.skipFetch ?? noSkipFetch, cache: repositories.catalogCache, now }),
+  });
+  const prepareSkips = (code: string) => {
+    skips.prepare(code).catch((error: unknown) => console.warn("Could not look up skip times", code, error));
+  };
   // A new séance starts being prepared at once: by the time someone opens it, the first minute is ready.
   const rooms = new RoomService({
     store,
@@ -94,16 +113,18 @@ export function createServices(options: ServiceOptions): Services {
     now,
     onCreated: (code) => {
       lowQualities.prep(code).catch((error: unknown) => console.warn("Could not start preparing", code, error));
+      prepareSkips(code);
     },
     // A queued episode is made ready behind the current one, so moving on to it starts at once.
-    onEpisodeAdded: (code) => lowQualities.prepareNext(code),
+    onEpisodeAdded: (code) => {
+      lowQualities.prepareNext(code);
+      prepareSkips(code);
+    },
   });
   const catalog = new CatalogService({ catalog: options.catalog, rooms, now, cache: repositories.catalogCache });
   const ratings = new RatingService({ repositories, now });
-  const tmdb = options.tmdbFetch
-    ? new Tmdb({ fetch: options.tmdbFetch, cache: repositories.catalogCache, now })
-    : undefined;
   return {
+    skips,
     store,
     history,
     rooms,

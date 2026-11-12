@@ -1,5 +1,10 @@
 import { DatabaseSync } from "node:sqlite";
-import { NEXT_EPISODE_COUNTDOWN_MS, type RoomSnapshot, type ServerMessage } from "@annamour/protocol";
+import {
+  CREDITS_COUNTDOWN_MS,
+  NEXT_EPISODE_COUNTDOWN_MS,
+  type RoomSnapshot,
+  type ServerMessage,
+} from "@annamour/protocol";
 import { describe, expect, it } from "vitest";
 import { RoomStore } from "../src/room-store.ts";
 import type { Connection } from "../src/rooms.ts";
@@ -45,6 +50,18 @@ describe("a séance with episodes", () => {
     room.handle(idA, { type: "ended", episode: 0 }, 5000);
     expect(room.playback).toMatchObject({ status: "paused", position: 100 });
     expect(b.lastRoom()).toMatchObject({ finished: true, countdownUntil: 5000 + NEXT_EPISODE_COUNTDOWN_MS });
+  });
+
+  it("starts the next episode's countdown for everyone when the end credits start, the video still playing", () => {
+    const { room, b, idA, idB } = setup();
+    room.handle(idA, { type: "play", position: 80 }, 0);
+    room.handle(idA, { type: "credits", episode: 0 }, 1000);
+    room.handle(idB, { type: "credits", episode: 0 }, 1200);
+    expect(b.lastRoom()).toMatchObject({ finished: false, countdownUntil: 1000 + CREDITS_COUNTDOWN_MS });
+    expect(room.playback.status).toBe("playing");
+
+    room.handle(idB, { type: "declineNext" }, 2000);
+    expect(b.lastRoom()).toMatchObject({ countdownUntil: null });
   });
 
   it("moves everyone to the next episode once, even when two devices ask together", () => {

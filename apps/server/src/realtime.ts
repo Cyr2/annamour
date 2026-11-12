@@ -24,7 +24,7 @@ const LEFT_ON_PURPOSE = new Set([1000, 1001]);
  */
 export function attachRealtime(
   server: HttpServer | Http2Server | Http2SecureServer,
-  { store, accounts, history }: Pick<Services, "store" | "accounts" | "history">,
+  { store, accounts, history, skips }: Pick<Services, "store" | "accounts" | "history" | "skips">,
   { reconnectGraceMs = RECONNECT_GRACE_MS }: { reconnectGraceMs?: number } = {},
 ): WebSocketServer {
   const wss = new WebSocketServer({ noServer: true, maxPayload: MAX_MESSAGE_BYTES });
@@ -70,8 +70,10 @@ export function attachRealtime(
       if (id === null) {
         connection.send({ type: "error", code: "room_full", message: "La séance est complète." });
         ws.close(4003, "room_full");
-      } else if (accountId !== undefined) {
-        history.recordParticipation(room.code, accountId);
+      } else {
+        if (accountId !== undefined) history.recordParticipation(room.code, accountId);
+        // A séance reopened from disk looks its intro and credits up again (kept in memory only).
+        skips.prepare(room.code).catch((error: unknown) => console.warn("Could not look up skip times", error));
       }
       return id;
     };
