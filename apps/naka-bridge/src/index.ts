@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { createServer } from "node:http";
 import { handleBridgeRequest } from "./bridge.ts";
 import { CallBudget } from "./budget.ts";
@@ -8,6 +9,12 @@ import { NakaPage } from "./naka-page.ts";
  * naka-bridge: lets the Annamour server search Naka and get a title's video
  * link. Reachable only on the Docker network, behind a shared secret.
  */
+
+/** Xvfb listens on /tmp/.X11-unix/X<n> for DISPLAY=:<n>; no DISPLAY (development): nothing to check. */
+function screenSocketExists(display: string | undefined): boolean {
+  const number = /^:(\d+)$/.exec(display ?? "")?.[1];
+  return number === undefined || existsSync(`/tmp/.X11-unix/X${number}`);
+}
 
 function required(name: string): string {
   const value = process.env[name]?.trim();
@@ -23,6 +30,7 @@ const deps = {
   budget: new CallBudget({ max: 20, windowMs: 60_000 }),
   media: new MediaGate(),
   now: Date.now,
+  screenReady: () => screenSocketExists(process.env.DISPLAY),
 };
 
 const server = createServer(async (req, res) => {

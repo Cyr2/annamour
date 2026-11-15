@@ -31,6 +31,8 @@ export interface BridgeDeps {
   media: MediaGate;
   mediaHosts?: readonly string[];
   now: () => number;
+  /** The virtual screen the headed browser opens on is there (Xvfb); without it no call can work. */
+  screenReady?: () => boolean;
 }
 
 function sameSecret(given: string | undefined, expected: string): boolean {
@@ -45,7 +47,11 @@ function error(status: number, message: string): NakaAnswer {
 
 /** One request to the bridge: checked, counted, then forwarded to Naka. */
 export async function handleBridgeRequest(request: BridgeRequest, deps: BridgeDeps): Promise<NakaAnswer> {
-  if (request.target === "/health") return { status: 200, body: JSON.stringify({ ok: true }) };
+  // Healthy only when a call could work: a bridge without its screen stayed « healthy » while every call failed.
+  if (request.target === "/health") {
+    if (deps.screenReady && !deps.screenReady()) return error(503, "no virtual screen for the browser");
+    return { status: 200, body: JSON.stringify({ ok: true }) };
+  }
   if (!sameSecret(request.secret, deps.secret)) return error(401, "bad secret");
   if (request.method !== "GET") return error(405, "GET only");
   if (request.target.startsWith("/media")) return handleMedia(request.target, deps);
