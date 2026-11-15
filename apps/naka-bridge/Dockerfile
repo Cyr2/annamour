@@ -18,5 +18,7 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
   CMD node -e "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
 # Not xvfb-run: as the container's first process it waits forever for Xvfb's ready signal.
-# The virtual screen starts in the background; node then replaces the shell to receive SIGTERM.
-CMD ["sh", "-c", "Xvfb :99 -screen 0 1280x800x24 -nolisten tcp & exec node --import tsx src/index.ts"]
+# The virtual screen runs in the background, started again if it ever stops (it once did, and every
+# Naka call failed until a restart); its stale lock is cleared first, or it would refuse to start.
+# Node then replaces the shell to receive SIGTERM.
+CMD ["sh", "-c", "(while true; do rm -f /tmp/.X99-lock /tmp/.X11-unix/X99; Xvfb :99 -screen 0 1280x800x24 -nolisten tcp; echo 'Xvfb stopped, starting it again' >&2; sleep 1; done) & exec node --import tsx src/index.ts"]

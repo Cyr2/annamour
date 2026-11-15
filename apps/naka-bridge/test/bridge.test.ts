@@ -167,6 +167,13 @@ describe("a request to the bridge", () => {
     const { naka } = fakeNaka();
     expect((await handleBridgeRequest(get("/health", null), deps(naka))).status).toBe(200);
   });
+
+  it("reports itself unwell while its browser has no screen to open on", async () => {
+    const { naka } = fakeNaka();
+    const answer = await handleBridgeRequest(get("/health", null), { ...deps(naka), screenReady: () => false });
+    expect(answer.status).toBe(503);
+    expect(answer.body).toContain("screen");
+  });
 });
 
 describe("the call budget", () => {
