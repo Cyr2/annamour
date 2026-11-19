@@ -7,8 +7,10 @@ import { audibleLevel, useVolume } from "./volume.ts";
 interface PlayerMoreSheetProps {
   open: boolean;
   onClose: () => void;
-  onOpenTracks: () => void;
-  onOpenUpNext: () => void;
+  /** Absent when there is nothing to choose. */
+  onOpenTracks: (() => void) | undefined;
+  /** Absent during a live stream. */
+  onOpenUpNext: (() => void) | undefined;
   /** Absent on the last episode. */
   onSkipNext: (() => void) | undefined;
   onFullscreen: () => void;
@@ -31,18 +33,22 @@ export function PlayerMoreSheet({ open, onClose, ...actions }: PlayerMoreSheetPr
   return (
     <Sheet open={open} onClose={onClose} title="Plus d'options">
       <div className="grid gap-1">
-        <AccountRow
-          icon={<Subtitles />}
-          title="Audio et sous-titres"
-          detail="Ne change que pour toi"
-          onClick={run(actions.onOpenTracks)}
-        />
-        <AccountRow
-          icon={<ListVideo />}
-          title={queueTitle}
-          detail="Choisir ou ajouter la suite"
-          onClick={run(actions.onOpenUpNext)}
-        />
+        {actions.onOpenTracks ? (
+          <AccountRow
+            icon={<Subtitles />}
+            title="Audio et sous-titres"
+            detail="Ne change que pour toi"
+            onClick={run(actions.onOpenTracks)}
+          />
+        ) : null}
+        {actions.onOpenUpNext ? (
+          <AccountRow
+            icon={<ListVideo />}
+            title={queueTitle}
+            detail="Choisir ou ajouter la suite"
+            onClick={run(actions.onOpenUpNext)}
+          />
+        ) : null}
         {actions.onSkipNext ? (
           <AccountRow
             icon={<SkipForward />}

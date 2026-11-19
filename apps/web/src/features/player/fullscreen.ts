@@ -1,3 +1,4 @@
+import { isVideoElement, type SyncMedia } from "../../sync/media.ts";
 /*
  * Full screen for the player. Where the page can go full screen (Android,
  * desktop, iPad), the whole player does, so our controls stay, and a phone
@@ -60,8 +61,9 @@ export function leaveFullscreen(): void {
   orientation()?.unlock?.();
 }
 
-export function toggleFullscreen(video: HTMLVideoElement | null): void {
-  const webkitVideo = video as WebkitVideo | null;
+export function toggleFullscreen(video: SyncMedia | null): void {
+  // Only a <video> has Safari's own full screen; YouTube's player goes full screen with the page.
+  const webkitVideo: WebkitVideo | null = isVideoElement(video) ? video : null;
   const plan = fullscreenPlan({
     active: Boolean(document.fullscreenElement),
     pageAllowed: Boolean(document.fullscreenEnabled && document.documentElement.requestFullscreen),

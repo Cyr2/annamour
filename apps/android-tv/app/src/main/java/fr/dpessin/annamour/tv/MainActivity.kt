@@ -294,6 +294,8 @@ class MainActivity : Activity() {
 
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
             if (request.url.host == startHost) return false
+            // A frame inside the page (YouTube's player) loads where it is: only the page itself leaves.
+            if (!request.isForMainFrame) return false
             // Other sites open outside the app, if the TV has something to open them with.
             try {
                 startActivity(Intent(Intent.ACTION_VIEW, request.url))

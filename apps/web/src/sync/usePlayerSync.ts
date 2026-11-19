@@ -2,11 +2,13 @@ import type { AudioTrack } from "@annamour/protocol";
 import { useEffect, useMemo, useState } from "react";
 import { isFilmDownloaded, onFilmsChanged } from "./film-cache.ts";
 import { wantsHevcLadder } from "./hevc-ladder.ts";
+import type { SyncMedia } from "./media.ts";
 import { initialPlayerSyncState, PlayerSync, type PlayerSyncState } from "./PlayerSync.ts";
 import { playerChoice } from "./player-choice.ts";
 import { type RoomState, useRoom } from "./room.ts";
 import type { SyncClient } from "./SyncClient.ts";
 import { usePlaybackStats } from "./usePlaybackStats.ts";
+import { useYouTubeInfo } from "./useYouTubeInfo.ts";
 
 export interface PlayerControls {
   /** Each returns false when offline (nothing was sent, nothing changed). */
@@ -35,14 +37,15 @@ const offline: PlayerControls = {
  * Keeps `video` on the room's shared timeline. Pass the element through a
  * callback ref held in state so the hook re-runs when it mounts:
  *
- *   const [video, setVideo] = useState<HTMLVideoElement | null>(null);
+ *   const [video, setVideo] = useState<SyncMedia | null>(null);
  *   const player = usePlayerSync(video, client);
  *   <video ref={setVideo} />
  */
-export function usePlayerSync(video: HTMLVideoElement | null, client: SyncClient | null): PlayerSyncHandle {
+export function usePlayerSync(video: SyncMedia | null, client: SyncClient | null): PlayerSyncHandle {
   const [state, setState] = useState<PlayerSyncState>(initialPlayerSyncState);
   const [engine, setEngine] = useState<PlayerSync | null>(null);
   usePlaybackStats(video, client, state.engine);
+  useYouTubeInfo(video, client);
 
   useEffect(() => {
     if (!video || !client) return;

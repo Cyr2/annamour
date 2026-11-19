@@ -29,7 +29,7 @@ export function AddLinkForm({ room, busy, error, onSubmit, onSearch }: AddLinkFo
 
   return (
     <form className="grid min-w-0 gap-4" onSubmit={submit}>
-      <Field label="Lien de l'épisode d'après (.m3u8)" htmlFor={linkId}>
+      <Field label="Lien de l'épisode d'après (.m3u8 ou YouTube)" htmlFor={linkId}>
         <Input
           id={linkId}
           type="url"

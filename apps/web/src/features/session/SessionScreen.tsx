@@ -2,6 +2,7 @@ import { isRoomCode, normalizeRoomCode } from "@annamour/protocol";
 import { House } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
+import type { SyncMedia } from "../../sync/media.ts";
 import { restartOnWelcome, sessionPath, wantsFromStart } from "../../sync/restart.ts";
 import { useRoom, useRoomConnection } from "../../sync/room.ts";
 import type { SyncClient } from "../../sync/SyncClient.ts";
@@ -20,7 +21,7 @@ export function SessionScreen({ code: raw }: { code: string }) {
   const code = normalizeRoomCode(raw);
   const valid = isRoomCode(code);
   const client = useRoomConnection(valid ? code : null);
-  const [video, setVideo] = useState<HTMLVideoElement | null>(null);
+  const [video, setVideo] = useState<SyncMedia | null>(null);
   const player = usePlayerSync(video, client);
   const { stage, countdown, start } = useSessionStage(player.controls);
   const status = useRoom((s) => s.status);
