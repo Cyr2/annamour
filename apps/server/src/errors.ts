@@ -66,6 +66,12 @@ export class TooManyEpisodesError extends UserFacingError {
   }
 }
 
+export class LiveSeanceError extends UserFacingError {
+  constructor() {
+    super("Un direct se regarde seul : crée une autre séance pour la suite.", 409);
+  }
+}
+
 export class SeanceInUseError extends UserFacingError {
   constructor() {
     super("Quelqu'un regarde encore cette séance : elle se terminera quand tout le monde l'aura quittée.", 409);
