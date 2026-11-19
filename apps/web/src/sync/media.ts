@@ -13,6 +13,8 @@ export interface SyncMedia {
   readonly buffered: TimeRanges;
   /** The picture's height, for the séance's stats. */
   readonly videoHeight: number;
+  /** A live stream (YouTube only): every device follows its own edge. */
+  readonly live?: boolean;
   playbackRate: number;
   volume: number;
   muted: boolean;
@@ -21,6 +23,8 @@ export interface SyncMedia {
   addEventListener(type: string, listener: () => void): void;
   removeEventListener(type: string, listener: () => void): void;
 }
+
+export const isLiveStream = (media: SyncMedia) => media.live === true;
 
 /** A <video> (or what stands for one), as opposed to YouTube's player: told by what only a <video> can do. */
 export function isVideoElement(media: SyncMedia | null): media is HTMLVideoElement {

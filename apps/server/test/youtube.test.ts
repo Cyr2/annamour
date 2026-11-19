@@ -82,10 +82,9 @@ describe("a séance from a YouTube link", () => {
     expect(room.playback).toMatchObject({ status: "paused", position: edge + 30 });
   });
 
-  it("takes a video whose oEmbed gives no title (some live streams), with a plain one", async () => {
-    const { app, services } = testApp({ fetchText: async () => JSON.stringify({ author_name: "Lofi Girl" }) });
-    const { code } = (await (await create(app)).json()) as { code: string };
-    expect(required(services.store.get(code), "the séance").media.title).toBe("Vidéo YouTube");
+  it("refuses a video whose oEmbed gives no title: YouTube says so of one that does not play (an ended live)", async () => {
+    const { app } = testApp({ fetchText: async () => JSON.stringify({ author_name: "Lofi Girl" }) });
+    expect((await create(app)).status).toBe(422);
   });
 
   it("can queue a YouTube video after another, named after it", async () => {

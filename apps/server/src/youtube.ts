@@ -16,8 +16,8 @@ export class YouTubeError extends Error {
   }
 }
 
-// Some live streams' oEmbed has no title: the video exists all the same.
-const OEmbed = z.object({ title: z.string().min(1).catch("Vidéo YouTube").default("Vidéo YouTube") });
+// No title in the answer: a video that does not play (an ended live stream, for one), refused like a missing one.
+const OEmbed = z.object({ title: z.string().min(1) });
 
 export async function importYouTube(
   videoId: string,

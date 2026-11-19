@@ -14,7 +14,7 @@ import {
 } from "@annamour/protocol";
 import type Hls from "hls.js";
 import { hlsConfig } from "./hls-config.ts";
-import { isVideoElement, type SyncMedia } from "./media.ts";
+import { isLiveStream, isVideoElement, type SyncMedia } from "./media.ts";
 import type { SyncClient } from "./SyncClient.ts";
 
 /*
@@ -81,6 +81,8 @@ const RESUME_SEEK_TOLERANCE = 1;
 const USER_SEEK_TOLERANCE = 1;
 /** After a correction seek, let playback settle before judging drift again (ms). */
 const SEEK_COOLDOWN_MS = 1200;
+/** In a live stream, how far behind its own edge a device may drift before it is brought back. */
+const LIVE_DRIFT_SECONDS = 30;
 /** How long a programmatic play/pause stays "expected" (ms). */
 const EXPECT_PLAY_PAUSE_MS = 1500;
 const EXPECT_SEEK_MS = 5000;
@@ -535,6 +537,12 @@ export class PlayerSync {
 
   private correctDrift(target: number): void {
     const video = this.video;
+    // A live stream's edge differs on every device (YouTube lets each player reach its own): seconds apart is
+    // fine, like a TV; only a device far behind is brought back, never nudged.
+    if (isLiveStream(video)) {
+      if (Math.abs(video.currentTime - target) > LIVE_DRIFT_SECONDS) this.doSeek(target);
+      return;
+    }
     const correction = correct(video.currentTime, target, {
       correcting: video.playbackRate !== 1,
       targetBuffered: bufferedAhead(this.bufferedRanges(), target) > 0,

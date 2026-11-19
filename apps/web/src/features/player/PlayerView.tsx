@@ -157,7 +157,8 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
       <WaitBanner members={loading} />
       <ReadyBanner slowest={slowest} />
       <VideoLoading visible={active && player.buffering && !player.error && !player.blocked && !over} />
-      {active && player.blocked ? <BlockedNotice onUnlock={controls.unlock} /> : null}
+      {/* A video that cannot play says so alone: « touche pour rejoindre » would lead nowhere. */}
+      {active && player.blocked && !player.error ? <BlockedNotice onUnlock={controls.unlock} /> : null}
       {player.error ? <PlayerError message={player.error} /> : null}
       <EpisodeLayer
         active={active}

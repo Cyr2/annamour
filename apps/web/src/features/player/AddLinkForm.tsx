@@ -46,9 +46,12 @@ export function AddLinkForm({ room, busy, error, onSubmit, onSearch }: AddLinkFo
           className="font-mono [&_input]:text-xs"
         />
       </Field>
-      <Field label="Titre" htmlFor={labelId}>
-        <Input id={labelId} value={label} onValueChange={setLabel} maxLength={40} />
-      </Field>
+      {/* A YouTube video comes with its own title. */}
+      {youTubeVideoId(url.trim()) ? null : (
+        <Field label="Titre" htmlFor={labelId}>
+          <Input id={labelId} value={label} onValueChange={setLabel} maxLength={40} />
+        </Field>
+      )}
       <p id={errorId} role="alert" className="min-h-5 text-sm text-danger">
         {error ?? ""}
       </p>

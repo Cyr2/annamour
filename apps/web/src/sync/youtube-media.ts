@@ -135,6 +135,10 @@ export class YouTubeMedia extends EventTarget implements SyncMedia {
     return { duration, live: player.getVideoData?.().isLive ?? duration === 0 };
   }
 
+  get live(): boolean {
+    return this.info()?.live === true;
+  }
+
   get currentTime(): number {
     return this.player?.getCurrentTime() ?? 0;
   }
