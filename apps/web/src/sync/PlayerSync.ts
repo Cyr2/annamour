@@ -14,6 +14,7 @@ import {
 } from "@annamour/protocol";
 import type Hls from "hls.js";
 import { hlsConfig } from "./hls-config.ts";
+import { isLiveStream, isVideoElement, type SyncMedia } from "./media.ts";
 import type { SyncClient } from "./SyncClient.ts";
 
 /*
@@ -29,7 +30,7 @@ import type { SyncClient } from "./SyncClient.ts";
  * the server if it actually disagrees with the shared state.
  */
 
-export type PlaybackEngine = "native" | "hls.js";
+export type PlaybackEngine = "native" | "hls.js" | "youtube";
 
 export interface PlayerSyncState {
   /** The browser refused to start playback without a tap. Call unlock() from a click. */
@@ -80,6 +81,8 @@ const RESUME_SEEK_TOLERANCE = 1;
 const USER_SEEK_TOLERANCE = 1;
 /** After a correction seek, let playback settle before judging drift again (ms). */
 const SEEK_COOLDOWN_MS = 1200;
+/** In a live stream, how far behind its own edge a device may drift before it is brought back. */
+const LIVE_DRIFT_SECONDS = 30;
 /** How long a programmatic play/pause stays "expected" (ms). */
 const EXPECT_PLAY_PAUSE_MS = 1500;
 const EXPECT_SEEK_MS = 5000;
@@ -94,6 +97,7 @@ const OWN_PLAYER_STARTUP_MS = 30_000;
  * downloaded and stall again.
  */
 const MAX_SEEK_LEAD = 0.5;
+const YOUTUBE_ERROR = "Cette vidéo YouTube ne se lit pas ici : privée, supprimée ou interdite hors de YouTube.";
 
 const HAVE_METADATA = 1;
 const HAVE_FUTURE_DATA = 3;
@@ -105,7 +109,7 @@ function isApple(): boolean {
 }
 
 export class PlayerSync {
-  private readonly video: HTMLVideoElement;
+  private readonly video: SyncMedia;
   private readonly client: SyncClient;
   private readonly emit: (state: PlayerSyncState) => void;
   private readonly fromDevice: (src: string) => boolean;
@@ -158,7 +162,7 @@ export class PlayerSync {
   private readonly offStatus: () => void;
 
   constructor(
-    video: HTMLVideoElement,
+    video: SyncMedia,
     client: SyncClient,
     emit: (state: PlayerSyncState) => void,
     { fromDevice = () => false, ownPlayer = () => false, hevcLadder = () => false }: PlayerSyncOptions = {},
@@ -170,8 +174,10 @@ export class PlayerSync {
     this.ownPlayer = ownPlayer;
     this.hevcLadder = hevcLadder;
 
-    video.playsInline = true;
-    video.preload = "auto";
+    if (isVideoElement(video)) {
+      video.playsInline = true;
+      video.preload = "auto";
+    }
 
     video.addEventListener("play", this.onPlay);
     video.addEventListener("pause", this.onPause);
@@ -241,8 +247,19 @@ export class PlayerSync {
     this.hevcFailed = false;
     const token = ++this.sourceToken;
     this.teardownSource();
+    // YouTube's player loads its own video: it is ready to be driven as soon as it is there.
+    if (!this.element()) {
+      this.sourceReady = true;
+      this.update({ engine: "youtube", error: null });
+      return;
+    }
     if (!src) return;
     void this.attach(src, token);
+  }
+
+  /** The <video> behind the film, for what only HLS needs (YouTube's player is not one). */
+  private element(): HTMLVideoElement | null {
+    return isVideoElement(this.video) ? this.video : null;
   }
 
   /* ---------- intents from this person (call from event handlers) ---------- */
@@ -280,7 +297,7 @@ export class PlayerSync {
    * with Safari's own player, at the same place, without a word. True if it did.
    */
   private fallBackToSafari(src: string): boolean {
-    const native = this.video.canPlayType("application/vnd.apple.mpegurl") !== "";
+    const native = Boolean(this.element()?.canPlayType("application/vnd.apple.mpegurl"));
     if (!native || !isApple() || this.fromDevice(src) || !this.ownPlayer() || this.ownPlayerFailed) return false;
     this.ownPlayerFailed = true;
     const token = ++this.sourceToken;
@@ -315,7 +332,8 @@ export class PlayerSync {
   /* ---------- source ---------- */
 
   private async attach(src: string, token: number): Promise<void> {
-    const video = this.video;
+    const video = this.element();
+    if (!video) return;
     const native = video.canPlayType("application/vnd.apple.mpegurl") !== "";
     // Safari (incl. iPad) gets native HLS: AirPlay, PiP, fullscreen and battery all work best.
     if (native && isApple() && !this.nativeFailed && !this.wantsOwnPlayer(src)) {
@@ -394,7 +412,9 @@ export class PlayerSync {
   }
 
   private attachNative(src: string): void {
-    this.video.src = src;
+    const video = this.element();
+    if (!video) return;
+    video.src = src;
     this.sourceReady = true;
     this.update({ engine: "native", error: null });
   }
@@ -409,9 +429,10 @@ export class PlayerSync {
       this.hls.destroy();
       this.hls = null;
     }
-    if (this.video.getAttribute("src")) {
-      this.video.removeAttribute("src");
-      this.video.load();
+    const element = this.element();
+    if (element?.getAttribute("src")) {
+      element.removeAttribute("src");
+      element.load();
     }
     if (this.state.engine) this.update({ engine: null });
   }
@@ -426,7 +447,9 @@ export class PlayerSync {
       if (index >= 0 && this.hls.audioTrack !== index) this.hls.audioTrack = index;
       return;
     }
-    const tracks = nativeAudioTracks(this.video);
+    const element = this.element();
+    if (!element) return;
+    const tracks = nativeAudioTracks(element);
     const index = tracks.findIndex((t) => matches(t.label, t.language));
     if (index < 0) return;
     tracks.forEach((t, i) => {
@@ -514,6 +537,12 @@ export class PlayerSync {
 
   private correctDrift(target: number): void {
     const video = this.video;
+    // A live stream's edge differs on every device (YouTube lets each player reach its own): seconds apart is
+    // fine, like a TV; only a device far behind is brought back, never nudged.
+    if (isLiveStream(video)) {
+      if (Math.abs(video.currentTime - target) > LIVE_DRIFT_SECONDS) this.doSeek(target);
+      return;
+    }
     const correction = correct(video.currentTime, target, {
       correcting: video.playbackRate !== 1,
       targetBuffered: bufferedAhead(this.bufferedRanges(), target) > 0,
@@ -627,6 +656,10 @@ export class PlayerSync {
   };
 
   private readonly onMediaError = (): void => {
+    if (!this.element()) {
+      this.update({ error: YOUTUBE_ERROR });
+      return;
+    }
     // hls.js reports and recovers its own errors.
     if (this.hls || !this.sourceReady || !this.src) return;
     if (this.state.engine === "native" && !this.nativeFailed) {

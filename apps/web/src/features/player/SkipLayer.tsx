@@ -1,6 +1,7 @@
 import { AnimatePresence, m } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { exit, spring } from "../../lib/motion.ts";
+import type { SyncMedia } from "../../sync/media.ts";
 import { useRoom } from "../../sync/room.ts";
 import type { SyncClient } from "../../sync/SyncClient.ts";
 import { primaryIn } from "../tv/focus-engine.ts";
@@ -9,12 +10,13 @@ import { AddNextCard } from "./AddNextCard.tsx";
 import { useEpisodeOver } from "./EpisodeLayer.tsx";
 import { CreditsCountdown, NextPill, SkipIntroPill } from "./SkipOffers.tsx";
 import { SKIP_OFFER_ATTRIBUTE, type SkipOffer, skipOfferOf } from "./skip-rules.ts";
+import { isLive } from "./source-rules.ts";
 import { useSkipPhase } from "./useSkipPhase.ts";
 
 interface SkipLayerProps {
   /** The film is on screen (not the salon). */
   active: boolean;
-  video: HTMLVideoElement | null;
+  video: SyncMedia | null;
   client: SyncClient | null;
 }
 
@@ -29,7 +31,8 @@ export function SkipLayer({ active, video, client }: SkipLayerProps) {
   const phase = useSkipPhase(video, client);
   // The end screen takes over once the video is over.
   const over = useEpisodeOver();
-  const shown = active && !over;
+  // A live stream has no intro to skip and no credits: nothing to offer there.
+  const shown = active && !over && !isLive(room?.media);
   // The episode whose « Ajouter et lancer » was dismissed on this screen.
   const [dismissed, setDismissed] = useState<number | null>(null);
   const offer = room && shown ? skipOfferOf(room, phase, dismissed === room.current) : null;

@@ -1,5 +1,5 @@
 import { expect, type Page } from "@playwright/test";
-import { createSession, onboard, person, test, videoPaused, videoTime } from "./helpers.ts";
+import { createSession, onboard, person, tapControl, test, videoPaused, videoTime } from "./helpers.ts";
 
 const MAX_DRIFT_SECONDS = 1;
 
@@ -29,18 +29,16 @@ test("deux personnes regardent le même film, synchronisées", async ({ browser 
   await expectInStep(darius, anna);
 
   // Anna pauses: Darius pauses too, at the same image.
-  await anna.mouse.move(10, 10);
-  await anna.getByRole("button", { name: "Pause", exact: true }).click();
+  await tapControl(anna, "Pause");
   await expect.poll(() => videoPaused(darius)).toBe(true);
   await expect(darius.getByText("Anna a mis en pause")).toBeVisible();
   await expectInStep(darius, anna);
 
   // Darius moves forward 10 s and plays: Anna follows.
   const before = await videoTime(anna);
-  await darius.mouse.move(20, 20);
-  await darius.getByRole("button", { name: "Avancer de 10 secondes" }).click();
+  await tapControl(darius, "Avancer de 10 secondes");
   await expect.poll(() => videoTime(anna)).toBeGreaterThan(before + 8);
-  await darius.getByRole("button", { name: "Lecture", exact: true }).click();
+  await tapControl(darius, "Lecture");
   await expect.poll(() => videoPaused(anna)).toBe(false);
   await anna.waitForTimeout(3000);
   await expectInStep(darius, anna);

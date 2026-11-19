@@ -1,4 +1,4 @@
-import type { AudioTrack, SubtitleTrack } from "@annamour/protocol";
+import type { AudioTrack, SubtitleTrack, YouTubeVideo } from "@annamour/protocol";
 import type { TextFetcher } from "./safe-fetch.ts";
 
 /**
@@ -16,6 +16,8 @@ export interface ImportedMedia {
   subtitleFiles: Map<string, string>;
   subtitles: Omit<SubtitleTrack, "url">[];
   duration: number | undefined;
+  /** A YouTube video (no playlists): played in YouTube's own player. */
+  youtube?: YouTubeVideo;
 }
 
 export class HlsError extends Error {

@@ -1,4 +1,4 @@
-import type { RoomSnapshot } from "@annamour/protocol";
+import { type RoomSnapshot, youTubeVideoId } from "@annamour/protocol";
 import { Plus } from "lucide-react";
 import { type FormEvent, useId, useState } from "react";
 import { Button, Input } from "../../ui/controls.tsx";
@@ -24,12 +24,13 @@ export function AddLinkForm({ room, busy, error, onSubmit, onSearch }: AddLinkFo
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    onSubmit(url, label);
+    // A YouTube video is named after itself on the server, not « Épisode 2 ».
+    onSubmit(url, youTubeVideoId(url.trim()) ? "" : label);
   };
 
   return (
     <form className="grid min-w-0 gap-4" onSubmit={submit}>
-      <Field label="Lien de l'épisode d'après (.m3u8)" htmlFor={linkId}>
+      <Field label="Lien de l'épisode d'après (.m3u8 ou YouTube)" htmlFor={linkId}>
         <Input
           id={linkId}
           type="url"
@@ -45,9 +46,12 @@ export function AddLinkForm({ room, busy, error, onSubmit, onSearch }: AddLinkFo
           className="font-mono [&_input]:text-xs"
         />
       </Field>
-      <Field label="Titre" htmlFor={labelId}>
-        <Input id={labelId} value={label} onValueChange={setLabel} maxLength={40} />
-      </Field>
+      {/* A YouTube video comes with its own title. */}
+      {youTubeVideoId(url.trim()) ? null : (
+        <Field label="Titre" htmlFor={labelId}>
+          <Input id={labelId} value={label} onValueChange={setLabel} maxLength={40} />
+        </Field>
+      )}
       <p id={errorId} role="alert" className="min-h-5 text-sm text-danger">
         {error ?? ""}
       </p>

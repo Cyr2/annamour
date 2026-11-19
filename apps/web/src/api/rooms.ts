@@ -22,10 +22,10 @@ export function inCircle(path: string, circleId: string | null | undefined): str
 
 export async function createRoom(url: string, title?: string, circleId?: string | null): Promise<string> {
   const input = CreateRoomRequest.safeParse({ url: url.trim(), ...(title?.trim() ? { title: title.trim() } : {}) });
-  if (!input.success) throw new ApiRequestError(400, "Colle un lien https vers une playlist .m3u8.");
+  if (!input.success) throw new ApiRequestError(400, "Colle un lien https vers une vidéo (.m3u8 ou YouTube).");
   const { code } = await request(CreateRoomResponse, inCircle("/api/rooms", circleId), {
     body: input.data,
-    messages: { 400: "Colle un lien https vers une playlist .m3u8." },
+    messages: { 400: "Colle un lien https vers une vidéo (.m3u8 ou YouTube)." },
   });
   return code;
 }
@@ -40,10 +40,10 @@ export async function addEpisode(code: string, url: string, label: string, clien
     clientId,
     ...(label.trim() ? { label: label.trim() } : {}),
   });
-  if (!input.success) throw new ApiRequestError(400, "Colle un lien https vers une playlist .m3u8.");
+  if (!input.success) throw new ApiRequestError(400, "Colle un lien https vers une vidéo (.m3u8 ou YouTube).");
   const { episode } = await request(AddEpisodeResponse, `/api/rooms/${encodeURIComponent(code)}/episodes`, {
     body: input.data,
-    messages: { 400: "Colle un lien https vers une playlist .m3u8.", 404: ROOM_GONE },
+    messages: { 400: "Colle un lien https vers une vidéo (.m3u8 ou YouTube).", 404: ROOM_GONE },
   });
   return episode;
 }

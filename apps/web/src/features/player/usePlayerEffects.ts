@@ -1,7 +1,9 @@
 import type { Media, PlaybackState } from "@annamour/protocol";
 import { useEffect, useRef, useState } from "react";
+import { isVideoElement, type SyncMedia } from "../../sync/media.ts";
 import { useRoom } from "../../sync/room.ts";
 import type { PlayerControls } from "../../sync/usePlayerSync.ts";
+import { YouTubeMedia } from "../../sync/youtube-media.ts";
 import { toast } from "../../ui/toast.ts";
 import { memberChanges } from "./member-changes.ts";
 import { describePlaybackEvent } from "./playback-notice.ts";
@@ -15,7 +17,7 @@ export interface VideoClock {
 }
 
 /** Where the video is, smoothly while it plays (one update per frame), for the scrubber and the time. */
-export function useVideoClock(video: HTMLVideoElement | null): VideoClock {
+export function useVideoClock(video: SyncMedia | null): VideoClock {
   const [clock, setClock] = useState<VideoClock>({ current: 0, duration: 0, buffered: 0 });
 
   useEffect(() => {
@@ -134,7 +136,7 @@ export function useMemberNotices(): void {
 
 /** Applies this person's audio language and subtitles to the video. */
 export function useTrackChoice(
-  video: HTMLVideoElement | null,
+  video: SyncMedia | null,
   code: string,
   media: Media | undefined,
   controls: PlayerControls,
@@ -151,7 +153,12 @@ export function useTrackChoice(
   }, [media, audioId, selectAudio]);
 
   useEffect(() => {
-    if (!video) return;
+    // YouTube's player shows its own captions: the choice is a language code.
+    if (video instanceof YouTubeMedia) {
+      video.setCaptions(subtitlesId);
+      return;
+    }
+    if (!isVideoElement(video)) return;
     const apply = () => {
       for (const track of Array.from(video.textTracks)) {
         track.mode = track.id === subtitlesId ? "showing" : "disabled";
@@ -165,7 +172,7 @@ export function useTrackChoice(
 }
 
 /** Personal volume: never sent to the room. */
-export function useVolumeOnVideo(video: HTMLVideoElement | null): void {
+export function useVolumeOnVideo(video: SyncMedia | null): void {
   const level = useVolume((s) => audibleLevel(s));
   useEffect(() => {
     if (!video) return;

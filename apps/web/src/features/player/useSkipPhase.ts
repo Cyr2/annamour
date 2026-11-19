@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { SyncMedia } from "../../sync/media.ts";
 import { useRoom } from "../../sync/room.ts";
 import type { SyncClient } from "../../sync/SyncClient.ts";
 import { type SkipPhase, skipPhaseOf } from "./skip-rules.ts";
@@ -8,7 +9,7 @@ import { type SkipPhase, skipPhaseOf } from "./skip-rules.ts";
  * re-rendering only when that changes, not on every frame. Reaching the credits
  * tells the room once per episode, which starts the next one's countdown for all.
  */
-export function useSkipPhase(video: HTMLVideoElement | null, client: SyncClient | null): SkipPhase {
+export function useSkipPhase(video: SyncMedia | null, client: SyncClient | null): SkipPhase {
   const [phase, setPhase] = useState<SkipPhase>(null);
   const reported = useRef<number | null>(null);
   const current = useRoom((s) => s.room?.current);

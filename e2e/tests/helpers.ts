@@ -52,7 +52,7 @@ export async function createSession(page: Page, title: string, url = HLS_URL): P
   await page.getByRole("button", { name: "Créer une séance" }).click();
   // The sheet opens on the title search; a link stays one tap away.
   await page.getByRole("button", { name: "Coller un lien" }).click();
-  await page.getByLabel("Lien de la vidéo (.m3u8)").fill(url);
+  await page.getByLabel("Lien de la vidéo (.m3u8 ou YouTube)").fill(url);
   await page.getByLabel("Nom de la séance").fill(title);
   // Two steps only: once the film is found, the salon opens by itself.
   await page.getByRole("button", { name: "Préparer la séance" }).click();
@@ -62,3 +62,16 @@ export async function createSession(page: Page, title: string, url = HLS_URL): P
 
 export const videoTime = (page: Page) => page.locator("video").evaluate((v: HTMLVideoElement) => v.currentTime);
 export const videoPaused = (page: Page) => page.locator("video").evaluate((v: HTMLVideoElement) => v.paused);
+
+/**
+ * Clicks a player control. The controls fade after 3 s without a move, and a slow CI
+ * runner can take that long to click: so it wakes them and tries again until it lands.
+ */
+export async function tapControl(page: Page, name: string) {
+  let step = 0;
+  await expect(async () => {
+    step += 1;
+    await page.mouse.move(10 + step, 10 + step);
+    await page.getByRole("button", { name, exact: true }).click({ timeout: 2000 });
+  }).toPass({ timeout: 30_000 });
+}

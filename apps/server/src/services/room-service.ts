@@ -1,9 +1,10 @@
-import { type CatalogRef, MAX_EPISODES, nextEpisodeLabel } from "@annamour/protocol";
-import { NotFoundError, TooManyEpisodesError } from "../errors.ts";
-import { importHls } from "../hls.ts";
+import { type CatalogRef, MAX_EPISODES, nextEpisodeLabel, youTubeVideoId } from "@annamour/protocol";
+import { LiveSeanceError, NotFoundError, TooManyEpisodesError } from "../errors.ts";
+import { type ImportedMedia, importHls } from "../hls.ts";
 import type { FirstEpisode, RoomStore } from "../room-store.ts";
 import type { Room } from "../rooms.ts";
 import type { TextFetcher } from "../safe-fetch.ts";
+import { importYouTube } from "../youtube.ts";
 import type { HistoryService } from "./history-service.ts";
 
 export const DEFAULT_ROOM_TITLE = "Notre séance";
@@ -33,9 +34,9 @@ export class RoomService {
     accountId: string | undefined,
     first: FirstEpisode = {},
   ): Promise<Room> {
-    const { store, history, fetchText, now } = this.options;
-    const imported = await importHls(url, fetchText);
-    const room = store.create(title ?? DEFAULT_ROOM_TITLE, imported, now(), first);
+    const { store, history, now } = this.options;
+    const { media: imported, title: found } = await this.importLink(url);
+    const room = store.create(title ?? found ?? DEFAULT_ROOM_TITLE, imported, now(), first);
     if (accountId !== undefined) history.recordParticipation(room.code, accountId);
     this.options.onCreated?.(room.code);
     return room;
@@ -54,8 +55,9 @@ export class RoomService {
     byClientId?: string,
   ): Promise<number> {
     const room = this.roomAcceptingEpisode(code);
-    const imported = await importHls(url, this.options.fetchText);
-    const name = label ?? nextEpisodeLabel(room.lastEpisodeLabel, room.episodeCount);
+    const { media: imported, title } = await this.importLink(url);
+    // A YouTube video is named after itself, not « É6 ».
+    const name = label ?? title ?? nextEpisodeLabel(room.lastEpisodeLabel, room.episodeCount);
     const index = this.options.store.addEpisode(room, name, imported, catalog, byClientId);
     this.options.onEpisodeAdded?.(code);
     return index;
@@ -68,7 +70,15 @@ export class RoomService {
   roomAcceptingEpisode(code: string): Room {
     const room = this.options.store.get(code);
     if (!room) throw new NotFoundError("Cette séance n'existe plus.");
+    if (room.media.youtube?.live) throw new LiveSeanceError();
     if (room.episodeCount >= MAX_EPISODES) throw new TooManyEpisodesError();
     return room;
+  }
+
+  /** A YouTube link plays in YouTube's player (its title comes along); any other is an HLS stream to import. */
+  private async importLink(url: URL): Promise<{ media: ImportedMedia; title?: string }> {
+    const videoId = youTubeVideoId(url.href);
+    if (videoId) return importYouTube(videoId, this.options.fetchText);
+    return { media: await importHls(url, this.options.fetchText) };
   }
 }

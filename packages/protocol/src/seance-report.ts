@@ -35,7 +35,7 @@ export type TargetCheck = z.infer<typeof TargetCheck>;
 export const DeviceEvening = z.object({
   name: Name,
   device: DeviceKind,
-  engine: z.enum(["native", "hls.js"]),
+  engine: z.enum(["native", "hls.js", "youtube"]),
   watchedSeconds: z.number(),
   stallCount: z.number(),
   stallSeconds: z.number(),
