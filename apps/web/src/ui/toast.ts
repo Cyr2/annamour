@@ -10,8 +10,10 @@ export interface Toast {
   /** Ties the capsule to a person: shows a small bubble in their colour (with their initial when `name` is set). */
   color?: BubbleColor;
   name?: string;
-  /** ms before it leaves on its own. */
+  /** ms before it leaves on its own (Infinity: it stays). */
   duration: number;
+  /** A button in the capsule, e.g. « Recharger ». */
+  action?: { label: string; onClick: () => void };
 }
 
 interface ToastStore {
@@ -28,7 +30,8 @@ export const useToasts = create<ToastStore>()((set, get) => ({
   push: ({ duration = 3200, ...rest }) => {
     const id = nextId++;
     set((s) => ({ toasts: [...s.toasts, { id, duration, ...rest }].slice(-MAX_VISIBLE) }));
-    setTimeout(() => get().dismiss(id), duration);
+    // Infinity: it stays until its action is taken (« Recharger »).
+    if (Number.isFinite(duration)) setTimeout(() => get().dismiss(id), duration);
     return id;
   },
   dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),

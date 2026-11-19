@@ -27,25 +27,17 @@ function serveWebApp(app: Hono<AppEnv>, webDist: string): void {
   // The app's text (scripts, styles, the page) goes out gzipped: a third of the bytes on a phone's network.
   // Registered after the API, so only the web app's responses pass through it.
   app.use("*", compress());
-  // Vite fingerprints everything under /assets, so those files never change.
+  // What a cache may keep, said for every file (unsaid, a proxy decides: Cloudflare held the old sw.js for
+  // hours, so the installed app never saw a new version). Vite fingerprints /assets: those never change.
+  // Everything else (the page, sw.js, the manifest, registerSW.js, workbox-*.js) is checked on every use.
   // (serveStatic's onFound hook does not reach the response in @hono/node-server 2, hence this wrapper.)
-  app.use(
-    "/assets/*",
-    async (c, next) => {
-      await next();
-      if (c.res.ok) c.res.headers.set("cache-control", "public, max-age=31536000, immutable");
-    },
-    serveStatic({ root: webDist }),
-  );
-  // The service worker and the manifest decide which version the installed app runs: no cache may keep them,
-  // in the browser or at the CDN (Cloudflare held the old sw.js for hours, so the app never updated).
-  for (const path of ["/sw.js", "/manifest.webmanifest"]) {
-    app.use(path, async (c, next) => {
-      await next();
-      c.res.headers.set("cache-control", "no-cache");
-      c.res.headers.set("cdn-cache-control", "no-store");
-    });
-  }
+  app.use("*", async (c, next) => {
+    await next();
+    const hashed =
+      c.req.path.startsWith("/assets/") && c.res.ok && !c.res.headers.get("content-type")?.includes("html");
+    c.res.headers.set("cache-control", hashed ? "public, max-age=31536000, immutable" : "no-cache");
+    if (!hashed) c.res.headers.set("cdn-cache-control", "no-store");
+  });
   app.use("*", serveStatic({ root: webDist }));
   // SPA fallback for client routes only. A missing file (anything with an extension) is a 404: served the page
   // instead, a CDN keyed on the extension kept it for hours in place of a new home-screen icon.
@@ -53,7 +45,7 @@ function serveWebApp(app: Hono<AppEnv>, webDist: string): void {
   app.get("*", async (c) => {
     if (/\.[a-z0-9]+$/i.test(new URL(c.req.url).pathname)) return c.notFound();
     indexHtml ??= await readFile(join(webDist, "index.html"), "utf8");
-    return c.html(indexHtml, 200, { "cache-control": "no-cache" });
+    return c.html(indexHtml);
   });
 }
 

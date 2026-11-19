@@ -1,33 +1,50 @@
 import { registerSW } from "virtual:pwa-register";
-import { canReloadNow } from "./reload-policy.ts";
+import { requestsInFlight } from "../api/http.ts";
+import { detectTvMode } from "../features/tv/tv-mode.ts";
+import { toast } from "../ui/toast.ts";
+import { isCalm } from "./reload-policy.ts";
 
 /*
- * Keeping the installed app up to date without reinstalling it: it looks for
- * a new version when it starts, whenever it comes back to the foreground and
- * every half hour, and reloads onto it by itself, except during a séance,
- * where it waits until the film is left (a reload would cut it).
+ * Keeping the installed app up to date without reinstalling it: it looks for a
+ * new version when it starts, whenever it comes back to the foreground (an
+ * installed app stays in memory for days without reloading its page) and
+ * every half hour. A new version is offered, « Nouvelle version prête ·
+ * Recharger », at a calm moment, never in the middle of something; it is
+ * never loaded without asking.
  */
 
 const CHECK_EVERY_MS = 30 * 60 * 1000;
-const RETRY_EVERY_MS = 5000;
+/** How often a waiting offer looks for a calm moment. */
+const CALM_CHECK_MS = 2000;
+
+const calmNow = () =>
+  isCalm({
+    path: window.location.pathname,
+    sheetOpen: document.querySelector('[role="dialog"][aria-modal="true"]') !== null,
+    requests: requestsInFlight(),
+  });
 
 export function startAppUpdates(): void {
-  let pending = false;
-  let retry: ReturnType<typeof setInterval> | undefined;
-
-  const applyWhenFree = () => {
-    if (!pending || !canReloadNow(window.location.pathname)) return;
-    clearInterval(retry);
-    void update(true);
-  };
+  let waiting: ReturnType<typeof setInterval> | undefined;
+  const onTv = detectTvMode();
 
   const update = registerSW({
     immediate: true,
     onNeedRefresh() {
-      pending = true;
-      applyWhenFree();
-      // In a séance: try again until it is left (the app navigates without page loads).
-      retry ??= setInterval(applyWhenFree, RETRY_EVERY_MS);
+      if (waiting) return;
+      const offerWhenCalm = () => {
+        if (!calmNow()) return;
+        clearInterval(waiting);
+        // A TV's remote cannot reach a button in a capsule: there the new version loads by itself, when calm.
+        if (onTv) return void update(true);
+        toast({
+          message: "Nouvelle version prête",
+          action: { label: "Recharger", onClick: () => void update(true) },
+          duration: Number.POSITIVE_INFINITY,
+        });
+      };
+      waiting = setInterval(offerWhenCalm, CALM_CHECK_MS);
+      offerWhenCalm();
     },
     onRegisteredSW(_url, registration) {
       if (!registration) return;
