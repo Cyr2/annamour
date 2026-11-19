@@ -187,13 +187,16 @@ export class Room {
    * What YouTube's player told of a video: its length, and whether it is live.
    * Only the first answer counts (every device sends it), and only for a YouTube episode.
    */
-  private learnYouTube(index: number, duration: number, live: boolean): void {
+  private learnYouTube(index: number, duration: number, live: boolean, now: number): void {
     const imported = this.episodes[index]?.imported;
     if (!imported?.youtube) return;
     // Already learned: a live stream, or a video whose length is known.
     if (imported.youtube.live || imported.duration !== undefined) return;
     imported.youtube = { ...imported.youtube, live };
     if (!live && duration > 0) imported.duration = duration;
+    // A live stream's « length » is its edge: everyone starts there, not at the start of YouTube's rewind window.
+    if (live && duration > 0 && index === this.progress.current)
+      this.playback = { ...this.playback, position: duration, at: now };
     this.broadcastRoom();
   }
 
@@ -471,7 +474,7 @@ export class Room {
   ): void {
     switch (message.type) {
       case "youtubeInfo":
-        this.learnYouTube(message.episode, message.duration, message.live);
+        this.learnYouTube(message.episode, message.duration, message.live, now);
         return;
       case "ended":
         this.onEnded(message.episode, now);

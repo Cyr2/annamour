@@ -18,7 +18,8 @@ export const RoomCode = z.string().check(
   z.refine((s) => [...s].every((c) => ROOM_CODE_ALPHABET.includes(c)), "invalid room code"),
 );
 
-export const Position = z.number().check(z.gte(0), z.lte(60 * 60 * 24));
+/** Seconds into the video. A YouTube live stream counts from when it went on air, months ago for some. */
+export const Position = z.number().check(z.gte(0), z.lte(60 * 60 * 24 * 365 * 10));
 
 export const PlaybackStateSchema = z.object({
   status: z.enum(["playing", "paused"]),

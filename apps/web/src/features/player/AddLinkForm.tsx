@@ -1,4 +1,4 @@
-import type { RoomSnapshot } from "@annamour/protocol";
+import { type RoomSnapshot, youTubeVideoId } from "@annamour/protocol";
 import { Plus } from "lucide-react";
 import { type FormEvent, useId, useState } from "react";
 import { Button, Input } from "../../ui/controls.tsx";
@@ -24,7 +24,8 @@ export function AddLinkForm({ room, busy, error, onSubmit, onSearch }: AddLinkFo
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    onSubmit(url, label);
+    // A YouTube video is named after itself on the server, not « Épisode 2 ».
+    onSubmit(url, youTubeVideoId(url.trim()) ? "" : label);
   };
 
   return (

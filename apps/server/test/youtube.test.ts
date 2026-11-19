@@ -69,6 +69,25 @@ describe("a séance from a YouTube link", () => {
     expect(added.status).toBe(409);
   });
 
+  it("puts everyone at the live edge, not at the start of YouTube's rewind window, and follows it", async () => {
+    const { app, services } = setup();
+    const { code } = (await (await create(app)).json()) as { code: string };
+    const room = required(services.store.get(code), "the séance");
+    const member = required(room.join("client-aaaa", "Darius", "peach", silent, 1000), "Darius to join");
+    // A stream on air for 155 days: its edge is far past a day of seconds.
+    const edge = 13_400_000;
+    room.handle(member, { type: "youtubeInfo", episode: 0, duration: edge, live: true }, 1000);
+    expect(room.playback.position).toBe(edge);
+    room.handle(member, { type: "pause", position: edge + 30 }, 2000);
+    expect(room.playback).toMatchObject({ status: "paused", position: edge + 30 });
+  });
+
+  it("takes a video whose oEmbed gives no title (some live streams), with a plain one", async () => {
+    const { app, services } = testApp({ fetchText: async () => JSON.stringify({ author_name: "Lofi Girl" }) });
+    const { code } = (await (await create(app)).json()) as { code: string };
+    expect(required(services.store.get(code), "the séance").media.title).toBe("Vidéo YouTube");
+  });
+
   it("can queue a YouTube video after another, named after it", async () => {
     const { app, services } = setup();
     const { code } = (await (await create(app)).json()) as { code: string };
