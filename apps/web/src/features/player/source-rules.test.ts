@@ -13,9 +13,9 @@ describe("what the player offers for what plays", () => {
     expect(isLive(undefined)).toBe(false);
   });
 
-  it("offers « Audio et sous-titres » only when there is something to choose", () => {
+  it("offers « Audio et sous-titres » for our own player as before, never for YouTube's", () => {
     expect(hasTracks(youtube(false))).toBe(false);
-    expect(hasTracks({ ...film, audio: [{ id: "fr", label: "Français", language: "fr" }] })).toBe(true);
+    expect(hasTracks(film)).toBe(true);
     expect(hasTracks(undefined)).toBe(false);
   });
 });

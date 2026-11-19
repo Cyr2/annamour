@@ -7,9 +7,9 @@ export function isLive(media: Media | undefined): boolean {
   return media?.youtube?.live === true;
 }
 
-/** Something to choose in « Audio et sous-titres » (YouTube's player has neither of ours). */
+/** « Audio et sous-titres » is offered for our own player (a film, a link), never for YouTube's, which has neither of ours. */
 export function hasTracks(media: Media | undefined): boolean {
-  return Boolean(media && (media.audio.length > 0 || media.subtitles.length > 0));
+  return Boolean(media && !media.youtube);
 }
 
 interface PlayerActions {
