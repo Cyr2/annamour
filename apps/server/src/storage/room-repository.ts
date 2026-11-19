@@ -140,6 +140,13 @@ export class RoomRepository {
     this.db.prepare("UPDATE rooms SET next_episode_id = ? WHERE code = ?").run(episode.id + 1, code);
   }
 
+  /** An episode's playlists, fetched again with fresh links (Nakanime's last 12 hours). */
+  saveEpisodeMedia(code: string, id: number, media: ImportedMedia): void {
+    this.db
+      .prepare("UPDATE room_episodes SET media = ? WHERE room_code = ? AND id = ?")
+      .run(serializeMedia(media), code, id);
+  }
+
   removeEpisode(code: string, id: number): void {
     this.db.prepare("DELETE FROM room_episodes WHERE room_code = ? AND id = ?").run(code, id);
   }

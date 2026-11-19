@@ -174,6 +174,11 @@ export class Room {
     return this.episodes.find((episode) => episode.id === id);
   }
 
+  /** The episode one of whose playlists lists `needle` (a segment's path): to renew its links. */
+  episodeListing(needle: string): Episode | undefined {
+    return this.episodes.find(({ imported }) => [...imported.playlists.values()].some((text) => text.includes(needle)));
+  }
+
   /** The episodes made from the catalog whose intro and credits are not known yet: what SkipService looks up. */
   episodesWithoutSkips(): { id: number; catalog: CatalogRef; duration: number | undefined }[] {
     return this.episodes.flatMap(({ id, catalog, skips, imported }) =>

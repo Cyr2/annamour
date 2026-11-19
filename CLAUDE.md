@@ -38,7 +38,7 @@ Watch-together PWA : deux personnes à distance regardent la même vidéo HLS, s
 - L'appli n'importe jamais `glisse` directement : passer par `apps/web/src/ui/`.
 - Tout message réseau passe par les schémas zod de `@annamour/protocol`.
 - Toujours les dernières versions des dépendances.
-- Le serveur ne relaie pas la vidéo d'origine : seulement les playlists (en cache) et les sous-titres. Seule exception, les qualités légères (480p, 360p) qu'il fabrique lui-même pour les réseaux faibles (`apps/server/src/media/`), effacées 6 h après la dernière lecture ; au-delà de `MEDIA_MAX_GB` (50 Go par défaut) au total, les séances regardées il y a le plus longtemps sont effacées en premier, jamais une séance en cours.
+- Le serveur ne relaie pas la vidéo d'origine : seulement les playlists (en cache) et les sous-titres. Exception Nakanime (accord avec leur équipe) : ses segments passent par le serveur, relayés à la volée et jamais stockés (`apps/server/src/services/relay-service.ts`), car ses liens sont signés 12 h et peut-être liés à l'IP ; seuls les liens de la playlist de l'épisode sont demandés. Autre exception, les qualités légères (480p, 360p) qu'il fabrique lui-même pour les réseaux faibles (`apps/server/src/media/`), effacées 6 h après la dernière lecture ; au-delà de `MEDIA_MAX_GB` (50 Go par défaut) au total, les séances regardées il y a le plus longtemps sont effacées en premier, jamais une séance en cours.
 
 ## Règles de développement (strictes, non négociables)
 

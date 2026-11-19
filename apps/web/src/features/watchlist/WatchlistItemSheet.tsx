@@ -70,7 +70,7 @@ function ItemBody({ item, me, onClose, onConfirmRemoval }: ItemBodyProps) {
       <EpisodePicker
         show={item.title}
         onBack={() => setPickingEpisode(false)}
-        onPick={(season, episode) => void launch(item, { season, episode })}
+        onPick={(season, episode, language) => void launch(item, { season, episode, language })}
       />
     );
   }

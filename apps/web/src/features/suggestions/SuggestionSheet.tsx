@@ -86,7 +86,7 @@ function SuggestionBody({
       <EpisodePicker
         show={title}
         onBack={() => setPickingEpisode(false)}
-        onPick={(season, episode) => void launch(forCircle, { season, episode })}
+        onPick={(season, episode, language) => void launch(forCircle, { season, episode, language })}
       />
     );
   }

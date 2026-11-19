@@ -4,6 +4,7 @@ import {
   CATALOG_API,
   CatalogQuery,
   type CatalogSearchResponse,
+  CatalogSeasonQuery,
   type CatalogSeasonResponse,
   type CreateRoomResponse,
   isRoomCode,
@@ -53,8 +54,9 @@ export function catalogRoutes({ services }: RouteDeps) {
   routes.get(CATALOG_API.season, async (c) => {
     const id = positiveInt(c.req.param("id"));
     const season = positiveInt(c.req.param("season"));
-    if (id === null || season === null) throw new BadRequestError("Cette saison n'existe pas.");
-    return c.json({ episodes: await catalog.season(id, season) } satisfies CatalogSeasonResponse);
+    const query = CatalogSeasonQuery.safeParse(c.req.query());
+    if (id === null || season === null || !query.success) throw new BadRequestError("Cette saison n'existe pas.");
+    return c.json((await catalog.season(id, season, query.data)) satisfies CatalogSeasonResponse);
   });
 
   routes.post(CATALOG_API.addEpisode, async (c) => {

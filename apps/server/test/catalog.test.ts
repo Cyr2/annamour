@@ -69,7 +69,9 @@ describe("the Naka catalog", () => {
   it("lists a season's episodes", async () => {
     const episodes = [{ episodeNumber: 1, name: "Pilote" }, { episodeNumber: 2 }];
     const { fetch } = fakeBridge({ "browse/91/season/1": { episodes } });
-    expect(await new NakaCatalog(fetch).season(91, 1)).toEqual([{ number: 1, title: "Pilote" }, { number: 2 }]);
+    expect(await new NakaCatalog(fetch).season(91, 1)).toEqual({
+      episodes: [{ number: 1, title: "Pilote" }, { number: 2 }],
+    });
   });
 
   it("finds the episodes wherever Naka puts them", () => {

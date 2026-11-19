@@ -51,7 +51,7 @@ function importErrorMessage(error: unknown): string | null {
 }
 
 export function roomRoutes({ services }: RouteDeps) {
-  const { store, rooms, accounts, lowQualities, circles, now } = services;
+  const { store, rooms, accounts, lowQualities, relay, circles, now } = services;
   // Creating a séance and adding an episode both import a stream: one budget for both.
   const imports = new RateLimiter(CREATE_LIMIT);
   const tooMany = { error: "Trop de liens importés, réessaie dans une minute." };
@@ -92,8 +92,9 @@ export function roomRoutes({ services }: RouteDeps) {
     const { code, episode, file } = c.req.param();
     // Apple's own player gets the HEVC rungs too (once offered); hls.js only the complete ladder, when it asks.
     const asker = askerOf(c.req.header("user-agent"), c.req.query(HEVC_LADDER_PARAM));
-    const lighter = /^\d+$/.test(episode) ? lowQualities.playlist(code, Number(episode), file, asker) : undefined;
-    const playlist = lighter ?? episodeOf(c.req.param())?.imported.playlists.get(file);
+    if (!/^\d+$/.test(episode)) return c.notFound();
+    const playlist =
+      lowQualities.playlist(code, Number(episode), file, asker) ?? relay.playlist(code, Number(episode), file);
     if (!playlist) return c.notFound();
     return c.body(playlist, 200, {
       "content-type": "application/vnd.apple.mpegurl",
@@ -122,6 +123,27 @@ export function roomRoutes({ services }: RouteDeps) {
       "content-type": mediaType(path),
       "cache-control": "private, max-age=86400",
     });
+  });
+
+  // A Nakanime segment, passed on from its source as it arrives (see RelayService): never kept.
+  routes.get("/api/rooms/:code/e/:episode/relay/:file/:index", async (c) => {
+    const { code, episode, file, index } = c.req.param();
+    if (!/^\d+$/.test(episode) || !/^\d{1,6}$/.test(index)) return c.notFound();
+    const upstream = await relay
+      .segment(code, Number(episode), file, Number(index), c.req.header("range"))
+      .catch((error: unknown) => {
+        // The player retries a segment its source failed to give.
+        if (error instanceof FetchError || error instanceof UserFacingError) return null;
+        throw error;
+      });
+    if (upstream === null) return c.body(null, 502, { "cache-control": "no-store" });
+    if (!upstream) return c.notFound();
+    const headers = new Headers({ "cache-control": "private, max-age=3600" });
+    for (const name of ["content-type", "content-length", "content-range", "accept-ranges"]) {
+      const value = upstream.headers.get(name);
+      if (value) headers.set(name, value);
+    }
+    return new Response(upstream.body, { status: upstream.status, headers });
   });
 
   routes.get("/api/rooms/:code/e/:episode/subs/:file", (c) => {

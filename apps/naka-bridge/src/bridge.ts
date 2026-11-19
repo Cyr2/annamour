@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { mediaUrl, nakaApiPath } from "./allowlist.ts";
+import { mediaUrl, type NakanimeCall, nakaApiPath, nakanimeCall } from "./allowlist.ts";
 import type { CallBudget } from "./budget.ts";
 import type { MediaGate } from "./media-gate.ts";
 
@@ -18,6 +18,21 @@ export interface NakaCaller {
   fetchMedia(url: URL): Promise<NakaAnswer>;
 }
 
+/**
+ * Reads Nakanime from inside a browser page that passed Cloudflare. Its API
+ * answers are encrypted for its own app: the page reads them as the app does.
+ */
+export interface NakanimeCaller {
+  /** `{ data: [...] }`: the catalog's search, as the app shows it. */
+  search(query: string): Promise<NakaAnswer>;
+  /** The anime's page data: seasons, episodes and their versions. */
+  title(id: number, slug: string): Promise<NakaAnswer>;
+  /** An episode's sources: one player page per version and host. */
+  sources(id: number, season: number, episode: number): Promise<NakaAnswer>;
+  /** `{ url }`: the HLS playlist a player page opens. */
+  resolve(player: URL): Promise<NakaAnswer>;
+}
+
 export interface BridgeRequest {
   method: string;
   target: string;
@@ -27,6 +42,8 @@ export interface BridgeRequest {
 export interface BridgeDeps {
   secret: string;
   naka: NakaCaller;
+  /** Absent: the bridge reads only Naka. */
+  nakanime?: NakanimeCaller;
   budget: CallBudget;
   media: MediaGate;
   mediaHosts?: readonly string[];
@@ -55,6 +72,7 @@ export async function handleBridgeRequest(request: BridgeRequest, deps: BridgeDe
   if (!sameSecret(request.secret, deps.secret)) return error(401, "bad secret");
   if (request.method !== "GET") return error(405, "GET only");
   if (request.target.startsWith("/media")) return handleMedia(request.target, deps);
+  if (request.target.startsWith("/nakanime/")) return handleNakanime(request.target, deps);
   const apiPath = nakaApiPath(request.target);
   if (apiPath === null) return error(404, "not an allowed Naka call");
   if (!deps.budget.trySpend(deps.now())) return error(429, "call budget spent, retry in a minute");
@@ -80,5 +98,31 @@ async function handleMedia(target: string, deps: BridgeDeps): Promise<NakaAnswer
   } catch (cause) {
     console.error("Naka media fetch failed", cause);
     return error(502, "Naka unreachable");
+  }
+}
+
+function callNakanime(caller: NakanimeCaller, call: NakanimeCall): Promise<NakaAnswer> {
+  switch (call.kind) {
+    case "search":
+      return caller.search(call.query);
+    case "title":
+      return caller.title(call.id, call.slug);
+    case "sources":
+      return caller.sources(call.id, call.season, call.episode);
+    case "resolve":
+      return caller.resolve(call.player);
+  }
+}
+
+/** One read on Nakanime, counted in the same budget as Naka's: the bridge weighs as little on both together. */
+async function handleNakanime(target: string, deps: BridgeDeps): Promise<NakaAnswer> {
+  const call = nakanimeCall(target);
+  if (call === null || !deps.nakanime) return error(404, "not an allowed Nakanime call");
+  if (!deps.budget.trySpend(deps.now())) return error(429, "call budget spent, retry in a minute");
+  try {
+    return await callNakanime(deps.nakanime, call);
+  } catch (cause) {
+    console.error("Nakanime call failed", cause);
+    return error(502, "Nakanime unreachable");
   }
 }

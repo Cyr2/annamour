@@ -12,6 +12,22 @@ export type CatalogMediaType = z.infer<typeof CatalogMediaType>;
 export const CatalogId = z.number().check(z.int(), z.positive());
 const Positive = z.number().check(z.int(), z.positive());
 
+/** Where a title comes from: Naka (films and series) or Nakanime (anime). Absent on titles kept before: Naka. */
+export const CatalogSource = z.enum(["naka", "nakanime"]);
+export type CatalogSource = z.infer<typeof CatalogSource>;
+
+/** An anime's versions on Nakanime: dubbed in French, or in Japanese with French subtitles. */
+export const CatalogLanguage = z.enum(["VF", "VOSTFR"]);
+export type CatalogLanguage = z.infer<typeof CatalogLanguage>;
+
+/** Nakanime names its pages after a slug (`/anime/17/frieren`). */
+export const CatalogSlug = z.string().check(z.regex(/^[a-z0-9-]{1,120}$/));
+
+/** The version picked when none is asked for: VF when the episode has it, else VOSTFR. */
+export function preferredLanguage(available: readonly CatalogLanguage[] | undefined): CatalogLanguage {
+  return available === undefined || available.length === 0 || available.includes("VF") ? "VF" : "VOSTFR";
+}
+
 export const CatalogTitle = z.object({
   id: CatalogId,
   type: CatalogMediaType,
@@ -24,6 +40,9 @@ export const CatalogTitle = z.object({
   seasons: z.optional(z.number()),
   /** The same title at TMDB, where its synopsis, rating and kin are read (absent for titles kept before). */
   tmdbId: z.optional(Positive),
+  source: z.optional(CatalogSource),
+  slug: z.optional(CatalogSlug),
+  languages: z.optional(z.array(CatalogLanguage)),
 });
 export type CatalogTitle = z.infer<typeof CatalogTitle>;
 
@@ -33,9 +52,22 @@ export const CatalogQuery = z.string().check(z.trim(), z.minLength(2), z.maxLeng
 export const CatalogSearchResponse = z.object({ titles: z.array(CatalogTitle) });
 export type CatalogSearchResponse = z.infer<typeof CatalogSearchResponse>;
 
-export const CatalogEpisode = z.object({ number: Positive, title: z.optional(z.string()) });
+export const CatalogEpisode = z.object({
+  number: Positive,
+  title: z.optional(z.string()),
+  /** Nakanime: the versions this episode has, and whether it is filler (« hors-série »). */
+  languages: z.optional(z.array(CatalogLanguage)),
+  filler: z.optional(z.boolean()),
+});
 export type CatalogEpisode = z.infer<typeof CatalogEpisode>;
-export const CatalogSeasonResponse = z.object({ episodes: z.array(CatalogEpisode) });
+/** `?source=nakanime&slug=frieren` on a season: Nakanime's page is found by its slug. Naka needs neither. */
+export const CatalogSeasonQuery = z.object({ source: z.optional(CatalogSource), slug: z.optional(CatalogSlug) });
+export type CatalogSeasonQuery = z.infer<typeof CatalogSeasonQuery>;
+export const CatalogSeasonResponse = z.object({
+  episodes: z.array(CatalogEpisode),
+  /** Nakanime tells how many seasons the anime has with its episodes (its search does not). */
+  seasons: z.optional(Positive),
+});
 export type CatalogSeasonResponse = z.infer<typeof CatalogSeasonResponse>;
 
 /** Starts a séance on a film, or on one episode of a series (season and episode then required). */
@@ -50,6 +82,10 @@ export const PlayCatalogRequest = z
     posterUrl: z.optional(z.url({ protocol: /^https$/ })),
     /** The title at TMDB: where its intro and credits are looked up without guessing by name. */
     tmdbId: z.optional(Positive),
+    source: z.optional(CatalogSource),
+    /** Nakanime only: the title's page name, and the version to play (VF by default). */
+    slug: z.optional(CatalogSlug),
+    language: z.optional(CatalogLanguage),
   })
   .check(
     z.refine((r) => {
@@ -57,6 +93,7 @@ export const PlayCatalogRequest = z
       const hasNone = r.season === undefined && r.episode === undefined;
       return r.type === "movie" ? hasNone : hasEpisode;
     }, "a series needs its season and episode, a film neither"),
+    z.refine((r) => r.source !== "nakanime" || r.slug !== undefined, "a Nakanime title needs its slug"),
   );
 export type PlayCatalogRequest = z.infer<typeof PlayCatalogRequest>;
 
@@ -77,22 +114,26 @@ export function catalogEpisodeLabel(season: number, episode: number): string {
  * a series episode by « S2 · É5 » (the séance carries the series' name), a film by its own title.
  */
 export function catalogLabel(ref: CatalogRef): string {
-  const { season, episode, title } = ref;
-  if (season !== undefined && episode !== undefined) return catalogEpisodeLabel(season, episode);
+  const { season, episode, title, language } = ref;
+  // An anime says its version too (« S1 · É3 · VF »).
+  if (season !== undefined && episode !== undefined) {
+    const label = catalogEpisodeLabel(season, episode);
+    return language ? `${label} · ${language}` : label;
+  }
   return title.length > EPISODE_LABEL_MAX ? `${title.slice(0, EPISODE_LABEL_MAX - 1)}…` : title;
 }
 
 /**
  * The episode that follows `last` in its series: the next one of its season when
  * the season has it (`seasonEpisodes`), else the first of the next season.
- * Null for a film: nothing follows it.
+ * Nakanime numbers an anime's episodes across seasons (season 2 starts at 29):
+ * there the next season goes on with the next number. Null for a film.
  */
 export function nextCatalogEpisode(last: CatalogRef, seasonEpisodes: readonly number[]): CatalogRef | null {
   if (last.type !== "tv" || last.season === undefined || last.episode === undefined) return null;
   const following = last.episode + 1;
-  return seasonEpisodes.includes(following)
-    ? { ...last, episode: following }
-    : { ...last, season: last.season + 1, episode: 1 };
+  if (seasonEpisodes.includes(following)) return { ...last, episode: following };
+  return { ...last, season: last.season + 1, episode: last.source === "nakanime" ? following : 1 };
 }
 
 export const CATALOG_API = {
