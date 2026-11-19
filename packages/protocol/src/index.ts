@@ -20,3 +20,4 @@ export * from "./taste.ts";
 export * from "./tv-pairing-code.ts";
 export * from "./watchlist.ts";
 export * from "./wordlist-fr.ts";
+export * from "./youtube.ts";

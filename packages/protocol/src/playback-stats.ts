@@ -38,7 +38,7 @@ export const PlaybackReport = z.object({
   viewingId: z.string().check(z.regex(/^[A-Za-z0-9_-]{8,64}$/)),
   name: Name,
   device: DeviceKind,
-  engine: z.enum(["native", "hls.js"]),
+  engine: z.enum(["native", "hls.js", "youtube"]),
   /** Seconds the film actually played while the séance was playing. */
   watchedSeconds: Seconds,
   /** Times the picture froze waiting for data (seeks excluded). */
