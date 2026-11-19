@@ -17,7 +17,7 @@ test("à la fin d'un épisode, le suivant démarre chez tout le monde", async ({
   await anna.getByRole("button", { name: "File", exact: true }).click();
   // Adding opens on the title search; a link stays one tap away.
   await anna.getByRole("button", { name: "Coller un lien" }).click();
-  await anna.getByLabel("Lien de l'épisode d'après (.m3u8)").fill(HLS_URL);
+  await anna.getByLabel("Lien de l'épisode d'après (.m3u8 ou YouTube)").fill(HLS_URL);
   await expect(anna.getByLabel("Titre", { exact: true })).toHaveValue("Épisode 2");
   await anna.getByRole("button", { name: "Ajouter à la suite" }).click();
   // Once the video is added, the sheet closes.
