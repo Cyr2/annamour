@@ -59,14 +59,20 @@ export function YouTubeSurface({ videoId, onMedia }: YouTubeSurfaceProps) {
 
   return (
     <>
-      <div
-        ref={host}
-        className={cx(
-          "absolute inset-0 [&_iframe]:size-full",
-          // Brought over the controls for a moment, the player takes the touch on « Passer l'annonce ».
-          touchable ? "pointer-events-auto z-40" : "pointer-events-none",
-        )}
-      />
+      <div className={cx("absolute inset-0 overflow-hidden", touchable && "z-40")}>
+        <div
+          ref={host}
+          className={cx(
+            "absolute inset-x-0 [&_iframe]:size-full",
+            // Brought over the controls for a moment, whole (« Passer l'annonce » sits in its bottom corner).
+            // Otherwise it runs past the frame: YouTube's title, channel and « Autres vidéos » bars fall outside,
+            // the picture stays (letterboxed by YouTube, so nothing of the film is cut on a 16:9 screen).
+            touchable
+              ? "pointer-events-auto inset-y-0"
+              : "pointer-events-none -top-[var(--am-youtube-chrome)] -bottom-[var(--am-youtube-chrome)]",
+          )}
+        />
+      </div>
       {still && !touchable ? (
         <button
           type="button"

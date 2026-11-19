@@ -1,3 +1,6 @@
+import type { SubtitleTrack } from "@annamour/protocol";
+import { z } from "zod/mini";
+
 /*
  * YouTube's player speaks in states (onStateChange); the sync listens to a
  * <video>'s events. This turns one into the other, pure.
@@ -69,4 +72,20 @@ export function qualityHeight(quality: string): number {
 export function nearestRate(rate: number, available: readonly number[]): number {
   if (available.length === 0) return 1;
   return available.reduce((best, candidate) => (Math.abs(candidate - rate) < Math.abs(best - rate) ? candidate : best));
+}
+
+/** YouTube's caption list (getOption("captions", "tracklist")), missing from its documentation: checked, never trusted. */
+const CaptionList = z.array(z.object({ languageCode: z.string(), displayName: z.string() }));
+
+/** The video's captions as subtitle tracks for « Audio et sous-titres », known by their language code. */
+export function captionTracks(tracklist: unknown): SubtitleTrack[] {
+  const parsed = CaptionList.safeParse(tracklist);
+  if (!parsed.success) return [];
+  return parsed.data.map((track) => ({
+    id: track.languageCode,
+    label: track.displayName,
+    language: track.languageCode,
+    url: "",
+    forced: false,
+  }));
 }

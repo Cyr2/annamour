@@ -1,5 +1,13 @@
+import type { SubtitleTrack } from "@annamour/protocol";
 import type { SyncMedia } from "./media.ts";
-import { type MediaFlags, nearestRate, onYouTubeState, qualityHeight, YT_STATE } from "./youtube-events.ts";
+import {
+  captionTracks,
+  type MediaFlags,
+  nearestRate,
+  onYouTubeState,
+  qualityHeight,
+  YT_STATE,
+} from "./youtube-events.ts";
 
 /*
  * A YouTube video in YouTube's own embedded player (its IFrame API), shown to
@@ -23,6 +31,10 @@ interface YTPlayer {
   unMute(): void;
   /** Not in YouTube's documentation, but present: tells a live stream. */
   getVideoData?: () => { isLive?: boolean };
+  /** Undocumented too: the captions module ("tracklist" to read, "track" to pick one, {} for none). */
+  loadModule?: (module: "captions") => void;
+  getOption?: (module: "captions", option: "tracklist") => unknown;
+  setOption?: (module: "captions", option: "track", value: { languageCode?: string }) => void;
   destroy(): void;
 }
 
@@ -89,6 +101,8 @@ export class YouTubeMedia extends EventTarget implements SyncMedia {
   private sentRate = 1;
   private level = 1;
   private silent = false;
+  /** Language code of the captions shown, null for none. */
+  private captions: string | null = null;
   /** A start was asked and no pause since: a start that never comes is the browser's refusal. */
   private wantsPlay = false;
   private readonly poll: ReturnType<typeof setInterval>;
@@ -137,6 +151,23 @@ export class YouTubeMedia extends EventTarget implements SyncMedia {
 
   get live(): boolean {
     return this.info()?.live === true;
+  }
+
+  /** Its captions, once YouTube has loaded them (when it starts playing). */
+  captionTracks(): SubtitleTrack[] {
+    return captionTracks(this.player?.getOption?.("captions", "tracklist"));
+  }
+
+  /** Shows the captions in this language, or none. */
+  setCaptions(languageCode: string | null): void {
+    this.captions = languageCode;
+    this.applyCaptions();
+  }
+
+  private applyCaptions(): void {
+    // The module stays loaded even with none shown: its list is what « Audio et sous-titres » offers.
+    this.player?.loadModule?.("captions");
+    this.player?.setOption?.("captions", "track", this.captions ? { languageCode: this.captions } : {});
   }
 
   get currentTime(): number {
@@ -244,6 +275,8 @@ export class YouTubeMedia extends EventTarget implements SyncMedia {
 
   private onState(state: number): void {
     if (state === YT_STATE.paused) this.wantsPlay = false;
+    // YouTube turns on captions of its own accord (the viewer's settings, a foreign video): the choice made here wins.
+    if (state === YT_STATE.playing) this.applyCaptions();
     this.apply(state);
   }
 

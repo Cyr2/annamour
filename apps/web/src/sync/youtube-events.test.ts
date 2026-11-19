@@ -1,5 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { type MediaFlags, nearestRate, onYouTubeState, qualityHeight, YT_STATE } from "./youtube-events.ts";
+import {
+  captionTracks,
+  type MediaFlags,
+  nearestRate,
+  onYouTubeState,
+  qualityHeight,
+  YT_STATE,
+} from "./youtube-events.ts";
+
+describe("a YouTube video's captions", () => {
+  it("are offered as subtitles, known by their language", () => {
+    const list = [
+      { languageCode: "fr", displayName: "Français", kind: "", is_default: false },
+      { languageCode: "en", displayName: "Anglais (générés automatiquement)", kind: "asr" },
+    ];
+    expect(captionTracks(list)).toEqual([
+      { id: "fr", label: "Français", language: "fr", url: "", forced: false },
+      { id: "en", label: "Anglais (générés automatiquement)", language: "en", url: "", forced: false },
+    ]);
+  });
+
+  it("are none when YouTube has no list yet, or an unexpected one", () => {
+    expect(captionTracks(undefined)).toEqual([]);
+    expect(captionTracks([{ code: "fr" }])).toEqual([]);
+  });
+});
 
 const paused: MediaFlags = { paused: true, ended: false, seeking: false, readyState: 0 };
 

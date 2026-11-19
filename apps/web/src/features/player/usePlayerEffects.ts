@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { isVideoElement, type SyncMedia } from "../../sync/media.ts";
 import { useRoom } from "../../sync/room.ts";
 import type { PlayerControls } from "../../sync/usePlayerSync.ts";
+import { YouTubeMedia } from "../../sync/youtube-media.ts";
 import { toast } from "../../ui/toast.ts";
 import { memberChanges } from "./member-changes.ts";
 import { describePlaybackEvent } from "./playback-notice.ts";
@@ -152,7 +153,11 @@ export function useTrackChoice(
   }, [media, audioId, selectAudio]);
 
   useEffect(() => {
-    // Subtitle tracks only live on a <video>: YouTube's player has none of ours.
+    // YouTube's player shows its own captions: the choice is a language code.
+    if (video instanceof YouTubeMedia) {
+      video.setCaptions(subtitlesId);
+      return;
+    }
     if (!isVideoElement(video)) return;
     const apply = () => {
       for (const track of Array.from(video.textTracks)) {
