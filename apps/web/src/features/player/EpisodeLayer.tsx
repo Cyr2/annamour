@@ -7,6 +7,7 @@ import { EpisodeEndScreen } from "./EpisodeEndScreen.tsx";
 import { EpisodesSheet } from "./EpisodesSheet.tsx";
 import { episodeEndOf, queueTitle } from "./episode-rules.ts";
 import { describeRoomChange } from "./playback-notice.ts";
+import { isLive } from "./source-rules.ts";
 
 interface EpisodeLayerProps {
   /** The film is on screen (not the salon). */
@@ -21,7 +22,8 @@ interface EpisodeLayerProps {
 export function EpisodeLayer({ active, client, upNextOpen, onUpNextOpenChange, onWatchAgain }: EpisodeLayerProps) {
   const room = useRoom((s) => s.room);
   useEpisodeNotices();
-  if (!room) return null;
+  // A live stream has no end and no queue: it is a séance of its own.
+  if (!room || isLive(room.media)) return null;
   const end = episodeEndOf(room);
   return (
     <>

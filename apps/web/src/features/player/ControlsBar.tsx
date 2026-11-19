@@ -1,12 +1,14 @@
 import type { Reaction } from "@annamour/protocol";
 import { Ellipsis, ListVideo, Maximize, Pause, Play, RotateCcw, RotateCw, SkipForward, Subtitles } from "lucide-react";
 import { formatClock } from "../../lib/format.ts";
+import type { SyncMedia } from "../../sync/media.ts";
 import { cx } from "../../ui/cx.ts";
 import { IconButton } from "../../ui/IconButton.tsx";
 import { Surface } from "../../ui/Surface.tsx";
 import { useTv } from "../tv/tv-context.ts";
 import { EndClock } from "./EndClock.tsx";
 import { useQueueTitle } from "./EpisodeLayer.tsx";
+import { LiveRow } from "./LiveRow.tsx";
 import { ReactionPicker } from "./ReactionPicker.tsx";
 import { Scrubber } from "./Scrubber.tsx";
 import { SEEK_STEP } from "./seek.ts";
@@ -14,15 +16,19 @@ import { useVideoClock } from "./usePlayerEffects.ts";
 import { VolumeControl } from "./VolumeControl.tsx";
 
 interface ControlsBarProps {
-  video: HTMLVideoElement | null;
+  video: SyncMedia | null;
   playing: boolean;
   onToggle: () => void;
   onSeek: (position: number) => void;
   reactionsOpen: boolean;
   onReactionsOpenChange: (open: boolean) => void;
   onReact: (emoji: Reaction) => void;
-  onOpenTracks: () => void;
-  onOpenUpNext: () => void;
+  /** Absent when there is nothing to choose (a YouTube video). */
+  onOpenTracks: (() => void) | undefined;
+  /** Absent during a live stream: it is a séance of its own. */
+  onOpenUpNext: (() => void) | undefined;
+  /** A live stream: « En direct » and « Revenir au direct » instead of the timeline and ±10 s. */
+  live: boolean;
   /** « ⋯ » on a phone held upright: tracks, episodes, sound and full screen. */
   onOpenMore: () => void;
   /** Skips to the next episode for everyone; absent on the last one. */
@@ -52,11 +58,16 @@ export function ControlsBar(props: ControlsBarProps) {
 
   return (
     <Surface className="surface-panel mx-auto grid w-full max-w-[55rem] gap-0.5 px-2 pt-2.5 pb-1.5 sm:px-3">
-      <div className="flex items-center gap-3 px-2 text-xs font-semibold text-fg-muted tabular-nums">
-        <span>{formatClock(clock.current)}</span>
-        <Scrubber clock={clock} onSeek={onSeek} className="flex-1" />
-        <EndClock clock={clock} />
-      </div>
+      {props.live ? (
+        // The live edge is where YouTube's player says the stream has got to.
+        <LiveRow onBackToLive={() => clock.duration > 0 && onSeek(clock.duration)} />
+      ) : (
+        <div className="flex items-center gap-3 px-2 text-xs font-semibold text-fg-muted tabular-nums">
+          <span>{formatClock(clock.current)}</span>
+          <Scrubber clock={clock} onSeek={onSeek} className="flex-1" />
+          <EndClock clock={clock} />
+        </div>
+      )}
       {/* A phone held upright keeps five buttons in one row; everything else waits behind « ⋯ ». */}
       <div className={"grid grid-cols-5 justify-items-center sm:flex sm:items-center sm:justify-start sm:gap-1"}>
         <IconButton
@@ -66,14 +77,25 @@ export function ControlsBar(props: ControlsBarProps) {
           data-tv-primary
           className="[&>svg]:size-6 [&>svg]:fill-current"
         />
-        <IconButton label="Reculer de 10 secondes" icon={<RotateCcw />} onClick={() => skip(-SEEK_STEP)} />
-        <IconButton label="Avancer de 10 secondes" icon={<RotateCw />} onClick={() => skip(SEEK_STEP)} />
+        {props.live ? null : (
+          <>
+            <IconButton label="Reculer de 10 secondes" icon={<RotateCcw />} onClick={() => skip(-SEEK_STEP)} />
+            <IconButton label="Avancer de 10 secondes" icon={<RotateCw />} onClick={() => skip(SEEK_STEP)} />
+          </>
+        )}
         <div className={cx("contents", folded)}>
           <VolumeControl />
         </div>
         <span className="hidden flex-1 sm:block" />
         <ReactionPicker open={props.reactionsOpen} onOpenChange={props.onReactionsOpenChange} onReact={props.onReact} />
-        <IconButton label="Audio et sous-titres" icon={<Subtitles />} onClick={props.onOpenTracks} className={folded} />
+        {props.onOpenTracks ? (
+          <IconButton
+            label="Audio et sous-titres"
+            icon={<Subtitles />}
+            onClick={props.onOpenTracks}
+            className={folded}
+          />
+        ) : null}
         {props.onSkipNext ? (
           <IconButton
             label="Épisode suivant"
@@ -82,7 +104,9 @@ export function ControlsBar(props: ControlsBarProps) {
             className="max-sm:hidden"
           />
         ) : null}
-        <IconButton label={queueTitle} icon={<ListVideo />} onClick={props.onOpenUpNext} className={folded} />
+        {props.onOpenUpNext ? (
+          <IconButton label={queueTitle} icon={<ListVideo />} onClick={props.onOpenUpNext} className={folded} />
+        ) : null}
         {tv ? null : (
           <IconButton label="Plein écran" icon={<Maximize />} onClick={props.onFullscreen} className={folded} />
         )}

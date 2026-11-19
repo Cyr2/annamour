@@ -1,5 +1,6 @@
 import { deviceKind } from "@annamour/protocol";
 import { useEffect, useRef } from "react";
+import type { SyncMedia } from "./media.ts";
 import type { PlaybackEngine } from "./PlayerSync.ts";
 import { beaconSender, PlaybackStats } from "./playback-stats.ts";
 import { type RoomState, useRoom, waitingForOthers } from "./room.ts";
@@ -9,7 +10,7 @@ const myName = ({ members, you }: RoomState) => members.find((member) => member.
 
 /** Reports how well the film plays on this device to the séance (see playback-stats.ts). */
 export function usePlaybackStats(
-  video: HTMLVideoElement | null,
+  video: SyncMedia | null,
   client: SyncClient | null,
   engine: PlaybackEngine | null,
 ): void {
