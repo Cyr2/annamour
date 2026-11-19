@@ -52,7 +52,7 @@ export function TrackPickers({ code, media }: { code: string; media: Pick<Media,
             />
           </div>
         ) : (
-          <p className="text-sm text-fg-muted">Ce film n'a pas de sous-titres.</p>
+          <p className="text-sm text-fg-muted">Pas de sous-titres pour cette vidéo.</p>
         )}
       </Field>
     </>

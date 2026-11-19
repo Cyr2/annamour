@@ -13,8 +13,9 @@ describe("what the player offers for what plays", () => {
     expect(isLive(undefined)).toBe(false);
   });
 
-  it("offers « Audio et sous-titres » for our own player as before, never for YouTube's", () => {
-    expect(hasTracks(youtube(false))).toBe(false);
+  it("offers « Audio et sous-titres » for a film and for YouTube, whose captions it lists", () => {
+    expect(hasTracks(youtube(false))).toBe(true);
+    expect(hasTracks(youtube(true))).toBe(true);
     expect(hasTracks(film)).toBe(true);
     expect(hasTracks(undefined)).toBe(false);
   });
@@ -25,7 +26,8 @@ describe("the player's offers", () => {
 
   it("leave out the queue and « Épisode suivant » during a live stream", () => {
     const live = sourceOffers(youtube(true), actions);
-    expect(live).toMatchObject({ live: true, openUpNext: undefined, skipToNext: undefined, openTracks: undefined });
+    expect(live).toMatchObject({ live: true, openUpNext: undefined, skipToNext: undefined });
+    expect(live.openTracks).toBeTypeOf("function");
     const video = sourceOffers(film, actions);
     expect(video.live).toBe(false);
     expect(video.openUpNext).toBeTypeOf("function");

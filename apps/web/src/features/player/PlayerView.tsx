@@ -175,7 +175,7 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
         onSkipNext={skipToNext}
         onFullscreen={fullscreen}
       />
-      <TracksSheet open={tracksOpen} onClose={() => setTracksOpen(false)} code={code} media={media} />
+      <TracksSheet open={tracksOpen} onClose={() => setTracksOpen(false)} code={code} media={media} video={video} />
     </section>
   );
 }
