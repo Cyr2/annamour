@@ -105,7 +105,9 @@ function episodeMedia(code: string, title: string, episode: Episode): Media {
   const { imported } = episode;
   return {
     title: episodeTitle(title, episode.label),
-    src: `${base}/hls/master.m3u8`,
+    // A YouTube video plays in YouTube's player: no playlist of ours.
+    src: imported.youtube ? "" : `${base}/hls/master.m3u8`,
+    ...(imported.youtube ? { youtube: imported.youtube } : {}),
     audio: imported.audio,
     subtitles: imported.subtitles.map((s) => ({ ...s, url: `${base}/subs/${s.id}.vtt` })),
     ...(imported.duration ? { duration: imported.duration } : {}),
@@ -179,6 +181,23 @@ export class Room {
     return this.episodes.flatMap(({ id, catalog, skips, imported }) =>
       catalog && !skips ? [{ id, catalog, duration: imported.duration }] : [],
     );
+  }
+
+  /**
+   * What YouTube's player told of a video: its length, and whether it is live.
+   * Only the first answer counts (every device sends it), and only for a YouTube episode.
+   */
+  private learnYouTube(index: number, duration: number, live: boolean, now: number): void {
+    const imported = this.episodes[index]?.imported;
+    if (!imported?.youtube) return;
+    // Already learned: a live stream, or a video whose length is known.
+    if (imported.youtube.live || imported.duration !== undefined) return;
+    imported.youtube = { ...imported.youtube, live };
+    if (!live && duration > 0) imported.duration = duration;
+    // A live stream's « length » is its edge: everyone starts there, not at the start of YouTube's rewind window.
+    if (live && duration > 0 && index === this.progress.current)
+      this.playback = { ...this.playback, position: duration, at: now };
+    this.broadcastRoom();
   }
 
   /** An episode's intro and credits are known: everyone's player can offer to skip them. */
@@ -447,10 +466,16 @@ export class Room {
 
   private handleEpisodeMessage(
     memberId: string,
-    message: Extract<ClientMessage, { type: "ended" | "credits" | "playEpisode" | "declineNext" | "removeEpisode" }>,
+    message: Extract<
+      ClientMessage,
+      { type: "ended" | "credits" | "youtubeInfo" | "playEpisode" | "declineNext" | "removeEpisode" }
+    >,
     now: number,
   ): void {
     switch (message.type) {
+      case "youtubeInfo":
+        this.learnYouTube(message.episode, message.duration, message.live, now);
+        return;
       case "ended":
         this.onEnded(message.episode, now);
         return;

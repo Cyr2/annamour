@@ -52,7 +52,7 @@ export async function createSession(page: Page, title: string, url = HLS_URL): P
   await page.getByRole("button", { name: "Créer une séance" }).click();
   // The sheet opens on the title search; a link stays one tap away.
   await page.getByRole("button", { name: "Coller un lien" }).click();
-  await page.getByLabel("Lien de la vidéo (.m3u8)").fill(url);
+  await page.getByLabel("Lien de la vidéo (.m3u8 ou YouTube)").fill(url);
   await page.getByLabel("Nom de la séance").fill(title);
   // Two steps only: once the film is found, the salon opens by itself.
   await page.getByRole("button", { name: "Préparer la séance" }).click();

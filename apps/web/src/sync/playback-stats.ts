@@ -7,6 +7,7 @@ import {
   median,
   type PlaybackReport,
 } from "@annamour/protocol";
+import type { SyncMedia } from "./media.ts";
 
 /*
  * Measures how well the film plays on this device, only while the séance is
@@ -20,7 +21,7 @@ import {
  */
 
 export interface PlaybackStatsOptions {
-  video: HTMLVideoElement;
+  video: SyncMedia;
   /** True while the séance's shared state is « playing ». */
   roomPlaying: () => boolean;
   /** True while the séance stands paused waiting for someone else to load. */
@@ -156,7 +157,7 @@ export class PlaybackStats {
     this.sampleLead(video, elapsed);
   };
 
-  private samplePicture(video: HTMLVideoElement, elapsed: number): void {
+  private samplePicture(video: SyncMedia, elapsed: number): void {
     const height = video.videoHeight;
     if (height <= 0) return;
     if (this.lastHeight > 0 && height !== this.lastHeight) this.qualitySwitches++;
@@ -164,7 +165,7 @@ export class PlaybackStats {
     this.heights = addHeightTime(this.heights, height, elapsed);
   }
 
-  private sampleLead(video: HTMLVideoElement, elapsed: number): void {
+  private sampleLead(video: SyncMedia, elapsed: number): void {
     const { buffered } = video;
     const ranges = Array.from({ length: buffered.length }, (_, i) => [buffered.start(i), buffered.end(i)] as const);
     const lead = bufferedAhead(ranges, video.currentTime);

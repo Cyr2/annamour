@@ -124,7 +124,8 @@ export function LobbyView({ code, onStart }: { code: string; onStart: (fromStart
         {/* Downloading the whole film is only worth it when the server cannot make lighter qualities;
             a TV is on a home connection, with no room to store a film. On a phone it comes after
             the invitation, which matters first; on a wide screen, under « Lancer ». */}
-        {room && !tv && prep?.available === false && "caches" in window ? (
+        {/* A YouTube video plays in YouTube's player: nothing of it can be downloaded. */}
+        {room && !room.media.youtube && !tv && prep?.available === false && "caches" in window ? (
           <div className="grid justify-items-center empty:hidden md:order-3 md:col-start-2">
             <DownloadCard src={room.media.src} duration={room.media.duration} />
           </div>

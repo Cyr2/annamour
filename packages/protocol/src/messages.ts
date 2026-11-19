@@ -6,6 +6,7 @@
 import { z } from "zod/mini";
 import { CatalogRef, PlayCatalogRequest } from "./catalog.ts";
 import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "./room-code.ts";
+import { YouTubeVideo } from "./youtube.ts";
 
 /** The colours a person can pick for their bubble. Values live in the web tokens. */
 export const BUBBLE_COLORS = ["peach", "lilac", "mint", "sky", "butter", "rose"] as const;
@@ -17,7 +18,8 @@ export const RoomCode = z.string().check(
   z.refine((s) => [...s].every((c) => ROOM_CODE_ALPHABET.includes(c)), "invalid room code"),
 );
 
-export const Position = z.number().check(z.gte(0), z.lte(60 * 60 * 24));
+/** Seconds into the video. A YouTube live stream counts from when it went on air, months ago for some. */
+export const Position = z.number().check(z.gte(0), z.lte(60 * 60 * 24 * 365 * 10));
 
 export const PlaybackStateSchema = z.object({
   status: z.enum(["playing", "paused"]),
@@ -52,11 +54,13 @@ export type SubtitleTrack = z.infer<typeof SubtitleTrack>;
 
 export const Media = z.object({
   title: z.string(),
-  /** Same-origin playlist served by the Annamour server. */
+  /** Same-origin playlist served by the Annamour server (empty for a YouTube video). */
   src: z.string(),
   audio: z.array(AudioTrack),
   subtitles: z.array(SubtitleTrack),
   duration: z.optional(z.number()),
+  /** Played in YouTube's own player instead of the HLS one. */
+  youtube: z.optional(YouTubeVideo),
 });
 export type Media = z.infer<typeof Media>;
 
@@ -132,6 +136,16 @@ export const ClientMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("ended"), episode: EpisodeIndex }),
   /** This device reached the end credits of `episode`: the next one's countdown starts for everyone. */
   z.object({ type: z.literal("credits"), episode: EpisodeIndex }),
+  /**
+   * What YouTube's player tells once it has loaded `episode`: its length (0 for
+   * a live stream) and whether it is live. The first device to say so teaches the room.
+   */
+  z.object({
+    type: z.literal("youtubeInfo"),
+    episode: EpisodeIndex,
+    duration: z.number().check(z.gte(0)),
+    live: z.boolean(),
+  }),
   /** Move everyone from episode `from` to episode `to` (once, however many devices ask). */
   z.object({ type: z.literal("playEpisode"), from: EpisodeIndex, to: EpisodeIndex }),
   /** « Pas ce soir »: stop the countdown for everyone. */

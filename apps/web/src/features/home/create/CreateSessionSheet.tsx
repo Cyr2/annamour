@@ -10,13 +10,14 @@ import { CatalogForm } from "./CatalogForm.tsx";
 import { CircleTarget } from "./CircleTarget.tsx";
 import { ExistingSeanceStep } from "./ExistingSeanceStep.tsx";
 import { LinkForm } from "./LinkForm.tsx";
+import type { LinkKind } from "./link-rules.ts";
 import { useCreateSession } from "./useCreateSession.ts";
 
 /* « Créer une séance »: for whom, then find a title by name (or paste a link), we import it, then the salon opens. */
 
 export function CreateSessionSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { state, prepare, prepareFromCatalog, reset } = useCreateSession();
-  const [byLink, setByLink] = useState(false);
+  const [byLink, setByLink] = useState<LinkKind | null>(null);
   const [existing, setExisting] = useState<{ session: SessionSummary; play: PlayCatalogRequest } | null>(null);
   // Untouched, the séance goes to the circle on screen; a pick on the sheet holds until it closes.
   const [picked, setPicked] = useState<{ circleId: string | null } | null>(null);
@@ -27,7 +28,7 @@ export function CreateSessionSheet({ open, onClose }: { open: boolean; onClose: 
   const close = () => {
     onClose();
     reset();
-    setByLink(false);
+    setByLink(null);
     setExisting(null);
     setPicked(null);
   };
@@ -55,19 +56,28 @@ export function CreateSessionSheet({ open, onClose }: { open: boolean; onClose: 
         />
       ) : null}
       {choosing && !byLink ? (
-        <CatalogForm error={state.error} onPlay={play} onPasteLink={() => setByLink(true)} onCancel={close} />
+        <CatalogForm
+          error={state.error}
+          onPlay={play}
+          onPasteLink={() => setByLink("m3u8")}
+          onYouTube={() => setByLink("youtube")}
+          onCancel={close}
+        />
       ) : null}
       {state.step === "link" && byLink ? (
         <LinkForm
+          kind={byLink}
           error={state.error}
           onSubmit={(url, title) => prepare(url, title, circleId)}
-          onCancel={() => setByLink(false)}
+          onCancel={() => setByLink(null)}
         />
       ) : null}
       {state.step === "loading" ? (
         <div className="flex items-center gap-3 px-1 py-[18px] text-fg-muted" role="status">
           <ThreadSpinner />
-          On récupère le film, les langues et les sous-titres…
+          {byLink === "youtube"
+            ? "On prépare la vidéo YouTube…"
+            : "On récupère le film, les langues et les sous-titres…"}
         </div>
       ) : null}
     </Sheet>

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import type { SyncMedia } from "../../sync/media.ts";
 import { type RoomState, useRoom } from "../../sync/room.ts";
 import { useAccount } from "../account/account.ts";
 import { askRatingIfNone, titleToRateOnLeave } from "../ratings/rate-question.ts";
@@ -9,7 +10,7 @@ import { askIfFinished, finishQuestion, type WatchedTo } from "../sessions/finis
  * screen. Only for a film watched on this visit (its position is the video's,
  * not a saved one) and for an account, which has séances to keep.
  */
-export function useAskIfFinishedOnLeave(video: HTMLVideoElement | null) {
+export function useAskIfFinishedOnLeave(video: SyncMedia | null) {
   const watchedTo = useRef<WatchedTo | null>(null);
 
   useEffect(() => {

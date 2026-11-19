@@ -37,6 +37,8 @@ const StoredMedia = z.object({
   subtitleFiles: FileEntries,
   subtitles: z.array(z.object(SubtitleTrack.shape).omit({ url: true })),
   duration: z.number().nullable(),
+  /** A YouTube video (no playlists); absent on rows kept before. */
+  youtube: z.object({ videoId: z.string(), live: z.boolean() }).optional(),
 });
 
 const RoomRow = z.object({
@@ -74,6 +76,7 @@ function serializeMedia(media: ImportedMedia): string {
     subtitleFiles: [...media.subtitleFiles],
     subtitles: media.subtitles,
     duration: media.duration ?? null,
+    ...(media.youtube ? { youtube: media.youtube } : {}),
   } satisfies z.input<typeof StoredMedia>);
 }
 
@@ -85,6 +88,7 @@ function deserializeMedia(json: string): ImportedMedia {
     subtitleFiles: new Map(stored.subtitleFiles),
     subtitles: stored.subtitles,
     duration: stored.duration ?? undefined,
+    ...(stored.youtube ? { youtube: stored.youtube } : {}),
   };
 }
 

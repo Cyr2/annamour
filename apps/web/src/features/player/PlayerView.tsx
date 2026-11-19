@@ -2,6 +2,7 @@ import type { Reaction } from "@annamour/protocol";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { keepScreenAwake } from "../../lib/screen-awake.ts";
+import type { SyncMedia } from "../../sync/media.ts";
 import { useRoom } from "../../sync/room.ts";
 import type { SyncClient } from "../../sync/SyncClient.ts";
 import type { PlayerSyncHandle } from "../../sync/usePlayerSync.ts";
@@ -9,6 +10,7 @@ import { cx } from "../../ui/cx.ts";
 import { useTv } from "../tv/tv-context.ts";
 import { ControlsBar } from "./ControlsBar.tsx";
 import { EpisodeLayer, useEpisodeOver, useSkipNext } from "./EpisodeLayer.tsx";
+import { FilmSurface } from "./FilmSurface.tsx";
 import { FloatingReactions } from "./FloatingReactions.tsx";
 import { leaveFullscreen, toggleFullscreen } from "./fullscreen.ts";
 import { PlayerMoreSheet } from "./PlayerMoreSheet.tsx";
@@ -17,6 +19,7 @@ import { PlayerTopBar } from "./PlayerTopBar.tsx";
 import { filmIsOn } from "./readying-rules.ts";
 import { SeekBadge } from "./SeekBadge.tsx";
 import { SkipLayer } from "./SkipLayer.tsx";
+import { sourceOffers } from "./source-rules.ts";
 import { TracksSheet } from "./TracksSheet.tsx";
 import { useEpisodeEndReport } from "./useEpisodeEndReport.ts";
 import { useControlsHidden, usePlaybackNotices, useTrackChoice, useVolumeOnVideo } from "./usePlayerEffects.ts";
@@ -28,8 +31,8 @@ import { useVolume } from "./volume.ts";
 interface PlayerViewProps {
   code: string;
   active: boolean;
-  video: HTMLVideoElement | null;
-  onVideo: (video: HTMLVideoElement | null) => void;
+  video: SyncMedia | null;
+  onVideo: (video: SyncMedia | null) => void;
   player: PlayerSyncHandle;
   client: SyncClient | null;
 }
@@ -56,6 +59,11 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
   const [, navigate] = useLocation();
   const controlsLayer = useRef<HTMLDivElement>(null);
   const { controls } = player;
+  const { live, openTracks, openUpNext, skipToNext } = sourceOffers(media, {
+    setTracksOpen,
+    setUpNextOpen,
+    skipNext,
+  });
 
   // Full screen belongs to the film: leaving the player gives the app back, upright.
   useEffect(() => leaveFullscreen, []);
@@ -104,19 +112,7 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
       className={cx("fixed inset-0 overflow-hidden bg-screen", !active && "invisible")}
     >
       {/* Not a glisse backdrop: bending a playing film costs a full-screen filter every frame. */}
-      {/* biome-ignore lint/a11y/useMediaCaption: subtitle tracks come from the room's media at runtime (mapped below). */}
-      <video ref={onVideo} className="absolute inset-0 size-full object-contain" playsInline>
-        {media?.subtitles.map((track) => (
-          <track
-            key={track.id}
-            id={track.id}
-            kind="subtitles"
-            src={track.url}
-            srcLang={track.language}
-            label={track.label}
-          />
-        ))}
-      </video>
+      <FilmSurface media={media} onVideo={onVideo} />
       <FloatingReactions />
       {/* The film's surface: tapping it plays or pauses (Space and K do it from the keyboard). With the controls hidden, a tap only brings them back. */}
       <div
@@ -147,10 +143,11 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
           reactionsOpen={reactionsOpen}
           onReactionsOpenChange={setReactionsOpen}
           onReact={react}
-          onOpenTracks={() => setTracksOpen(true)}
-          onOpenUpNext={() => setUpNextOpen(true)}
+          onOpenTracks={openTracks}
+          onOpenUpNext={openUpNext}
+          live={live}
           onOpenMore={() => setMoreOpen(true)}
-          onSkipNext={skipNext}
+          onSkipNext={skipToNext}
           onFullscreen={fullscreen}
         />
       </div>
@@ -160,7 +157,8 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
       <WaitBanner members={loading} />
       <ReadyBanner slowest={slowest} />
       <VideoLoading visible={active && player.buffering && !player.error && !player.blocked && !over} />
-      {active && player.blocked ? <BlockedNotice onUnlock={controls.unlock} /> : null}
+      {/* A video that cannot play says so alone: « touche pour rejoindre » would lead nowhere. */}
+      {active && player.blocked && !player.error ? <BlockedNotice onUnlock={controls.unlock} /> : null}
       {player.error ? <PlayerError message={player.error} /> : null}
       <EpisodeLayer
         active={active}
@@ -172,9 +170,9 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
       <PlayerMoreSheet
         open={moreOpen}
         onClose={() => setMoreOpen(false)}
-        onOpenTracks={() => setTracksOpen(true)}
-        onOpenUpNext={() => setUpNextOpen(true)}
-        onSkipNext={skipNext}
+        onOpenTracks={openTracks}
+        onOpenUpNext={openUpNext}
+        onSkipNext={skipToNext}
         onFullscreen={fullscreen}
       />
       <TracksSheet open={tracksOpen} onClose={() => setTracksOpen(false)} code={code} media={media} />

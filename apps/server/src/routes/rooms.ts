@@ -16,9 +16,10 @@ import { type AppEnv, clientIp, type RouteDeps, readBody, sessionToken } from ".
 import { isAppleDevice, isAppleNativePlayer } from "../media/hevc.ts";
 import { FetchError } from "../safe-fetch.ts";
 import { RateLimiter } from "../services/rate-limiter.ts";
+import { YouTubeError } from "../youtube.ts";
 
 const CREATE_LIMIT = { windowMs: 60_000, max: 10 };
-const IMPORT_HELP = "Colle un lien https vers une playlist .m3u8.";
+const IMPORT_HELP = "Colle un lien https vers une playlist .m3u8 ou une vidéo YouTube.";
 
 /**
  * HEVC is shown to Apple's own player, and its complete ladder to our player
@@ -42,6 +43,7 @@ function mediaType(path: string): string {
 /** What to tell the person when a link can't be imported; null for unexpected errors. */
 function importErrorMessage(error: unknown): string | null {
   if (error instanceof HlsError) return "Ce lien ne mène pas à une vidéo lisible.";
+  if (error instanceof YouTubeError) return "Cette vidéo YouTube est introuvable, privée ou ne se laisse pas intégrer.";
   if (error instanceof FetchError) {
     // Signed CDN links answer 401/403 once their token has expired.
     const expired = error.status === 401 || error.status === 403;
