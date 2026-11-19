@@ -34,6 +34,16 @@ function Capsule({ toast, at }: { toast: Toast; at: ToasterPlace }) {
         ) : null}
         {toast.icon ? <span className="grid shrink-0 text-accent [&>svg]:size-[18px]">{toast.icon}</span> : null}
         <span>{toast.message}</span>
+        {toast.action ? (
+          <button
+            type="button"
+            onClick={toast.action.onClick}
+            // The list lets touches through to the page; its button takes them.
+            className="pointer-events-auto -my-2 -mr-3 min-h-11 rounded-pill px-3 font-bold text-accent"
+          >
+            {toast.action.label}
+          </button>
+        ) : null}
       </Surface>
     </m.li>
   );

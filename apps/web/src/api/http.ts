@@ -78,11 +78,29 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
   }
 }
 
+let inFlight = 0;
+
+/** Requests not answered yet: a new version of the app is only offered once none is (see app-update.ts). */
+export const requestsInFlight = () => inFlight;
+
 /** Calls the API and returns the body parsed by `schema`, or throws an ApiRequestError. */
 export async function request<Schema extends z.ZodMiniType>(
   schema: Schema,
   path: string,
   options: RequestOptions = {},
+): Promise<z.infer<Schema>> {
+  inFlight++;
+  try {
+    return await answerOf(schema, path, options);
+  } finally {
+    inFlight--;
+  }
+}
+
+async function answerOf<Schema extends z.ZodMiniType>(
+  schema: Schema,
+  path: string,
+  options: RequestOptions,
 ): Promise<z.infer<Schema>> {
   const response = await send(path, options);
   const body = await readJson(response);

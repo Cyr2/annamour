@@ -130,6 +130,17 @@ describe("serving the built app", () => {
     expect(sw.headers.get("cdn-cache-control")).toBe("no-store");
   });
 
+  it("lets no cache keep anything without a hash in its name: the page, the scripts that register the worker", async () => {
+    await writeFile(join(dist, "registerSW.js"), "navigator.serviceWorker.register('/sw.js')");
+    await writeFile(join(dist, "workbox-1a2b.js"), "self.workbox = {}");
+    const app = createApp(testServices(), { webDist: dist });
+    for (const path of ["/", "/registerSW.js", "/workbox-1a2b.js"]) {
+      const response = await app.request(path);
+      expect(response.status, path).toBe(200);
+      expect(response.headers.get("cache-control"), path).toBe("no-cache");
+    }
+  });
+
   it("gzips the app's scripts for browsers that accept it", async () => {
     await writeFile(join(dist, "assets", "big.js"), `console.info("${"annamour ".repeat(400)}")`);
     const app = createApp(testServices(), { webDist: dist });
