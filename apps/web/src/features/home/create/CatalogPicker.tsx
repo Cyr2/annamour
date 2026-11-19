@@ -4,6 +4,7 @@ import { Input } from "../../../ui/controls.tsx";
 import { Field } from "../../../ui/Field.tsx";
 import { ThreadSpinner } from "../../../ui/ThreadSpinner.tsx";
 import { CatalogResults } from "./CatalogResults.tsx";
+import { episodeRequest, filmRequest } from "./catalog-rules.ts";
 import { EpisodePicker } from "./EpisodePicker.tsx";
 import { useCatalogSearch } from "./useCatalogSearch.ts";
 
@@ -15,13 +16,6 @@ interface CatalogPickerProps {
   label?: string;
 }
 
-/** The poster goes along, so the séance can show it on « Ce soir ». */
-/** What goes along with the title picked: its poster (for the séance's card) and TMDB's number (for its intro). */
-const posterOf = (title: CatalogTitle) => ({
-  ...(title.posterUrl ? { posterUrl: title.posterUrl } : {}),
-  ...(title.tmdbId ? { tmdbId: title.tmdbId } : {}),
-});
-
 /** Type a title, pick it (and, for a series, its episode). Used to create a séance and to queue what follows. */
 export function CatalogPicker({ onPick, error, label = "Titre" }: CatalogPickerProps) {
   const queryId = useId();
@@ -31,7 +25,7 @@ export function CatalogPicker({ onPick, error, label = "Titre" }: CatalogPickerP
 
   const pick = (title: CatalogTitle) => {
     if (title.type === "tv") setShow(title);
-    else onPick({ id: title.id, type: "movie", title: title.title, ...posterOf(title) });
+    else onPick(filmRequest(title));
   };
 
   if (show) {
@@ -39,9 +33,7 @@ export function CatalogPicker({ onPick, error, label = "Titre" }: CatalogPickerP
       <EpisodePicker
         show={show}
         onBack={() => setShow(null)}
-        onPick={(season, episode) =>
-          onPick({ id: show.id, type: "tv", title: show.title, season, episode, ...posterOf(show) })
-        }
+        onPick={(season, episode, language) => onPick(episodeRequest(show, { season, episode, language }))}
       />
     );
   }
@@ -55,7 +47,7 @@ export function CatalogPicker({ onPick, error, label = "Titre" }: CatalogPickerP
           enterKeyHint="search"
           value={query}
           onValueChange={setQuery}
-          placeholder="Interstellar, Euphoria…"
+          placeholder="Interstellar, Euphoria, Frieren…"
           autoComplete="off"
           maxLength={80}
           data-autofocus

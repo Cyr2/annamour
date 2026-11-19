@@ -1,11 +1,10 @@
-import { type BrowserContext, chromium, type Page } from "playwright";
+import type { Page } from "playwright";
 import type { NakaAnswer, NakaCaller } from "./bridge.ts";
+import { closeSharedContext, sharedContext } from "./browser.ts";
 
 const NAKA_ORIGIN = "https://naka.cx";
-const CHALLENGE_TITLE = /just a moment|un instant/i;
-const CHALLENGE_WAIT_MS = 45_000;
-/** Kept between calls (and restarts, if on a volume) so Cloudflare's clearance cookie is reused. */
-const PROFILE_DIR = process.env.BROWSER_PROFILE_DIR ?? "/tmp/naka-profile";
+export const CHALLENGE_TITLE = /just a moment|un instant/i;
+export const CHALLENGE_WAIT_MS = 45_000;
 
 export interface NakaAccount {
   token: string;
@@ -30,7 +29,6 @@ const CHALLENGE_FAILED: NakaAnswer = {
  */
 export class NakaPage implements NakaCaller {
   private readonly account: NakaAccount;
-  private context: BrowserContext | null = null;
   private page: Page | null = null;
 
   constructor(account: NakaAccount) {
@@ -71,10 +69,8 @@ export class NakaPage implements NakaCaller {
   }
 
   async close(): Promise<void> {
-    const context = this.context;
-    this.context = null;
     this.page = null;
-    await context?.close().catch(() => undefined);
+    await closeSharedContext();
   }
 
   private async callOnce(apiPath: string): Promise<NakaAnswer> {
@@ -90,15 +86,8 @@ export class NakaPage implements NakaCaller {
 
   private async openPage(): Promise<Page> {
     if (this.page && !this.page.isClosed()) return this.page;
-    this.context ??= await chromium.launchPersistentContext(PROFILE_DIR, {
-      headless: false,
-      locale: "fr-FR",
-      viewport: { width: 1280, height: 800 },
-      // Playwright's automation markers (navigator.webdriver…) make Cloudflare's check fail every time.
-      ignoreDefaultArgs: ["--enable-automation"],
-      args: ["--disable-blink-features=AutomationControlled"],
-    });
-    const page = this.context.pages()[0] ?? (await this.context.newPage());
+    const context = await sharedContext();
+    const page = context.pages()[0] ?? (await context.newPage());
     await this.visit(page);
     this.page = page;
     return page;

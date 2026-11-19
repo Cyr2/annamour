@@ -61,7 +61,7 @@ const naka: Catalog = {
       { id: 902, type: "movie", title: "Demain", tmdbId: 777 },
       { id: 901, type: "movie", title: "Coup de foudre à Notting Hill", tmdbId: 509 },
     ].filter((title) => title.title.toLowerCase().includes(query.toLowerCase())) as CatalogTitle[],
-  season: async () => [],
+  season: async () => ({ episodes: [] }),
   videoUrl: async () => new URL("https://cdn.example/master.m3u8"),
 };
 

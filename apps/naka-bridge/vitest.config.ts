@@ -6,7 +6,7 @@ export default defineConfig({
       provider: "v8",
       include: ["src/**/*.ts"],
       // Both drive a real browser: exercised on the server, not in unit tests.
-      exclude: ["src/index.ts", "src/naka-page.ts"],
+      exclude: ["src/index.ts", "src/browser.ts", "src/naka-page.ts", "src/nakanime-page.ts"],
       reporter: ["text-summary"],
       thresholds: { lines: 90, functions: 90, branches: 85, statements: 90 },
     },

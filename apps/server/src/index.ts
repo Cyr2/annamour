@@ -14,7 +14,7 @@ import {
   fmp4SourceAudio,
   x265Available,
 } from "./media/hevc-ffmpeg.ts";
-import { segmentSource } from "./media/segment-source.ts";
+import { type SegmentSource, segmentSource } from "./media/segment-source.ts";
 import { BYTES_PER_GB } from "./media/storage-cap.ts";
 import { Transcoder } from "./media/transcoder.ts";
 import { attachRealtime } from "./realtime.ts";
@@ -32,6 +32,10 @@ const { nakaBridge } = config;
 // The end-to-end tests serve their film from a fake CDN on localhost (refused in production by loadConfig).
 const fetchText = config.allowLocalMedia ? localTestFetchText : safeFetchText;
 const fetchBytes = config.allowLocalMedia ? localTestFetchBytes : safeFetchBytes;
+const plainSource = segmentSource(fetchBytes, nakaBridge);
+// Set once the services exist: Nakanime's expired links are renewed by its relay, which needs the séances.
+let renewingSource: SegmentSource | undefined;
+const source: SegmentSource = (url) => (renewingSource ?? plainSource)(url);
 const transcoder = await lowQualityTranscoder();
 const services = createServices({
   db,
@@ -39,13 +43,18 @@ const services = createServices({
   fetchText,
   relyingParty: config.relyingParty,
   mediaMaxBytes: config.mediaMaxGb * BYTES_PER_GB,
-  ...(nakaBridge ? { catalog: new NakaCatalog(bridgeFetcher(nakaBridge.url, nakaBridge.secret)) } : {}),
+  ...(nakaBridge
+    ? {
+        catalog: new NakaCatalog(bridgeFetcher(nakaBridge.url, nakaBridge.secret)),
+        nakanimeFetch: bridgeFetcher(nakaBridge.url, nakaBridge.secret, "nakanime"),
+      }
+    : {}),
   ...(config.tmdbToken ? { tmdbFetch: tmdbFetcher(config.tmdbToken), skipFetch: skipFetcher } : {}),
   ...(transcoder
     ? {
         transcoder,
         timelineProbe: {
-          source: segmentSource(fetchBytes, nakaBridge),
+          source,
           firstTimestamp,
           describe: describeMedia,
           log: console.info,
@@ -53,6 +62,7 @@ const services = createServices({
       }
     : {}),
 });
+renewingSource = services.relay.renewingSource(plainSource);
 
 /** HEVC's encoders; with `full`, the source's sound in fMP4 too, for the complete ladder. */
 function hevcEncoders(full: boolean) {
@@ -72,7 +82,7 @@ async function lowQualityTranscoder(): Promise<Transcoder | undefined> {
   if (config.hevc && !hevc) console.info("HEVC off: this ffmpeg has no libx265");
   return new Transcoder({
     dir,
-    source: segmentSource(fetchBytes, nakaBridge),
+    source,
     encode: ffmpegEncoder,
     ...(config.lightAudio ? { encodeAudio: ffmpegAudioEncoder } : {}),
     ...(hevc ? { hevc: hevcEncoders(config.hevcFull) } : {}),

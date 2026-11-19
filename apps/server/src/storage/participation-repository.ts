@@ -18,7 +18,7 @@ export interface JoinedRoom {
   /** The current episode's poster, when it came from the catalog. */
   posterUrl: string | undefined;
   /** The catalog title the current episode comes from (the series, for an episode). */
-  catalog: { id: number; type: "movie" | "tv" } | undefined;
+  catalog: Pick<CatalogRef, "id" | "type" | "source"> | undefined;
 }
 
 const JoinedRoomRow = z.object({
@@ -63,7 +63,9 @@ function queuedItem(label: string | null, ref: CatalogRef | undefined): QueuedIt
 
 /** What the history tells of the catalog title a room plays. */
 function catalogOf(ref: CatalogRef | undefined): Pick<JoinedRoom, "posterUrl" | "catalog"> {
-  return { posterUrl: ref?.posterUrl, catalog: ref ? { id: ref.id, type: ref.type } : undefined };
+  // Naka and Nakanime number their titles each their own way: the source tells them apart.
+  const source = ref?.source ? { source: ref.source } : {};
+  return { posterUrl: ref?.posterUrl, catalog: ref ? { id: ref.id, type: ref.type, ...source } : undefined };
 }
 
 /** Who took part in which room: the sessions history of each account. */

@@ -97,8 +97,8 @@ export class CatalogUnavailableError extends UserFacingError {
 }
 
 export class CatalogUnreachableError extends UserFacingError {
-  constructor() {
-    super("Naka ne répond pas. Réessaie dans un instant, ou colle le lien de la vidéo.", 502);
+  constructor(site = "Naka") {
+    super(`${site} ne répond pas. Réessaie dans un instant, ou colle le lien de la vidéo.`, 502);
   }
 }
 
@@ -115,8 +115,8 @@ export class CatalogBusyError extends UserFacingError {
 }
 
 export class NoVideoError extends UserFacingError {
-  constructor() {
-    super("Ce titre n'a pas encore de vidéo sur Naka. Choisis-en un autre.", 404);
+  constructor(site = "Naka") {
+    super(`Ce titre n'a pas encore de vidéo sur ${site}. Choisis-en un autre.`, 404);
   }
 }
 

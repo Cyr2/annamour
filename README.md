@@ -69,8 +69,17 @@ Le conteneur expose `/api/health` pour le healthcheck. Un salon est gardé 60 jo
 
 ### Recherche par titre (`apps/naka-bridge`)
 
-Pour taper le nom d'un film au lieu de coller un lien `.m3u8`, le serveur interroge Naka (accord de leur équipe, à condition de ne jamais surcharger leur site). Leur API est derrière Cloudflare, qui ne laisse passer qu'un vrai navigateur : `naka-bridge` garde un Chromium avec fenêtre (sous Xvfb) ouvert sur naka.cx et n'accepte que trois appels (recherche, saison, sources de lecture), au plus 20 par minute.
+Pour taper le nom d'un film au lieu de coller un lien `.m3u8`, le serveur interroge Naka (accord de leur équipe, à condition de ne jamais surcharger leur site). Leur API est derrière Cloudflare, qui ne laisse passer qu'un vrai navigateur : `naka-bridge` garde un Chromium avec fenêtre (sous Xvfb) ouvert sur naka.cx et n'accepte que trois appels (recherche, saison, sources de lecture), au plus 20 par minute (Nakanime compris, voir plus bas).
 
 1. Nouvelle ressource → ce dépôt → **Dockerfile** `apps/naka-bridge/Dockerfile`, port `3000`, **sans domaine**, alias réseau `naka-bridge`.
 2. Variables : `NAKA_TOKEN` (le `oat_…` de `nakastream-auth` dans le Local Storage de naka.cx), `NAKA_PROFILE` (l'id de `nakastream-profile`), `BRIDGE_SECRET` (`openssl rand -base64 32`). Changer de compte Naka = changer ces deux valeurs et redémarrer.
 3. Sur l'appli Annamour : `NAKA_BRIDGE_URL=http://naka-bridge:3000` et `NAKA_BRIDGE_SECRET` = le même secret.
+
+#### Nakanime (animés)
+
+La même recherche interroge aussi Nakanime (nakanime.tv, même accord que Naka : collaborateurs). Les résultats des deux sites s'affichent ensemble, avec un badge « Naka » ou « Nakanime » ; un animé se choisit par saison, épisode (numérotation de Nakanime, continue d'une saison à l'autre) et version : VF par défaut quand l'épisode l'a, sinon VOSTFR.
+
+- `naka-bridge` lit Nakanime dans un second onglet du même Chromium, comme une personne : page catalogue (recherche), page de l'animé (saisons, épisodes, versions), page de l'épisode (sources), puis page du lecteur (Vidmoly, Voe) pour trouver la playlist HLS. Les réponses chiffrées de leur API ne sont jamais déchiffrées par nous : le bridge lit ce que leur appli a déjà déchiffré. Images, polices et vidéos de ces pages ne sont pas téléchargées. Mêmes secret et budget que Naka : 20 appels par minute pour les deux sites ensemble.
+- La page d'un animé est gardée 24 h (`catalog_cache`) ; jusqu'à 3 lecteurs sont essayés par épisode, la version demandée d'abord.
+- **La vidéo de Nakanime passe par le serveur** (seule source dans ce cas) : ses liens sont signés 12 h et peut-être liés à l'adresse IP qui les a demandés. Chaque segment est relayé à la volée (`/api/rooms/:code/e/:épisode/relay/…`), jamais écrit sur disque ; seuls les liens listés dans la playlist de l'épisode sont demandés (pas de proxy ouvert). Les liens sont renouvelés 15 min avant leur fin ou dès que la source les refuse ; les qualités légères les utilisent aussi.
+- Rien à configurer en plus : avec `NAKA_BRIDGE_URL`, Nakanime est branché.

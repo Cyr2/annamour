@@ -269,10 +269,13 @@ export function relativeDay(time: number, now: number): string {
   return plural(Math.floor(days / 365), "an");
 }
 
-type TitleRef = { id: number; type: "movie" | "tv" };
+type TitleRef = { id: number; type: "movie" | "tv"; source?: "naka" | "nakanime" | undefined };
 
+// Naka and Nakanime number their titles each their own way: the same id on both is two titles.
 const sameTitle = (session: SessionSummary, title: TitleRef) =>
-  session.catalog?.id === title.id && session.catalog.type === title.type;
+  session.catalog?.id === title.id &&
+  session.catalog.type === title.type &&
+  (session.catalog.source ?? "naka") === (title.source ?? "naka");
 
 /** Two séances of the same catalog title (never two séances of pasted links). */
 export const isSameTitle = (a: SessionSummary, b: SessionSummary) => (a.catalog ? sameTitle(b, a.catalog) : false);

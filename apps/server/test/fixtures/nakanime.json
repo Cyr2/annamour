@@ -1,0 +1,450 @@
+{
+  "search": {
+    "data": [
+      {
+        "id": "16",
+        "slug": "one-piece",
+        "title": "One Piece",
+        "format": "TV",
+        "season_year": 1999,
+        "episode_count": 1181,
+        "languages": ["VF", "VOSTFR"],
+        "poster_url": "https://image.tmdb.org/t/p/w500/oag7edI9flSMawmNySEiSEJAbrf.jpg"
+      },
+      {
+        "id": "2660",
+        "slug": "one-piece-kai",
+        "title": "One Piece : Kai",
+        "format": "TV",
+        "season_year": 2018,
+        "episode_count": 137,
+        "languages": ["VF", "VOSTFR"],
+        "poster_url": "https://static.wikia.nocookie.net/fan-kai/images/b/be/One_piece_yabai_affiche.png/revision/latest?cb=20230806004202&path-prefix=fr"
+      },
+      {
+        "id": "1091",
+        "slug": "one-piece-film-1-le-film",
+        "title": "One Piece, film 1 : Le Film",
+        "format": "MOVIE",
+        "season_year": 2000,
+        "episode_count": 1,
+        "languages": ["VF", "VOSTFR"],
+        "poster_url": "https://image.tmdb.org/t/p/w500/mcSelqZam2hcLWSb6kgcHWli2kw.jpg"
+      }
+    ],
+    "meta": {
+      "total": 19,
+      "page": 1,
+      "per_page": 32,
+      "total_pages": 1
+    }
+  },
+  "anime": {
+    "anime": {
+      "id": 17,
+      "slug": "frieren",
+      "format": "TV",
+      "languages": ["MULTI", "VF", "VOSTFR"],
+      "seasons": [
+        {
+          "id": 517,
+          "number": 1,
+          "name": "Saison 1"
+        },
+        {
+          "id": 518,
+          "number": 2,
+          "name": "Saison 2"
+        }
+      ],
+      "episodesList": [
+        {
+          "id": 11749,
+          "number": 1,
+          "title": "La fin de l'aventure",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11750,
+          "number": 2,
+          "title": "Magie ou pas, peu importe",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11751,
+          "number": 3,
+          "title": "Le zoltraak",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11752,
+          "number": 4,
+          "title": "Là où reposent les âmes",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11753,
+          "number": 5,
+          "title": "Mirages",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11754,
+          "number": 6,
+          "title": "Le héros du village",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11755,
+          "number": 7,
+          "title": "Comme un conte de fées",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11756,
+          "number": 8,
+          "title": "Frieren la Fossoyeuse",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11757,
+          "number": 9,
+          "title": "Aura la Guillotine",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11758,
+          "number": 10,
+          "title": "Une mage redoutable",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11759,
+          "number": 11,
+          "title": "L'hiver des Contrées du nord",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11760,
+          "number": 12,
+          "title": "Le véritable héros",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11761,
+          "number": 13,
+          "title": "Répulsion envers un semblable",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11762,
+          "number": 14,
+          "title": "Le privilège de la jeunesse",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11763,
+          "number": 15,
+          "title": "L'odeur des ennuis",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11764,
+          "number": 16,
+          "title": "Amis de longue vie",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11765,
+          "number": 17,
+          "title": "Faites bon voyage",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11766,
+          "number": 18,
+          "title": "L'examen de mage de premier niveau",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11767,
+          "number": 19,
+          "title": "Une stratégie soignée",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11768,
+          "number": 20,
+          "title": "Meurtres nécessaires",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11769,
+          "number": 21,
+          "title": "Le monde de la magie",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11770,
+          "number": 22,
+          "title": "D'alliés à ennemis",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11771,
+          "number": 23,
+          "title": "La conquête du donjon",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11772,
+          "number": 24,
+          "title": "Des copies conformes",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11773,
+          "number": 25,
+          "title": "Le point faible",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11774,
+          "number": 26,
+          "title": "Les sommets de la magie",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11775,
+          "number": 27,
+          "title": "L'âge des Hommes",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11776,
+          "number": 28,
+          "title": "Nos retrouvailles en deviendraient gênantes",
+          "seasonId": 517,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11777,
+          "number": 29,
+          "title": "Allez, reprenons la route",
+          "seasonId": 518,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11778,
+          "number": 30,
+          "title": "Le héros du Sud",
+          "seasonId": 518,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11779,
+          "number": 31,
+          "title": "Le lieu idéal",
+          "seasonId": 518,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11780,
+          "number": 32,
+          "title": "Leurs terres natales",
+          "seasonId": 518,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11781,
+          "number": 33,
+          "title": "La logistique du haut-plateau du nord",
+          "seasonId": 518,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["MULTI", "VF", "VOSTFR"]
+        },
+        {
+          "id": 11782,
+          "number": 34,
+          "title": "L'expédition punitive",
+          "seasonId": 518,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11783,
+          "number": 35,
+          "title": "Revolte le Divin",
+          "seasonId": 518,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11784,
+          "number": 36,
+          "title": "Mort en héros",
+          "seasonId": 518,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        },
+        {
+          "id": 11785,
+          "number": 37,
+          "title": "Les Mémoires de Himmel",
+          "seasonId": 518,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["MULTI", "VF", "VOSTFR"]
+        },
+        {
+          "id": 11786,
+          "number": 38,
+          "title": "Une vue à couper le souffle",
+          "seasonId": 518,
+          "isFiller": false,
+          "hasSources": true,
+          "languages": ["VF", "VOSTFR"]
+        }
+      ]
+    }
+  },
+  "sources": [
+    {
+      "id": 9621,
+      "url": "https://vidmoly.org/embed-b44nsd5xtnfi.html",
+      "host": "vidmoly",
+      "language": "VOSTFR",
+      "episodeId": 11749
+    },
+    {
+      "id": 9733,
+      "url": "https://vidmoly.org/embed-k9m927ql2k8t.html",
+      "host": "vidmoly",
+      "language": "VF",
+      "episodeId": 11749
+    },
+    {
+      "id": 9892,
+      "url": "https://vidmoly.org/embed-oqqsbnualojj.html",
+      "host": "vidmoly",
+      "language": "VOSTFR",
+      "episodeId": 11749
+    },
+    {
+      "id": 10004,
+      "url": "https://vidmoly.org/embed-ghiwo10inca9.html",
+      "host": "vidmoly",
+      "language": "VF",
+      "episodeId": 11749
+    },
+    {
+      "id": 620761,
+      "url": "https://arianathankspecial.com/e/pgixyo9xhq04",
+      "host": "voe",
+      "language": "VF",
+      "episodeId": 11749
+    },
+    {
+      "id": 676113,
+      "url": "https://arianathankspecial.com/e/sbghen8n5cpp",
+      "host": "voe",
+      "language": "VOSTFR",
+      "episodeId": 11749
+    }
+  ]
+}
