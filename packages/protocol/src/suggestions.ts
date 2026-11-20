@@ -16,6 +16,8 @@ export const SuggestionWhy = z.union([
   z.object({ kind: z.enum(["loved", "liked"]), people: z.array(Participant) }),
   /** « Très bien noté : 8,1 ». */
   z.object({ kind: z.literal("acclaimed"), voteAverage: z.number() }),
+  /** « Coup de cœur de l'équipe Naka », « Choix de la communauté Naka ». */
+  z.object({ kind: z.literal("picked"), by: z.enum(["team", "community"]) }),
 ]);
 export type SuggestionWhy = z.infer<typeof SuggestionWhy>;
 

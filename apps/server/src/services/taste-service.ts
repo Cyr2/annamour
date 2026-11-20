@@ -16,6 +16,7 @@ import {
   type TitleDetailsQuery,
   USUAL_AVERAGE,
 } from "@annamour/protocol";
+import type { CatalogPick } from "../catalog/naka-catalog.ts";
 import type { Tmdb, TmdbBrief, TmdbTitle } from "../catalog/tmdb.ts";
 import { NotFoundError } from "../errors.ts";
 import type { DismissalRepository } from "../storage/dismissal-repository.ts";
@@ -47,6 +48,8 @@ const SHORTLIST = 40;
 const NAKA_LOOKUPS = 15;
 /** A circle's suggestions are kept this long while nothing it said changes. */
 const MEMO_MS = 6 * 60 * 60 * 1000;
+/** Naka picks read from TMDB at most, to keep a refresh light. */
+const PICKS_READ = 20;
 /** « Pas pour nous » holds this long. */
 const DISMISS_MS = 180 * 24 * 60 * 60 * 1000;
 
@@ -170,7 +173,7 @@ export class TasteService {
     const usualAverage = averages.length ? averages.reduce((a, b) => a + b, 0) / averages.length : USUAL_AVERAGE;
     const ranked = rankForGroup(people, candidates, excluded, RANKED, { idf, usualAverage });
     const details = new Map(full.flatMap((c) => (c.details ? [[c.candidate.title.key, c.details] as const] : [])));
-    return this.available(ranked, gathered, { details, briefs: rough.briefs }, candidates);
+    return this.available(ranked, gathered, { details, briefs: rough.briefs, picks: rough.picks }, candidates);
   }
 
   private async dismissedTitles(dismissed: Gathered["dismissed"]) {
@@ -190,7 +193,7 @@ export class TasteService {
   private async roughCandidates(
     gathered: Gathered,
     people: Parameters<typeof discoverPath>[0],
-  ): Promise<{ candidates: TasteCandidate[]; briefs: Map<string, TmdbBrief> }> {
+  ): Promise<{ candidates: TasteCandidate[]; briefs: Map<string, TmdbBrief>; picks: Map<string, CatalogPick> }> {
     const { signals, resolved } = gathered;
     const listed = signals.toWatch.flatMap((item) => {
       const found = resolved.get(catalogKey(item.title));
@@ -211,11 +214,34 @@ export class TasteService {
     );
     const found = await this.discovered(signals, people);
     const discovered = found.map((brief) => ({ title: tasteOf(brief), seeds: [], wantedBy: [] }));
+    const picked = await this.picked();
     // Their posters and ratings, for the titles whose full details are not read.
-    const briefs = new Map(
-      [...seeds.flatMap(({ title }) => title.recommendations), ...found].map((b) => [keyOf(b.type, b.tmdbId), b]),
+    const briefs = new Map<string, TmdbBrief>(
+      [...seeds.flatMap(({ title }) => title.recommendations), ...found, ...picked.map((p) => p.details)].map((b) => [
+        keyOf(b.type, b.tmdbId),
+        b,
+      ]),
     );
-    return { candidates: mergeCandidates([...listed, ...lovedElsewhere, ...recommended, ...discovered]), briefs };
+    const pickedCandidates = picked.map(({ details }) => ({ title: tasteOf(details), seeds: [], wantedBy: [] }));
+    return {
+      candidates: mergeCandidates([...listed, ...lovedElsewhere, ...recommended, ...discovered, ...pickedCandidates]),
+      briefs,
+      picks: new Map(picked.map(({ details, pick }) => [keyOf(details.type, details.tmdbId), pick])),
+    };
+  }
+
+  /** Naka's team favourites and community choice, read from TMDB: candidates like any other, ranked on taste. */
+  private async picked(): Promise<{ pick: CatalogPick; details: TmdbTitle }[]> {
+    const { tmdb, catalog } = this.options;
+    if (!tmdb) return [];
+    const picks = (await catalog.picks()).slice(0, PICKS_READ);
+    const found = await Promise.all(
+      picks.map(async (pick) => {
+        const details = pick.title.tmdbId ? await tmdb.title(pick.title.type, pick.title.tmdbId) : null;
+        return details ? [{ pick, details }] : [];
+      }),
+    );
+    return found.flat();
   }
 
   /** « Discover » on the group's taste; for a circle that said little yet, the best rated and the trending. */
@@ -266,7 +292,15 @@ export class TasteService {
   private async available(
     ranked: readonly RankedTitle[],
     { signals, resolved }: Gathered,
-    { details, briefs }: { details: ReadonlyMap<string, TmdbTitle>; briefs: ReadonlyMap<string, TmdbBrief> },
+    {
+      details,
+      briefs,
+      picks,
+    }: {
+      details: ReadonlyMap<string, TmdbTitle>;
+      briefs: ReadonlyMap<string, TmdbBrief>;
+      picks: ReadonlyMap<string, CatalogPick>;
+    },
     candidates: readonly TasteCandidate[],
   ): Promise<GroupSuggestion[]> {
     const listed = new Map(
@@ -282,21 +316,25 @@ export class TasteService {
       const item = listed.get(entry.key);
       const full = details.get(entry.key);
       const brief = full ?? briefs.get(entry.key);
-      const title = item?.title ?? (await this.onNaka(brief, naka));
+      const pick = picks.get(entry.key);
+      // A pick comes with Naka's own title: no search needed.
+      const title = item?.title ?? pick?.title ?? (await this.onNaka(brief, naka));
       if (!title) continue;
       const wantedBy = candidates.find((c) => c.title.key === entry.key)?.wantedBy ?? [];
+      const reasons = reasonsOf(entry, {
+        members: signals.members,
+        signals: signals.signals,
+        resolved,
+        full,
+        brief,
+        wantedBy,
+      });
       suggestions.push({
         title: { ...title, ...(brief?.posterUrl && !title.posterUrl ? { posterUrl: brief.posterUrl } : {}) },
         ...(item ? { itemId: item.id } : {}),
         perfect: entry.perfect,
-        reasons: reasonsOf(entry, {
-          members: signals.members,
-          signals: signals.signals,
-          resolved,
-          full,
-          brief,
-          wantedBy,
-        }),
+        // After the most telling reason: the card says the first, the sheet all of them.
+        reasons: pick ? [...reasons.slice(0, 1), { kind: "picked", by: pick.by }, ...reasons.slice(1)] : reasons,
       });
     }
     return suggestions;

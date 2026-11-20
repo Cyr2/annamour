@@ -6,7 +6,7 @@ import {
   type PlayCatalogRequest,
 } from "@annamour/protocol";
 import { z } from "zod/mini";
-import { type Catalog, isCatalogPoster } from "../catalog/naka-catalog.ts";
+import { type Catalog, type CatalogPick, isCatalogPoster } from "../catalog/naka-catalog.ts";
 import { CatalogUnavailableError, NoVideoError } from "../errors.ts";
 import type { Room } from "../rooms.ts";
 import type { CatalogCacheRepository } from "../storage/catalog-cache-repository.ts";
@@ -36,6 +36,22 @@ function parseKeptTitle(body: string): CatalogTitle | null {
     return parsed.success ? parsed.data.title : null;
   } catch {
     return null;
+  }
+}
+
+const PICKS_KEY = "naka:picks";
+/** Naka's picks change weekly at most: read once a day. */
+const PICKS_TTL_MS = 24 * 60 * 60 * 1000;
+const KeptPicks = z.object({
+  picks: z.array(z.object({ title: CatalogTitle, by: z.enum(["team", "community"]) })),
+});
+
+function parseKeptPicks(body: string): CatalogPick[] {
+  try {
+    const parsed = z.safeParse(KeptPicks, JSON.parse(body));
+    return parsed.success ? parsed.data.picks : [];
+  } catch {
+    return [];
   }
 }
 
@@ -140,6 +156,22 @@ export class CatalogService {
       null;
     this.options.cache?.put(key, JSON.stringify({ title: match }), this.options.now());
     return match;
+  }
+
+  /** The catalog's own picks, read once a day; none when it cannot say. */
+  async picks(): Promise<CatalogPick[]> {
+    const { catalog, cache, now } = this.options;
+    if (!catalog?.picks) return [];
+    const kept = cache?.get(PICKS_KEY, now() - PICKS_TTL_MS);
+    if (kept !== undefined) return parseKeptPicks(kept);
+    let picks: CatalogPick[];
+    try {
+      picks = await catalog.picks();
+    } catch {
+      return [];
+    }
+    cache?.put(PICKS_KEY, JSON.stringify({ picks }), now());
+    return picks;
   }
 
   private catalog(): Catalog {

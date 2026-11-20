@@ -108,6 +108,8 @@ describe("which Naka calls the bridge makes", () => {
     expect(nakaApiPath("/naka/skip-segments?tmdbId=1396&type=tv&season=1&episode=1")).toBe(
       "skip-segments?tmdbId=1396&type=tv&season=1&episode=1",
     );
+    expect(nakaApiPath("/naka/browse/home")).toBe("browse/home");
+    expect(nakaApiPath("/naka/community/choice")).toBe("community/choice");
   });
 
   it("refuses anything that could act on the account", () => {

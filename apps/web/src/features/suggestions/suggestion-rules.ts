@@ -36,6 +36,8 @@ export function reasonLine(reason: SuggestionWhy, me: string, type: CatalogMedia
       return `${type === "tv" ? "Créé" : "Réalisé"} par ${reason.name}`;
     case "genres":
       return `${capitalized(joinNames(reason.genres))}, ${reason.genres.length > 1 ? "vos genres" : "votre genre"}`;
+    case "picked":
+      return reason.by === "team" ? "Coup de cœur de l'équipe Naka" : "Choix de la communauté Naka";
     case "acclaimed":
       return `Très bien noté : ${reason.voteAverage.toLocaleString("fr-FR")} sur 10`;
   }
