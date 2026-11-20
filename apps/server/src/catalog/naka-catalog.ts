@@ -1,6 +1,12 @@
 import type { CatalogEpisode, CatalogTitle, PlayCatalogRequest } from "@annamour/protocol";
 import { z } from "zod";
-import { CatalogAccountError, CatalogBusyError, CatalogUnreachableError, NoVideoError } from "../errors.ts";
+import {
+  CatalogAccountError,
+  CatalogBusyError,
+  CatalogCaptchaError,
+  CatalogUnreachableError,
+  NoVideoError,
+} from "../errors.ts";
 
 /*
  * Naka (naka.cx) as a catalog. Its API sits behind Cloudflare, so the calls go
@@ -26,8 +32,8 @@ export type BridgeFetcher = (apiPath: string) => Promise<BridgeAnswer>;
 export interface Catalog {
   search(query: string): Promise<CatalogTitle[]>;
   season(id: number, season: number): Promise<CatalogEpisode[]>;
-  /** The title's HLS master playlist, with a fresh token. */
-  videoUrl(request: PlayCatalogRequest): Promise<URL>;
+  /** The title's HLS master playlists with fresh tokens, the best first: the next one is tried if one fails. */
+  videoUrls(request: PlayCatalogRequest): Promise<URL[]>;
 }
 
 const NakaTitle = z.object({
@@ -48,8 +54,46 @@ const NakaEpisode = z.object({
   episode_number: z.number().int().positive().optional(),
   name: z.string().nullish(),
   title: z.string().nullish(),
+  /** Naka V2: false for an episode without a video, unless it is `pending` (being put back online). */
+  available: z.boolean().optional(),
+  pending: z.boolean().optional(),
 });
-const NakaSources = z.object({ sources: z.array(z.object({ url: z.string(), isHls: z.boolean().optional() })) });
+const NakaSource = z.object({
+  url: z.string(),
+  isHls: z.boolean().optional(),
+  /** "encoded" is Naka's own copy; "voe-clone" and "darki-clone" live on hosts the bridge does not fetch. */
+  type: z.string().optional(),
+  /** "premium": the subscribers' copy, likely refused to the server's free account. */
+  access: z.string().nullish(),
+  maxQuality: z.string().nullish(),
+});
+const NakaSources = z.object({ sources: z.array(z.unknown()) });
+
+/** Naka's own ranking of its qualities (its player's); a copy without one sits between 720p and 1080p. */
+const QUALITY_RANK: Record<string, number> = {
+  "4K": 50,
+  "2K": 40,
+  "1440p": 40,
+  "1080p": 30,
+  "720p": 20,
+  "480p": 10,
+  "360p": 5,
+};
+const UNKNOWN_QUALITY_RANK = 15;
+
+/** The playlists we can play, the best first: Naka's own HLS copies, the free ones before the premium one. */
+export function playableSources(sources: readonly unknown[]): string[] {
+  const playable = sources.flatMap((raw) => {
+    const parsed = NakaSource.safeParse(raw);
+    if (!parsed.success) return [];
+    const source = parsed.data;
+    if (source.isHls === false || (source.type !== undefined && source.type !== "encoded")) return [];
+    const rank = QUALITY_RANK[source.maxQuality ?? ""] ?? UNKNOWN_QUALITY_RANK;
+    return [{ url: source.url, premium: source.access === "premium", rank }];
+  });
+  playable.sort((a, b) => Number(a.premium) - Number(b.premium) || b.rank - a.rank);
+  return playable.map((source) => source.url);
+}
 
 function yearOf(date: string | null | undefined): number | undefined {
   const year = Number.parseInt(date ?? "", 10);
@@ -87,6 +131,7 @@ export function toCatalogEpisodes(body: unknown): CatalogEpisode[] {
     const parsed = NakaEpisode.safeParse(raw);
     const number = parsed.success ? (parsed.data.episodeNumber ?? parsed.data.episode_number) : undefined;
     if (!parsed.success || number === undefined) return [];
+    if (parsed.data.available === false && !parsed.data.pending) return [];
     const title = parsed.data.name ?? parsed.data.title;
     return [title ? { number, title } : { number }];
   });
@@ -126,7 +171,7 @@ export class NakaCatalog implements Catalog {
     return toCatalogEpisodes(await this.json(`browse/${id}/season/${season}`));
   }
 
-  async videoUrl({ id, type, season, episode }: PlayCatalogRequest): Promise<URL> {
+  async videoUrls({ id, type, season, episode }: PlayCatalogRequest): Promise<URL[]> {
     const query = new URLSearchParams({ type });
     if (season !== undefined && episode !== undefined) {
       query.set("season", String(season));
@@ -135,9 +180,9 @@ export class NakaCatalog implements Catalog {
     const raw = await this.json(`streaming/sources/${id}?${query}`);
     logSourceFields(raw);
     const body = NakaSources.safeParse(raw);
-    const source = body.success ? body.data.sources.find((s) => s.isHls !== false) : undefined;
-    if (!source) throw new NoVideoError();
-    return new URL(source.url, NAKA_ORIGIN);
+    const urls = body.success ? playableSources(body.data.sources) : [];
+    if (urls.length === 0) throw new NoVideoError();
+    return urls.map((url) => new URL(url, NAKA_ORIGIN));
   }
 
   /** Calls the bridge and reads Naka's JSON, turning its failures into what the person can do. */
@@ -148,8 +193,12 @@ export class NakaCatalog implements Catalog {
     } catch {
       throw new CatalogUnreachableError();
     }
-    // Naka answers 400 « No sources found » for a title without a video yet.
-    if (answer.status === 400 || answer.status === 404) throw new NoVideoError();
+    // Naka answers 400 « No sources found » for a title without a video yet, `mirror_pending` while putting one back.
+    if (answer.status === 400 || answer.status === 404 || answer.body.includes("mirror_pending")) {
+      throw new NoVideoError();
+    }
+    // Its check against robots (a proof of work in the browser), off today: the token is not to blame then.
+    if (answer.status === 403 && answer.body.includes("CAPTCHA_REQUIRED")) throw new CatalogCaptchaError();
     if (answer.status === 401 || answer.status === 403) throw new CatalogAccountError();
     if (answer.status === 429) throw new CatalogBusyError();
     if (answer.status !== 200) throw new CatalogUnreachableError();

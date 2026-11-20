@@ -1,6 +1,12 @@
 import { API, CATALOG_API, type CreateAccountResponse } from "@annamour/protocol";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type BridgeAnswer, bridgeFetcher, NakaCatalog, toCatalogEpisodes } from "../src/catalog/naka-catalog.ts";
+import {
+  type BridgeAnswer,
+  bridgeFetcher,
+  NakaCatalog,
+  playableSources,
+  toCatalogEpisodes,
+} from "../src/catalog/naka-catalog.ts";
 import { ConfigError, loadConfig } from "../src/config.ts";
 import type { TextFetcher } from "../src/safe-fetch.ts";
 import { jsonRequest, media, sessionCookieOf, testApp, testStore } from "./helpers.ts";
@@ -55,15 +61,48 @@ describe("the Naka catalog", () => {
 
   it("asks for a film's sources and returns its playlist on naka.cx", async () => {
     const { fetch, calls } = fakeBridge({ "streaming/sources/543?type=movie": SOURCES });
-    const url = await new NakaCatalog(fetch).videoUrl({ id: 543, type: "movie", title: "Interstellar" });
-    expect(url.href).toBe("https://naka.cx/api/v1/r2/movies/157336-unr8i/master.m3u8?token=t&exp=1");
+    const [url] = await new NakaCatalog(fetch).videoUrls({ id: 543, type: "movie", title: "Interstellar" });
+    expect(url?.href).toBe("https://naka.cx/api/v1/r2/movies/157336-unr8i/master.m3u8?token=t&exp=1");
     expect(calls).toEqual(["streaming/sources/543?type=movie"]);
   });
 
   it("asks for one episode of a series", async () => {
     const { fetch, calls } = fakeBridge({ "streaming/sources/91?type=tv&season=2&episode=5": SOURCES });
-    await new NakaCatalog(fetch).videoUrl({ id: 91, type: "tv", title: "Euphoria", season: 2, episode: 5 });
+    await new NakaCatalog(fetch).videoUrls({ id: 91, type: "tv", title: "Euphoria", season: 2, episode: 5 });
     expect(calls).toEqual(["streaming/sources/91?type=tv&season=2&episode=5"]);
+  });
+
+  it("plays Naka's own copies, the free ones first and the sharpest of them first, never another host's", () => {
+    const sources = [
+      { url: "/voe.m3u8", type: "voe-clone", isHls: true },
+      { url: "/premium.m3u8", type: "encoded", access: "premium", maxQuality: "4K", isHls: true },
+      { url: "/720.m3u8", type: "encoded", maxQuality: "720p", isHls: true },
+      { url: "/1080.m3u8", type: "encoded", maxQuality: "1080p", isHls: true },
+      { url: "/mp4", type: "encoded", isHls: false },
+      { url: "/lightbox.m3u8", type: "darki-clone" },
+      { broken: true },
+    ];
+    expect(playableSources(sources)).toEqual(["/1080.m3u8", "/720.m3u8", "/premium.m3u8"]);
+    // Before its V2, Naka named no type: such a copy is still played.
+    expect(playableSources([{ url: "/old.m3u8", isHls: true }])).toEqual(["/old.m3u8"]);
+  });
+
+  it("leaves out the episodes Naka has no video of, but keeps one being put back online", () => {
+    const episodes = [
+      { episode_number: 1, available: true },
+      { episode_number: 2, available: false },
+      { episode_number: 3, available: false, pending: true },
+      { episode_number: 4 },
+    ];
+    expect(toCatalogEpisodes(episodes).map((e) => e.number)).toEqual([1, 3, 4]);
+  });
+
+  it("does not blame the token when Naka asks for its anti-robot check, and says so when a video is being put back", async () => {
+    const play = { id: 1, type: "movie" as const, title: "X" };
+    const answer = (status: number, body: string) => new NakaCatalog(async () => ({ status, body })).videoUrls(play);
+    await expect(answer(403, '{"code":"CAPTCHA_REQUIRED"}')).rejects.toThrow(/vérification anti-robot/);
+    await expect(answer(403, '{"code":"FORBIDDEN"}')).rejects.toThrow(/NAKA_TOKEN/);
+    await expect(answer(503, '{"code":"mirror_pending"}')).rejects.toThrow(/pas encore de vidéo/);
   });
 
   it("lists a season's episodes", async () => {
@@ -86,10 +125,10 @@ describe("the Naka catalog", () => {
     const noSource = { status: 400, body: '{"message":"No sources found"}' };
     const play = { id: 1, type: "movie" as const, title: "X" };
     await expect(
-      new NakaCatalog(fakeBridge({ "streaming/sources/1?type=movie": noSource }).fetch).videoUrl(play),
+      new NakaCatalog(fakeBridge({ "streaming/sources/1?type=movie": noSource }).fetch).videoUrls(play),
     ).rejects.toThrow(/pas encore de vidéo/);
     await expect(
-      new NakaCatalog(fakeBridge({ "streaming/sources/1?type=movie": { sources: [] } }).fetch).videoUrl(play),
+      new NakaCatalog(fakeBridge({ "streaming/sources/1?type=movie": { sources: [] } }).fetch).videoUrls(play),
     ).rejects.toThrow(/pas encore de vidéo/);
   });
 
@@ -203,6 +242,32 @@ describe("searching the catalog from the PWA", () => {
 });
 
 describe("starting a séance from the catalog", () => {
+  it("falls back on Naka's next copy when the first one's playlist cannot be read", async () => {
+    const sources = {
+      sources: [
+        { url: "https://cdn.example/broken/master.m3u8", type: "encoded", maxQuality: "1080p" },
+        { url: "https://cdn.example/good/master.m3u8", type: "encoded", maxQuality: "720p" },
+      ],
+    };
+    const bridge = fakeBridge({ "streaming/sources/543?type=movie": sources });
+    const asked: string[] = [];
+    const { app } = testApp({
+      fetchText: async (url) => {
+        asked.push(url.href);
+        if (url.pathname.startsWith("/broken")) throw new Error("403");
+        return fetchText(url);
+      },
+      catalog: new NakaCatalog(bridge.fetch),
+    });
+    const created = await app.request(API.createAccount, jsonRequest("POST", { name: "Darius", color: "peach" }));
+    const cookie = sessionCookieOf(created);
+    const play = { id: 543, type: "movie", title: "Interstellar" };
+    const response = await app.request(CATALOG_API.play, jsonRequest("POST", play, { cookie }));
+    expect(response.status).toBe(201);
+    expect(asked[0]).toContain("/broken/");
+    expect(asked.at(-1)).toContain("/good/");
+  });
+
   it("imports the title's video and names the séance after it", async () => {
     const { app, signedIn } = setup({ "streaming/sources/91?type=tv&season=1&episode=3": SOURCES });
     const { cookie } = await signedIn();

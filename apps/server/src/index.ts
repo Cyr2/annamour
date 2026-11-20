@@ -39,7 +39,12 @@ const services = createServices({
   fetchText,
   relyingParty: config.relyingParty,
   mediaMaxBytes: config.mediaMaxGb * BYTES_PER_GB,
-  ...(nakaBridge ? { catalog: new NakaCatalog(bridgeFetcher(nakaBridge.url, nakaBridge.secret)) } : {}),
+  ...(nakaBridge
+    ? {
+        catalog: new NakaCatalog(bridgeFetcher(nakaBridge.url, nakaBridge.secret)),
+        nakaSkipFetch: bridgeFetcher(nakaBridge.url, nakaBridge.secret, 15_000),
+      }
+    : {}),
   ...(config.tmdbToken ? { tmdbFetch: tmdbFetcher(config.tmdbToken), skipFetch: skipFetcher } : {}),
   ...(transcoder
     ? {

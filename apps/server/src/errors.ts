@@ -108,6 +108,15 @@ export class CatalogAccountError extends UserFacingError {
   }
 }
 
+export class CatalogCaptchaError extends UserFacingError {
+  constructor() {
+    super(
+      "Naka demande en ce moment une vérification anti-robot pour lancer une vidéo. Colle le lien de la vidéo à la place.",
+      502,
+    );
+  }
+}
+
 export class CatalogBusyError extends UserFacingError {
   constructor() {
     super("Beaucoup de recherches d'un coup : réessaie dans une minute.", 429);

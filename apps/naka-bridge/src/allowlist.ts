@@ -4,9 +4,15 @@
  * the account (profiles, history, admin…).
  */
 
-const ALLOWED_PATHS = [/^browse\/search$/, /^browse\/\d{1,9}\/season\/\d{1,3}$/, /^streaming\/sources\/\d{1,9}$/];
+const ALLOWED_PATHS = [
+  /^browse\/search$/,
+  /^browse\/\d{1,9}\/season\/\d{1,3}$/,
+  /^streaming\/sources\/\d{1,9}$/,
+  /^skip-segments$/,
+];
 const ALLOWED_PARAMS: Record<string, RegExp> = {
   q: /^.{1,80}$/su,
+  tmdbId: /^\d{1,9}$/,
   type: /^(movie|tv)$/,
   season: /^\d{1,3}$/,
   episode: /^\d{1,4}$/,

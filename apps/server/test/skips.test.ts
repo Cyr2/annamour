@@ -1,6 +1,13 @@
 import type { CatalogRef } from "@annamour/protocol";
 import { describe, expect, it, vi } from "vitest";
-import { fromIntroDb, fromSkipDb, fromTheIntroDb, type SkipFetch, SkipSources } from "../src/catalog/skip-sources.ts";
+import {
+  fromIntroDb,
+  fromNaka,
+  fromSkipDb,
+  fromTheIntroDb,
+  type SkipFetch,
+  SkipSources,
+} from "../src/catalog/skip-sources.ts";
 import { Tmdb, type TmdbFetch } from "../src/catalog/tmdb.ts";
 import { SkipService } from "../src/services/skip-service.ts";
 import { CatalogCacheRepository } from "../src/storage/catalog-cache-repository.ts";
@@ -98,6 +105,38 @@ describe("an episode's intro and credits", () => {
     expect(asked.find((url) => url.includes("skipdb"))).toContain("duration=3500");
     await skips.lookUp(episodeOne, 3500);
     expect(asked).toHaveLength(3);
+  });
+
+  it("come from Naka first, set on the very copy we play, asked through its bridge", async () => {
+    const { tmdb } = setup({}, { "tv/1396": BREAKING_BAD });
+    const askedNaka: string[] = [];
+    const naka: SkipFetch = async (path) => {
+      askedNaka.push(path);
+      const segments = {
+        intro: [{ startMs: 10_000, endMs: 70_000 }],
+        credits: [{ startMs: 3_400_000, endMs: 3_500_000 }],
+      };
+      return { status: 200, body: JSON.stringify({ hit: true, segments }) };
+    };
+    const sources = new SkipSources({
+      fetch: async () => ({ status: 200, body: JSON.stringify(SKIP_DB) }),
+      naka,
+      cache: new CatalogCacheRepository(openDatabase(":memory:")),
+      now: () => 0,
+    });
+    const skips = new SkipService({ store: testStore().store, tmdb, sources });
+    expect(await skips.lookUp(episodeOne, 3500)).toEqual({ introStart: 10, introEnd: 70, creditsStart: 3400 });
+    expect(askedNaka).toEqual(["skip-segments?tmdbId=1396&type=tv&season=1&episode=1"]);
+  });
+
+  it("read nothing from a Naka answer without times", () => {
+    expect(fromNaka({ hit: false, segments: { intro: [], credits: [] } })).toBeNull();
+    expect(fromNaka({ hit: false })).toBeNull();
+    expect(fromNaka({ segments: { credits: [{ startMs: 5000, endMs: 9000 }] } })).toEqual({
+      source: "naka",
+      confidence: 1,
+      creditsStart: 5,
+    });
   });
 
   it("are given to the séance, which shows them to everyone", async () => {

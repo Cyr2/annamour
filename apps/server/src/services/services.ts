@@ -47,6 +47,8 @@ export interface ServiceOptions {
   tmdbFetch?: TmdbFetch;
   /** The public databases of intro and credits times; absent, nothing is skipped (tests stay offline). */
   skipFetch?: SkipFetch;
+  /** Naka's own intro and credits times, through naka-bridge. */
+  nakaSkipFetch?: SkipFetch;
 }
 
 export interface Services {
@@ -100,7 +102,12 @@ export function createServices(options: ServiceOptions): Services {
   const skips = new SkipService({
     store,
     tmdb: options.skipFetch ? tmdb : undefined,
-    sources: new SkipSources({ fetch: options.skipFetch ?? noSkipFetch, cache: repositories.catalogCache, now }),
+    sources: new SkipSources({
+      fetch: options.skipFetch ?? noSkipFetch,
+      ...(options.nakaSkipFetch ? { naka: options.nakaSkipFetch } : {}),
+      cache: repositories.catalogCache,
+      now,
+    }),
   });
   const prepareSkips = (code: string) => {
     skips.prepare(code).catch((error: unknown) => console.warn("Could not look up skip times", code, error));
