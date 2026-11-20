@@ -1,13 +1,11 @@
 import type { DatabaseSync } from "node:sqlite";
-import { CatalogSources } from "../catalog/catalog-sources.ts";
-import type { BridgeFetcher, Catalog } from "../catalog/naka-catalog.ts";
-import { NakanimeCatalog } from "../catalog/nakanime-catalog.ts";
+import type { Catalog } from "../catalog/naka-catalog.ts";
 import { type SkipFetch, SkipSources } from "../catalog/skip-sources.ts";
 import { Tmdb, type TmdbFetch } from "../catalog/tmdb.ts";
 import type { TimelineProbe } from "../media/timeline-probe.ts";
 import type { Transcoder } from "../media/transcoder.ts";
 import { RoomStore } from "../room-store.ts";
-import { type StreamFetcher, safeFetchStream, safeFetchText, type TextFetcher } from "../safe-fetch.ts";
+import { safeFetchText, type TextFetcher } from "../safe-fetch.ts";
 import { createRepositories } from "../storage/repositories.ts";
 import { AccountService } from "./account-service.ts";
 import { CatalogService } from "./catalog-service.ts";
@@ -17,7 +15,6 @@ import { LowQualityService } from "./low-quality-service.ts";
 import { PasskeyService, type RelyingParty, type WebAuthn } from "./passkey-service.ts";
 import { PlaybackStatsService } from "./playback-stats-service.ts";
 import { RatingService } from "./rating-service.ts";
-import { RelayService } from "./relay-service.ts";
 import { RoomService } from "./room-service.ts";
 import type { RandomInt } from "./secrets.ts";
 import { SkipService } from "./skip-service.ts";
@@ -40,10 +37,6 @@ export interface ServiceOptions {
   webAuthn?: WebAuthn;
   /** Films and series to search by name (Naka through naka-bridge); absent, séances start from a link. */
   catalog?: Catalog;
-  /** Nakanime through naka-bridge: anime, searched with Naka; absent, Naka alone. */
-  nakanimeFetch?: BridgeFetcher;
-  /** How Nakanime's segments are passed on to the players (tests use a fake source). */
-  fetchStream?: StreamFetcher;
   /** Makes lighter qualities of each film (needs ffmpeg); absent, séances keep their source's only quality. */
   transcoder?: Transcoder;
   /** What the lighter qualities of every séance may take on disk together. */
@@ -67,7 +60,6 @@ export interface Services {
   watchlist: WatchlistService;
   circles: CircleService;
   lowQualities: LowQualityService;
-  relay: RelayService;
   playbackStats: PlaybackStatsService;
   ratings: RatingService;
   taste: TasteService;
@@ -129,23 +121,7 @@ export function createServices(options: ServiceOptions): Services {
       prepareSkips(code);
     },
   });
-  const nakanime = options.nakanimeFetch
-    ? new NakanimeCatalog({ fetch: options.nakanimeFetch, cache: repositories.catalogCache, now })
-    : undefined;
-  const sources = new CatalogSources({ naka: options.catalog, nakanime });
-  const catalog = new CatalogService({
-    catalog: sources.any ? sources : undefined,
-    rooms,
-    now,
-    cache: repositories.catalogCache,
-  });
-  const relay = new RelayService({
-    store,
-    catalog: nakanime,
-    fetchText,
-    fetchStream: options.fetchStream ?? safeFetchStream,
-    now,
-  });
+  const catalog = new CatalogService({ catalog: options.catalog, rooms, now, cache: repositories.catalogCache });
   const ratings = new RatingService({ repositories, now });
   return {
     skips,
@@ -171,7 +147,6 @@ export function createServices(options: ServiceOptions): Services {
     playbackStats: new PlaybackStatsService({ repositories, now }),
     ratings,
     lowQualities,
-    relay,
     now,
   };
 }

@@ -4,7 +4,6 @@ import {
   localTestFetchBytes,
   localTestFetchText,
   safeFetchBytes,
-  safeFetchStream,
   safeFetchText,
 } from "../src/safe-fetch.ts";
 
@@ -85,30 +84,5 @@ describe("fetching for the end-to-end tests (E2E_ALLOW_LOCAL_MEDIA)", () => {
   it("still refuses anything that is not a web link, and the safe fetchers still refuse localhost", async () => {
     await expect(localTestFetchText(new URL("file:///etc/passwd"))).rejects.toBeInstanceOf(FetchError);
     await expect(safeFetchBytes(new URL("https://localhost/s.ts"))).rejects.toBeInstanceOf(FetchError);
-  });
-});
-
-describe("safeFetchStream", () => {
-  it("passes a segment on as it comes, with the part asked for", async () => {
-    const fetchMock = stubFetch(new Response("abc", { status: 206, headers: { "content-range": "bytes 0-2/9" } }));
-    const response = await safeFetchStream(new URL(`${PUBLIC}/s.ts`), "bytes=0-2");
-    expect(response.status).toBe(206);
-    expect(await response.text()).toBe("abc");
-    expect(fetchMock.mock.calls[0]?.[1]?.headers).toMatchObject({ range: "bytes=0-2" });
-  });
-
-  it("cuts off a body larger than any segment, whatever its headers say", async () => {
-    const huge = new ReadableStream<Uint8Array>({
-      pull(controller) {
-        controller.enqueue(new Uint8Array(16 * 1024 * 1024));
-      },
-    });
-    stubFetch(new Response(huge, { status: 200 }));
-    const response = await safeFetchStream(new URL(`${PUBLIC}/s.ts`));
-    await expect(response.arrayBuffer()).rejects.toThrow(/too large/);
-  });
-
-  it("refuses private addresses like the other fetchers", async () => {
-    await expect(safeFetchStream(new URL("https://127.0.0.1/s.ts"))).rejects.toBeInstanceOf(FetchError);
   });
 });

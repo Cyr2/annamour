@@ -1,5 +1,5 @@
 import { z } from "zod/mini";
-import { CatalogId, CatalogMediaType, CatalogSource } from "./catalog.ts";
+import { CatalogId, CatalogMediaType } from "./catalog.ts";
 import { BubbleColor, Name, RoomCode } from "./messages.ts";
 import { isTvPairingCode, normalizeTvPairingCode } from "./tv-pairing-code.ts";
 
@@ -95,7 +95,7 @@ export const SessionSummary = z.object({
   /** I created it: I may delete it for everyone (the others can only leave it). */
   createdByMe: z.optional(z.boolean()),
   /** The catalog title it plays (the series, for an episode): a title in « Notre liste » leads back to its séance. */
-  catalog: z.optional(z.object({ id: CatalogId, type: CatalogMediaType, source: z.optional(CatalogSource) })),
+  catalog: z.optional(z.object({ id: CatalogId, type: CatalogMediaType })),
   /** The current episode's poster, for a séance started from the catalog; absent for a pasted link. */
   posterUrl: z.optional(z.url({ protocol: /^https$/ })),
   /** Who is in its salon right now, me left out: « Darius vous attend, Rejoindre ». */

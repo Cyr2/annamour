@@ -1,6 +1,6 @@
 import { type BubbleColor, type CatalogRef, generateRoomCode, ROOM_RETENTION_MS } from "@annamour/protocol";
 import type { ImportedMedia } from "./hls.ts";
-import { type Episode, Room, type RoomPersistence } from "./rooms.ts";
+import { Room, type RoomPersistence } from "./rooms.ts";
 import type { RoomRepository } from "./storage/room-repository.ts";
 
 /** An empty room leaves memory after this long; it stays on disk and reopens on demand. */
@@ -96,23 +96,6 @@ export class RoomStore {
     const episode = { id: room.nextEpisodeId, label, catalog };
     this.repository.addEpisode(room.code, { ...episode, media: imported });
     return room.addEpisode({ ...episode, imported }, byClientId);
-  }
-
-  /** An episode's playlists fetched again (fresh links), in memory and on disk. */
-  replaceEpisodeMedia(code: string, episodeId: number, imported: ImportedMedia): void {
-    const episode = this.get(code)?.episodeById(episodeId);
-    if (!episode) return;
-    episode.imported = imported;
-    this.repository.saveEpisodeMedia(code, episodeId, imported);
-  }
-
-  /** The séance in memory and its episode whose playlists list `needle` (a segment's path). */
-  findListing(needle: string): { code: string; episode: Episode } | undefined {
-    for (const room of this.live.values()) {
-      const episode = room.episodeListing(needle);
-      if (episode) return { code: room.code, episode };
-    }
-    return undefined;
   }
 
   /** Where a room in memory is right now; undefined when it is only on disk. */

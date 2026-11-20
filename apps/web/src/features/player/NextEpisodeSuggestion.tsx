@@ -22,9 +22,6 @@ export function useNextEpisode(last: CatalogRef | undefined): Suggestion | null 
   const episode = last?.type === "tv" ? last.episode : undefined;
   const posterUrl = last?.posterUrl;
   const tmdbId = last?.tmdbId;
-  const source = last?.source;
-  const slug = last?.slug;
-  const language = last?.language;
 
   useEffect(() => {
     setSuggestion(null);
@@ -40,13 +37,9 @@ export function useNextEpisode(last: CatalogRef | undefined): Suggestion | null 
       ...(posterUrl ? { posterUrl } : {}),
       // TMDB's number goes along too: the next episode's intro and credits are then found without guessing.
       ...(tmdbId ? { tmdbId } : {}),
-      // An anime goes on from Nakanime, in the same version.
-      ...(source ? { source } : {}),
-      ...(slug ? { slug } : {}),
-      ...(language ? { language } : {}),
     };
-    fetchSeason({ id, source, slug }, season, controller.signal).then(
-      ({ episodes }: { episodes: CatalogEpisode[] }) => {
+    fetchSeason(id, season, controller.signal).then(
+      (episodes: CatalogEpisode[]) => {
         const next = nextCatalogEpisode(
           current,
           episodes.map((e) => e.number),
@@ -59,7 +52,7 @@ export function useNextEpisode(last: CatalogRef | undefined): Suggestion | null 
       () => undefined,
     );
     return () => controller.abort();
-  }, [id, title, season, episode, posterUrl, tmdbId, source, slug, language]);
+  }, [id, title, season, episode, posterUrl, tmdbId]);
 
   return suggestion;
 }
