@@ -4,11 +4,10 @@ import { handleBridgeRequest } from "./bridge.ts";
 import { CallBudget } from "./budget.ts";
 import { MediaGate } from "./media-gate.ts";
 import { NakaPage } from "./naka-page.ts";
-import { NakanimePage } from "./nakanime-page.ts";
 
 /*
- * naka-bridge: lets the Annamour server search Naka and Nakanime and get a
- * title's video link. Reachable only on the Docker network, behind a shared secret.
+ * naka-bridge: lets the Annamour server search Naka and get a title's video
+ * link. Reachable only on the Docker network, behind a shared secret.
  */
 
 /** Xvfb listens on /tmp/.X11-unix/X<n> for DISPLAY=:<n>; no DISPLAY (development): nothing to check. */
@@ -27,8 +26,7 @@ const naka = new NakaPage({ token: required("NAKA_TOKEN"), profileId: required("
 const deps = {
   secret: required("BRIDGE_SECRET"),
   naka,
-  nakanime: new NakanimePage(),
-  // For both sites together, far below Naka's own limit (30 a minute): a search and a play are two calls.
+  // Far below Naka's own limit (30 a minute): a search and a play are two calls.
   budget: new CallBudget({ max: 20, windowMs: 60_000 }),
   media: new MediaGate(),
   now: Date.now,

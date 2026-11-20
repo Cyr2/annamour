@@ -57,14 +57,13 @@ async function safeResponse(
   maxBytes: number,
   timeoutMs: number,
   checkHost: HostCheck = assertPublicHost,
-  range?: string,
 ): Promise<Response> {
   let url = input;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     await checkHost(url);
     const response = await fetch(url, {
       redirect: "manual",
-      headers: { "user-agent": USER_AGENT, accept: "*/*", ...(range ? { range } : {}) },
+      headers: { "user-agent": USER_AGENT, accept: "*/*" },
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (response.status >= 300 && response.status < 400) {
@@ -105,36 +104,6 @@ function bytesFetcher(checkHost: HostCheck): BytesFetcher {
 
 export const safeFetchText = textFetcher(assertPublicHost);
 export const safeFetchBytes = bytesFetcher(assertPublicHost);
-
-/** A segment passed on as it arrives (nothing kept), `range` asked of the source when given. */
-export type StreamFetcher = (url: URL, range?: string) => Promise<Response>;
-
-/** Cuts a body off past `maxBytes`: a source that lies about its size cannot fill the server. */
-function capped(body: ReadableStream<Uint8Array>, maxBytes: number): ReadableStream<Uint8Array> {
-  let seen = 0;
-  return body.pipeThrough(
-    new TransformStream<Uint8Array, Uint8Array>({
-      transform(chunk, controller) {
-        seen += chunk.byteLength;
-        if (seen > maxBytes) controller.error(new FetchError("Response too large"));
-        else controller.enqueue(chunk);
-      },
-    }),
-  );
-}
-
-function streamFetcher(checkHost: HostCheck): StreamFetcher {
-  return async (url, range) => {
-    const response = await safeResponse(url, MAX_SEGMENT_BYTES, SEGMENT_TIMEOUT_MS, checkHost, range);
-    if (!response.body) return response;
-    return new Response(capped(response.body, MAX_SEGMENT_BYTES), {
-      status: response.status,
-      headers: response.headers,
-    });
-  };
-}
-
-export const safeFetchStream = streamFetcher(assertPublicHost);
 
 /**
  * For the end-to-end tests only (E2E_ALLOW_LOCAL_MEDIA, refused in production

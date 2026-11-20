@@ -1,4 +1,4 @@
-import { CatalogLanguage, type CatalogSeasonResponse, type CatalogTitle, preferredLanguage } from "@annamour/protocol";
+import type { CatalogEpisode, CatalogTitle } from "@annamour/protocol";
 import { useEffect, useState } from "react";
 import { fetchSeason } from "../../../api/catalog.ts";
 import { errorMessage } from "../../../api/http.ts";
@@ -6,81 +6,39 @@ import { Button } from "../../../ui/controls.tsx";
 import { Poster } from "../../../ui/Poster.tsx";
 import { ThreadSpinner } from "../../../ui/ThreadSpinner.tsx";
 import { describeTitle } from "./CatalogResults.tsx";
-import { EpisodeList } from "./EpisodeList.tsx";
 
 type SeasonState =
   | { status: "loading" }
-  | ({ status: "done" } & CatalogSeasonResponse)
+  | { status: "done"; episodes: CatalogEpisode[] }
   | { status: "error"; message: string };
 
-function useSeason(show: CatalogTitle, season: number): SeasonState {
+function useSeason(id: number, season: number): SeasonState {
   const [state, setState] = useState<SeasonState>({ status: "loading" });
-  const { id, source, slug } = show;
   useEffect(() => {
     const controller = new AbortController();
     setState({ status: "loading" });
-    fetchSeason({ id, source, slug }, season, controller.signal).then(
-      (answer) => setState({ status: "done", ...answer }),
+    fetchSeason(id, season, controller.signal).then(
+      (episodes) => setState({ status: "done", episodes }),
       (error: unknown) => {
         if (!controller.signal.aborted) setState({ status: "error", message: errorMessage(error) });
       },
     );
     return () => controller.abort();
-  }, [id, source, slug, season]);
+  }, [id, season]);
   return state;
-}
-
-/** How many seasons to offer: Nakanime says so with the episodes, Naka with the title. */
-function useSeasonCount(show: CatalogTitle, state: SeasonState): number {
-  const [count, setCount] = useState(show.seasons ?? 1);
-  const told = state.status === "done" ? state.seasons : undefined;
-  useEffect(() => {
-    if (told !== undefined) setCount(told);
-  }, [told]);
-  return count;
-}
-
-interface ChoiceProps<T extends string | number> {
-  legend: string;
-  options: readonly T[];
-  label: (option: T) => string;
-  value: T;
-  onChange: (option: T) => void;
-}
-
-/** A row of buttons, one pressed: the season, or an anime's version. */
-function Choice<T extends string | number>({ legend, options, label, value, onChange }: ChoiceProps<T>) {
-  return (
-    <fieldset className="-mx-1 flex min-w-0 gap-2 overflow-x-auto border-0 px-1 pb-1">
-      <legend className="sr-only">{legend}</legend>
-      {options.map((option) => (
-        <Button
-          key={option}
-          aria-pressed={option === value}
-          tone={option === value ? "accent" : "default"}
-          onClick={() => onChange(option)}
-        >
-          {label(option)}
-        </Button>
-      ))}
-    </fieldset>
-  );
 }
 
 interface EpisodePickerProps {
   show: CatalogTitle;
-  /** `language` is the anime's version (VF or VOSTFR); absent for Naka's series. */
-  onPick: (season: number, episode: number, language: CatalogLanguage | undefined) => void;
+  onPick: (season: number, episode: number) => void;
   onBack: () => void;
 }
 
-/** A series: choose the season (and for an anime its version), then the episode to watch together. */
+/** A series: choose the season, then the episode to watch together. */
 export function EpisodePicker({ show, onPick, onBack }: EpisodePickerProps) {
   const [season, setSeason] = useState(1);
-  const anime = show.source === "nakanime";
-  const [language, setLanguage] = useState(() => preferredLanguage(show.languages));
-  const state = useSeason(show, season);
-  const seasons = Array.from({ length: useSeasonCount(show, state) }, (_, i) => i + 1);
+  const state = useSeason(show.id, season);
+  const seasons = Array.from({ length: show.seasons ?? 1 }, (_, i) => i + 1);
 
   return (
     <div className="grid min-w-0 gap-3">
@@ -91,17 +49,20 @@ export function EpisodePicker({ show, onPick, onBack }: EpisodePickerProps) {
           <p className="text-xs text-fg-muted">{describeTitle(show)}</p>
         </div>
       </div>
-      {anime ? (
-        <Choice
-          legend="Version"
-          options={CatalogLanguage.options}
-          label={(l) => l}
-          value={language}
-          onChange={setLanguage}
-        />
-      ) : null}
       {seasons.length > 1 ? (
-        <Choice legend="Saison" options={seasons} label={(n) => `Saison ${n}`} value={season} onChange={setSeason} />
+        <fieldset className="-mx-1 flex min-w-0 gap-2 overflow-x-auto border-0 px-1 pb-1">
+          <legend className="sr-only">Saison</legend>
+          {seasons.map((n) => (
+            <Button
+              key={n}
+              aria-pressed={n === season}
+              tone={n === season ? "accent" : "default"}
+              onClick={() => setSeason(n)}
+            >
+              Saison {n}
+            </Button>
+          ))}
+        </fieldset>
       ) : null}
       {state.status === "loading" ? (
         <div className="flex items-center gap-3 px-1 py-3 text-fg-muted" role="status">
@@ -114,14 +75,29 @@ export function EpisodePicker({ show, onPick, onBack }: EpisodePickerProps) {
           {state.message}
         </p>
       ) : null}
-      {state.status === "done" ? (
-        <EpisodeList
-          episodes={state.episodes}
-          language={anime ? language : undefined}
-          onPick={(episode, chosen) => onPick(season, episode, chosen)}
-        />
-      ) : null}
+      {state.status === "done" ? <EpisodeList episodes={state.episodes} onPick={(e) => onPick(season, e)} /> : null}
       <Button onClick={onBack}>Retour aux résultats</Button>
     </div>
+  );
+}
+
+function EpisodeList({ episodes, onPick }: { episodes: CatalogEpisode[]; onPick: (episode: number) => void }) {
+  if (episodes.length === 0)
+    return <p className="px-1 text-sm text-fg-muted">Pas encore d'épisode pour cette saison.</p>;
+  return (
+    <ul className="-mx-1 grid max-h-[36dvh] grid-cols-[minmax(0,1fr)] gap-1 overflow-y-auto px-1" aria-label="Épisodes">
+      {episodes.map(({ number, title }) => (
+        <li key={number}>
+          <button
+            type="button"
+            onClick={() => onPick(number)}
+            className="surface-tile flex min-h-11 w-full items-baseline gap-3 px-3.5 py-2.5 text-left focus-visible:outline-2 focus-visible:outline-accent"
+          >
+            <span className="w-7 shrink-0 font-mono text-sm text-fg-muted">É{number}</span>
+            <span className="min-w-0 truncate text-sm text-fg">{title ?? `Épisode ${number}`}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }

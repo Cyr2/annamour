@@ -1,7 +1,6 @@
 import {
   type AddCatalogEpisodeRequest,
-  type CatalogSeasonQuery,
-  type CatalogSeasonResponse,
+  type CatalogEpisode,
   CatalogTitle,
   catalogLabel,
   type PlayCatalogRequest,
@@ -68,8 +67,8 @@ export class CatalogService {
     return titles;
   }
 
-  season(id: number, season: number, query: CatalogSeasonQuery = {}): Promise<CatalogSeasonResponse> {
-    return this.catalog().season(id, season, query);
+  season(id: number, season: number): Promise<CatalogEpisode[]> {
+    return this.catalog().season(id, season);
   }
 
   /**

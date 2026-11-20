@@ -3,6 +3,7 @@ import {
   AddEpisodeResponse,
   apiPath,
   CATALOG_API,
+  type CatalogEpisode,
   CatalogSearchResponse,
   CatalogSeasonResponse,
   type CatalogTitle,
@@ -31,21 +32,10 @@ export async function fetchTitleDetails(title: CatalogTitle, signal?: AbortSigna
   return details;
 }
 
-/** Where a series is read from: Nakanime finds it by its page name too. */
-type SeriesRef = Pick<CatalogTitle, "id" | "source" | "slug">;
-
-/** A season's episodes; Nakanime also says how many seasons there are. */
-export async function fetchSeason(
-  series: SeriesRef,
-  season: number,
-  signal?: AbortSignal,
-): Promise<CatalogSeasonResponse> {
-  const path = apiPath(CATALOG_API.season, { id: String(series.id), season: String(season) });
-  const query =
-    series.source === "nakanime" && series.slug
-      ? `?${new URLSearchParams({ source: "nakanime", slug: series.slug })}`
-      : "";
-  return request(CatalogSeasonResponse, `${path}${query}`, signal ? { signal } : {});
+export async function fetchSeason(id: number, season: number, signal?: AbortSignal): Promise<CatalogEpisode[]> {
+  const path = apiPath(CATALOG_API.season, { id: String(id), season: String(season) });
+  const { episodes } = await request(CatalogSeasonResponse, path, signal ? { signal } : {});
+  return episodes;
 }
 
 /** Queues a catalog title after a séance's episodes; returns its index in the queue. */

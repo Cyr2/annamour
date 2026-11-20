@@ -1,10 +1,4 @@
-import type {
-  CatalogEpisode,
-  CatalogSeasonQuery,
-  CatalogSeasonResponse,
-  CatalogTitle,
-  PlayCatalogRequest,
-} from "@annamour/protocol";
+import type { CatalogEpisode, CatalogTitle, PlayCatalogRequest } from "@annamour/protocol";
 import { z } from "zod";
 import { CatalogAccountError, CatalogBusyError, CatalogUnreachableError, NoVideoError } from "../errors.ts";
 
@@ -31,8 +25,7 @@ export type BridgeFetcher = (apiPath: string) => Promise<BridgeAnswer>;
 
 export interface Catalog {
   search(query: string): Promise<CatalogTitle[]>;
-  /** A season's episodes; Nakanime also tells how many seasons the anime has, and needs its slug. */
-  season(id: number, season: number, query?: CatalogSeasonQuery): Promise<CatalogSeasonResponse>;
+  season(id: number, season: number): Promise<CatalogEpisode[]>;
   /** The title's HLS master playlist, with a fresh token. */
   videoUrl(request: PlayCatalogRequest): Promise<URL>;
 }
@@ -129,8 +122,8 @@ export class NakaCatalog implements Catalog {
     return body.data.data.flatMap((raw) => toCatalogTitle(raw) ?? []);
   }
 
-  async season(id: number, season: number): Promise<CatalogSeasonResponse> {
-    return { episodes: toCatalogEpisodes(await this.json(`browse/${id}/season/${season}`)) };
+  async season(id: number, season: number): Promise<CatalogEpisode[]> {
+    return toCatalogEpisodes(await this.json(`browse/${id}/season/${season}`));
   }
 
   async videoUrl({ id, type, season, episode }: PlayCatalogRequest): Promise<URL> {
@@ -147,35 +140,31 @@ export class NakaCatalog implements Catalog {
     return new URL(source.url, NAKA_ORIGIN);
   }
 
-  private json(apiPath: string): Promise<unknown> {
-    return bridgeJson(this.fetch, apiPath, "Naka");
+  /** Calls the bridge and reads Naka's JSON, turning its failures into what the person can do. */
+  private async json(apiPath: string): Promise<unknown> {
+    let answer: BridgeAnswer;
+    try {
+      answer = await this.fetch(apiPath);
+    } catch {
+      throw new CatalogUnreachableError();
+    }
+    // Naka answers 400 « No sources found » for a title without a video yet.
+    if (answer.status === 400 || answer.status === 404) throw new NoVideoError();
+    if (answer.status === 401 || answer.status === 403) throw new CatalogAccountError();
+    if (answer.status === 429) throw new CatalogBusyError();
+    if (answer.status !== 200) throw new CatalogUnreachableError();
+    try {
+      return JSON.parse(answer.body);
+    } catch {
+      throw new CatalogUnreachableError();
+    }
   }
 }
 
-/** Calls the bridge and reads the site's JSON, turning its failures into what the person can do. */
-export async function bridgeJson(fetch: BridgeFetcher, path: string, site: string): Promise<unknown> {
-  let answer: BridgeAnswer;
-  try {
-    answer = await fetch(path);
-  } catch {
-    throw new CatalogUnreachableError(site);
-  }
-  // Naka answers 400 « No sources found » for a title without a video yet.
-  if (answer.status === 400 || answer.status === 404) throw new NoVideoError(site);
-  if (answer.status === 401 || answer.status === 403) throw new CatalogAccountError();
-  if (answer.status === 429) throw new CatalogBusyError();
-  if (answer.status !== 200) throw new CatalogUnreachableError(site);
-  try {
-    return JSON.parse(answer.body);
-  } catch {
-    throw new CatalogUnreachableError(site);
-  }
-}
-
-/** The bridge over HTTP, on the Docker network, with its shared secret; `site` is `naka` or `nakanime`. */
-export function bridgeFetcher(baseUrl: string, secret: string, site = "naka", timeoutMs = 95_000): BridgeFetcher {
+/** The bridge over HTTP, on the Docker network, with its shared secret. */
+export function bridgeFetcher(baseUrl: string, secret: string, timeoutMs = 95_000): BridgeFetcher {
   return async (apiPath) => {
-    const response = await fetch(new URL(`/${site}/${apiPath}`, baseUrl), {
+    const response = await fetch(new URL(`/naka/${apiPath}`, baseUrl), {
       headers: { "x-bridge-secret": secret },
       signal: AbortSignal.timeout(timeoutMs),
     });
