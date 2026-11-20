@@ -28,6 +28,8 @@ describe("why a title is suggested", () => {
     expect(reasonLine({ kind: "genres", genres: ["thriller", "drame"] }, "darius")).toBe(
       "Thriller et drame, vos genres",
     );
+    expect(reasonLine({ kind: "picked", by: "team" }, "darius")).toBe("Coup de cœur de l'équipe Naka");
+    expect(reasonLine({ kind: "picked", by: "community" }, "darius")).toBe("Choix de la communauté Naka");
     expect(reasonLine({ kind: "acclaimed", voteAverage: 8.1 }, "darius")).toBe("Très bien noté : 8,1 sur 10");
   });
 

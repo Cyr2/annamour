@@ -9,6 +9,9 @@ const ALLOWED_PATHS = [
   /^browse\/\d{1,9}\/season\/\d{1,3}$/,
   /^streaming\/sources\/\d{1,9}$/,
   /^skip-segments$/,
+  // Read once a day for « Pour vous ce soir »: the team's favourites and the community's choice.
+  /^browse\/home$/,
+  /^community\/choice$/,
 ];
 const ALLOWED_PARAMS: Record<string, RegExp> = {
   q: /^.{1,80}$/su,

@@ -34,6 +34,25 @@ export interface Catalog {
   season(id: number, season: number): Promise<CatalogEpisode[]>;
   /** The title's HLS master playlists with fresh tokens, the best first: the next one is tried if one fails. */
   videoUrls(request: PlayCatalogRequest): Promise<URL[]>;
+  /** The team's favourites and the community's weekly choice, to add to « Pour vous ce soir ». */
+  picks?(): Promise<CatalogPick[]>;
+}
+
+export interface CatalogPick {
+  title: CatalogTitle;
+  by: "team" | "community";
+}
+
+/** How deep a pick may sit in Naka's answers (`staffPicks[i].media`…): its shape was never seen answered. */
+const PICK_DEPTH = 4;
+
+/** Every title (with its TMDB id) found in a Naka answer, wherever it sits in it. */
+export function titlesIn(value: unknown, depth = PICK_DEPTH): CatalogTitle[] {
+  if (depth < 0 || typeof value !== "object" || value === null) return [];
+  if (Array.isArray(value)) return value.flatMap((item) => titlesIn(item, depth - 1));
+  const title = toCatalogTitle(value);
+  if (title?.tmdbId) return [title];
+  return Object.values(value).flatMap((item) => titlesIn(item, depth - 1));
 }
 
 const NakaTitle = z.object({
@@ -169,6 +188,21 @@ export class NakaCatalog implements Catalog {
 
   async season(id: number, season: number): Promise<CatalogEpisode[]> {
     return toCatalogEpisodes(await this.json(`browse/${id}/season/${season}`));
+  }
+
+  async picks(): Promise<CatalogPick[]> {
+    const [home, community] = await Promise.allSettled([this.json("browse/home"), this.json("community/choice")]);
+    const staffPicks =
+      home.status === "fulfilled" && typeof home.value === "object" && home.value !== null && "staffPicks" in home.value
+        ? home.value.staffPicks
+        : undefined;
+    const team = titlesIn(staffPicks);
+    const voted = community.status === "fulfilled" ? titlesIn(community.value) : [];
+    console.info("Naka picks:", team.length, "from the team,", voted.length, "from the community");
+    return [
+      ...team.map((title) => ({ title, by: "team" as const })),
+      ...voted.map((title) => ({ title, by: "community" as const })),
+    ];
   }
 
   async videoUrls({ id, type, season, episode }: PlayCatalogRequest): Promise<URL[]> {

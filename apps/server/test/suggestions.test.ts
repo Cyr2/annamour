@@ -67,10 +67,10 @@ const naka: Catalog = {
 
 const film = (id: number, title: string, tmdbId: number) => ({ id, type: "movie", title, tmdbId }) as const;
 
-async function setup(withTmdb = true) {
+async function setup(withTmdb = true, catalog: Catalog = naka) {
   // A real date: films out in 2015 are out, one dated 2099 is not.
   const now = Date.parse("2026-11-12T20:00:00Z");
-  const { app, services } = testApp({ now: () => now, catalog: naka, ...(withTmdb ? { tmdbFetch } : {}) });
+  const { app, services } = testApp({ now: () => now, catalog, ...(withTmdb ? { tmdbFetch } : {}) });
   async function account(name: string) {
     const response = await app.request(API.createAccount, jsonRequest("POST", { name, color: "peach" }));
     const { account } = (await response.json()) as CreateAccountResponse;
@@ -119,6 +119,26 @@ describe("« Pour vous ce soir »", () => {
     expect(titles).not.toContain("Demain");
     // Each loved one the other has not seen is a fine idea too.
     expect(list.find((s) => s.title.title === "Gone Girl")).toBeUndefined();
+  });
+
+  it("adds the Naka team's favourites to the candidates, saying so, with Naka's own title", async () => {
+    let asked = 0;
+    const picking: Catalog = {
+      ...naka,
+      picks: async () => {
+        asked++;
+        return [{ by: "team", title: { id: 960, type: "movie", title: "Coup de foudre à Notting Hill", tmdbId: 509 } }];
+      },
+    };
+    const { darius, rate, suggestions } = await setup(true, picking);
+    await rate(darius.cookie, film(10, "Seven", 807), "loved");
+    const notting = (await suggestions()).list.find((s) => s.title.tmdbId === 509);
+    expect(notting?.title.id).toBe(960);
+    expect(notting?.reasons).toContainEqual({ kind: "picked", by: "team" });
+    // Read once a day, not at each refresh.
+    await rate(darius.cookie, film(12, "Prisoners", 146233), "liked");
+    await suggestions();
+    expect(asked).toBe(1);
   });
 
   it("leaves out what one of them did not like, and what both already rated", async () => {

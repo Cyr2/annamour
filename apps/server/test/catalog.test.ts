@@ -87,6 +87,33 @@ describe("the Naka catalog", () => {
     expect(playableSources([{ url: "/old.m3u8", isHls: true }])).toEqual(["/old.m3u8"]);
   });
 
+  it("finds the team's favourites and the community's choice wherever Naka puts the titles", async () => {
+    const { fetch, calls } = fakeBridge({
+      "browse/home": {
+        featured: [INTERSTELLAR],
+        staffPicks: [
+          { content: "On adore", media: { ...INTERSTELLAR } },
+          { content: "Sans TMDB", media: EUPHORIA },
+        ],
+      },
+      "community/choice": { week: 47, winners: [{ votes: 12, ...INTERSTELLAR, id: 544 }] },
+    });
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    const picks = await new NakaCatalog(fetch).picks();
+    info.mockRestore();
+    expect(picks.map((p) => [p.by, p.title.id])).toEqual([
+      ["team", 543],
+      ["community", 544],
+    ]);
+    expect(calls).toEqual(["browse/home", "community/choice"]);
+  });
+
+  it("has no picks when Naka refuses them", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    expect(await new NakaCatalog(async () => ({ status: 401, body: "" })).picks()).toEqual([]);
+    info.mockRestore();
+  });
+
   it("leaves out the episodes Naka has no video of, but keeps one being put back online", () => {
     const episodes = [
       { episode_number: 1, available: true },
