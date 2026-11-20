@@ -102,17 +102,56 @@ function fromIntroAndOutro(source: string, body: unknown): SourceMarkers | null 
   );
 }
 
+const NakaSegment = z.object({ startMs: z.number(), endMs: z.number() });
+
+/** Naka's own times (`segments.intro`, `segments.credits`), set on the very copy we play: trusted most. */
+export function fromNaka(body: unknown): SourceMarkers | null {
+  const parsed = z
+    .object({ segments: z.object({ intro: z.array(NakaSegment).nullish(), credits: z.array(NakaSegment).nullish() }) })
+    .safeParse(body);
+  if (!parsed.success) return null;
+  const intro = parsed.data.segments.intro?.find((segment) => segment.endMs > 0);
+  const credits = parsed.data.segments.credits?.find((segment) => segment.startMs > 0);
+  if (!intro && !credits) return null;
+  return Marker.parse(
+    defined({
+      source: "naka",
+      confidence: 1,
+      introStart: intro ? seconds(intro.startMs) : undefined,
+      introEnd: seconds(intro?.endMs),
+      creditsStart: seconds(credits?.startMs),
+    }),
+  );
+}
+
 export const fromIntroDb = (body: unknown) => fromIntroAndOutro("introdb", body);
 export const fromSkipDb = (body: unknown) => fromIntroAndOutro("skipdb", body);
 
-function urlsFor(
-  target: SkipTarget,
-): { source: string; url: string; parse: (body: unknown) => SourceMarkers | null }[] {
+interface SkipSource {
+  source: string;
+  /** A public API's URL, or for Naka a path on its API, asked through naka-bridge. */
+  url: string;
+  parse: (body: unknown) => SourceMarkers | null;
+  viaNaka?: boolean;
+}
+
+function urlsFor(target: SkipTarget, withNaka: boolean): SkipSource[] {
   const episode = target.type === "tv" && target.season !== undefined && target.episode !== undefined;
   const where: Record<string, string> = episode
     ? { season: String(target.season), episode: String(target.episode) }
     : {};
-  const urls = [
+  const naka: SkipSource[] = withNaka
+    ? [
+        {
+          source: "naka",
+          url: `skip-segments?${new URLSearchParams({ tmdbId: String(target.tmdbId), type: target.type, ...where })}`,
+          parse: fromNaka,
+          viaNaka: true,
+        },
+      ]
+    : [];
+  const urls: SkipSource[] = [
+    ...naka,
     {
       source: "theintrodb",
       url: `https://api.theintrodb.org/v4/media?${new URLSearchParams({ tmdb_id: String(target.tmdbId), ...where })}`,
@@ -137,6 +176,8 @@ function urlsFor(
 
 export interface SkipSourcesOptions {
   fetch: SkipFetch;
+  /** Naka's API through naka-bridge, when set up. */
+  naka?: SkipFetch;
   cache: CatalogCacheRepository;
   now: () => number;
 }
@@ -150,11 +191,13 @@ export class SkipSources {
   }
 
   async markers(target: SkipTarget): Promise<SourceMarkers[]> {
-    const found = await Promise.all(urlsFor(target).map((source) => this.ask(source)));
+    const found = await Promise.all(urlsFor(target, this.options.naka !== undefined).map((source) => this.ask(source)));
     return found.flat();
   }
 
-  private async ask(source: ReturnType<typeof urlsFor>[number]): Promise<SourceMarkers[]> {
+  private async ask(source: SkipSource): Promise<SourceMarkers[]> {
+    const fetch = source.viaNaka ? this.options.naka : this.options.fetch;
+    if (!fetch) return [];
     const { cache, now } = this.options;
     const key = `skip:${source.url}`;
     const kept = cache.get(key, now() - FOUND_TTL_MS);
@@ -164,7 +207,7 @@ export class SkipSources {
       if (markers.length > 0 || cache.get(key, now() - MISSING_TTL_MS) !== undefined) return markers;
     }
     try {
-      const answer = await this.options.fetch(source.url);
+      const answer = await fetch(source.url);
       // 404: the source does not know this title (kept, as « nothing »); anything else is tried again later.
       if (answer.status !== 200 && answer.status !== 404) return [];
       const markers = answer.status === 200 ? source.parse(JSON.parse(answer.body)) : null;

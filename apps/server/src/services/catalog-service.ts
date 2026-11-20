@@ -7,7 +7,7 @@ import {
 } from "@annamour/protocol";
 import { z } from "zod/mini";
 import { type Catalog, isCatalogPoster } from "../catalog/naka-catalog.ts";
-import { CatalogUnavailableError } from "../errors.ts";
+import { CatalogUnavailableError, NoVideoError } from "../errors.ts";
 import type { Room } from "../rooms.ts";
 import type { CatalogCacheRepository } from "../storage/catalog-cache-repository.ts";
 import type { RoomService } from "./room-service.ts";
@@ -77,9 +77,10 @@ export class CatalogService {
    * so the episodes queued after it read « Euphoria · S1 · É2 ».
    */
   async play(request: PlayCatalogRequest, accountId: string | undefined): Promise<Room> {
-    const url = await this.catalog().videoUrl(request);
     const label = request.type === "tv" ? catalogLabel(request) : undefined;
-    return this.options.rooms.create(url, request.title, accountId, { label, catalog: withTrustedPoster(request) });
+    return this.withVideo(request, (url) =>
+      this.options.rooms.create(url, request.title, accountId, { label, catalog: withTrustedPoster(request) }),
+    );
   }
 
   /** Queues a catalog title after a séance's episodes: the next one of its series, or another film. */
@@ -88,8 +89,27 @@ export class CatalogService {
     rooms.roomAcceptingEpisode(code);
     // The device only names who added it: the title keeps nothing of it.
     const { clientId, ...title } = request;
-    const url = await this.catalog().videoUrl(title);
-    return rooms.addEpisode(code, url, catalogLabel(title), withTrustedPoster(title), clientId);
+    return this.withVideo(title, (url) =>
+      rooms.addEpisode(code, url, catalogLabel(title), withTrustedPoster(title), clientId),
+    );
+  }
+
+  /** Imports the title's best copy; when its playlist cannot be read, the next copy Naka offers. */
+  private async withVideo<T>(request: PlayCatalogRequest, use: (url: URL) => Promise<T>): Promise<T> {
+    const [first, ...others] = await this.catalog().videoUrls(request);
+    if (!first) throw new NoVideoError();
+    try {
+      return await use(first);
+    } catch (error) {
+      for (const url of others) {
+        try {
+          return await use(url);
+        } catch {
+          // The next one, then the first failure is what the person reads.
+        }
+      }
+      throw error;
+    }
   }
 
   /**
