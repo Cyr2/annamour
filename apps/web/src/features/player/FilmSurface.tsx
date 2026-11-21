@@ -1,5 +1,6 @@
 import type { Media } from "@annamour/protocol";
 import type { SyncMedia } from "../../sync/media.ts";
+import { useSubtitleSize } from "./subtitle-settings.ts";
 import { YouTubeSurface } from "./YouTubeSurface.tsx";
 
 interface FilmSurfaceProps {
@@ -9,10 +10,11 @@ interface FilmSurfaceProps {
 
 /** What plays, full bleed: our <video> (HLS, with the room's subtitles), or YouTube's own player. */
 export function FilmSurface({ media, onVideo }: FilmSurfaceProps) {
+  const subtitleSize = useSubtitleSize((s) => s.size);
   if (media?.youtube) return <YouTubeSurface videoId={media.youtube.videoId} onMedia={onVideo} />;
   return (
     // biome-ignore lint/a11y/useMediaCaption: subtitle tracks come from the room's media at runtime (mapped below).
-    <video ref={onVideo} className="absolute inset-0 size-full object-contain" playsInline>
+    <video ref={onVideo} data-cue-size={subtitleSize} className="absolute inset-0 size-full object-contain" playsInline>
       {media?.subtitles.map((track) => (
         <track
           key={track.id}

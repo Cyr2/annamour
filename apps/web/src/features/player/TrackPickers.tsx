@@ -23,7 +23,7 @@ interface TrackChoiceProps {
 }
 
 /** Two options side by side; more, one per row, all in view. */
-function TrackChoice({ label, items, value, onValueChange }: TrackChoiceProps) {
+export function TrackChoice({ label, items, value, onValueChange }: TrackChoiceProps) {
   if (items.length <= SEGMENTED_MAX) {
     return (
       <SegmentedControl
