@@ -27,14 +27,15 @@ describe("track choice", () => {
   it("starts on the first language with forced French subtitles", () => {
     expect(defaultSubtitles(media.subtitles)).toBe("subs_fre_forced");
     expect(defaultSubtitles([])).toBeNull();
-    expect(defaultChoice(media)).toEqual({ audio: "p0", subtitles: "subs_fre_forced" });
+    expect(defaultChoice(media)).toEqual({ audio: "p0", subtitles: "subs_fre_forced", subtitleOffset: 0 });
   });
 
   it("remembers a personal choice per séance, without touching the others", () => {
     chooseTracks("YWEK", media, { subtitles: null });
     chooseTracks("YWEK", media, { audio: "p1" });
+    chooseTracks("YWEK", media, { subtitleOffset: 1.5 });
     const { byRoom } = useTrackChoices.getState();
-    expect(choiceFor(byRoom, "YWEK", media)).toEqual({ audio: "p1", subtitles: null });
+    expect(choiceFor(byRoom, "YWEK", media)).toEqual({ audio: "p1", subtitles: null, subtitleOffset: 1.5 });
     expect(choiceFor(byRoom, "QHMP", media)).toEqual(defaultChoice(media));
   });
 

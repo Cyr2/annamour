@@ -544,6 +544,20 @@
   outline: 2px solid var(--am-focus);
 }
 
+/*
+ * ---- Subtitle size (features/player/FilmSurface.tsx): relative to the browser's own,
+ * which follows the video's height. Literal percentages: ::cue does not reliably resolve var()
+ * in Safari. iOS's native full screen draws captions itself and ignores this. ----
+ */
+
+video[data-cue-size="small"]::cue {
+  font-size: 80%;
+}
+
+video[data-cue-size="large"]::cue {
+  font-size: 130%;
+}
+
 /* ---- Reduced transparency: solid tinted surfaces, no blur, no bending ---- */
 
 @media (prefers-reduced-transparency: reduce) {
