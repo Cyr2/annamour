@@ -17,6 +17,7 @@ import { useLoadSessions } from "../sessions/useLoadSessions.ts";
 import { useTv } from "../tv/tv-context.ts";
 import { InviteLinkButton } from "./InviteLinkButton.tsx";
 import { type LobbyStart, lobbyStart } from "./lobby-rules.ts";
+import { PlanEvening } from "./PlanEvening.tsx";
 import { PrepLine } from "./PrepLine.tsx";
 import { SalonPresence } from "./Presence.tsx";
 import { usePrep } from "./prep.ts";
@@ -92,6 +93,7 @@ export function LobbyView({ code, onStart }: { code: string; onStart: (fromStart
             </Button>
           </div>
           <PrepLine status={prep} />
+          {seance && !tv ? <PlanEvening seance={seance} /> : null}
           <KeepSeanceLink code={code} />
         </div>
         <Surface className="surface-panel grid justify-items-center gap-5 p-6 text-center sm:p-8 md:order-1">

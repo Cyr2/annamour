@@ -75,8 +75,8 @@ export type TonightPick =
   | { kind: "nothing" };
 
 /**
- * The one thing « On regarde ? » offers: the séance left unfinished most
- * recently in this circle, else the title of its list most wanted.
+ * The one thing « On regarde ? » offers: the séance planned soonest in this
+ * circle, else the one left unfinished most recently, else the title of its list most wanted.
  */
 export function tonightPick(
   sessions: readonly SessionSummary[],
@@ -84,7 +84,11 @@ export function tonightPick(
   circle: Circle | null,
   me: string,
 ): TonightPick {
-  const session = latestUnfinished(ofCircle(sessions, circle, me));
+  const mine = ofCircle(sessions, circle, me);
+  const planned = mine
+    .filter((seance) => seance.plannedAt !== undefined)
+    .sort((a, b) => (a.plannedAt ?? 0) - (b.plannedAt ?? 0));
+  const session = planned[0] ?? latestUnfinished(mine);
   if (session) return { kind: "resume", session };
   const [item] = sortWatchlist(splitWatchlist(ofCircle(items, circle, me)).toWatch, "wants");
   return item ? { kind: "title", item } : { kind: "nothing" };
