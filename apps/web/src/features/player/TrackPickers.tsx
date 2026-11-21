@@ -26,13 +26,16 @@ interface TrackChoiceProps {
 export function TrackChoice({ label, items, value, onValueChange }: TrackChoiceProps) {
   if (items.length <= SEGMENTED_MAX) {
     return (
-      <SegmentedControl
-        aria-label={label}
-        style={SEGMENT_STYLE}
-        items={items}
-        value={value}
-        onValueChange={onValueChange}
-      />
+      // Its tabs have a fixed width: stretched to the sheet's, the control would show an empty track beside them.
+      <div className="flex">
+        <SegmentedControl
+          aria-label={label}
+          style={SEGMENT_STYLE}
+          items={items}
+          value={value}
+          onValueChange={onValueChange}
+        />
+      </div>
     );
   }
   return (
