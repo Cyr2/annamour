@@ -1,5 +1,6 @@
 import type { RoomSnapshot, ServerMessage } from "@annamour/protocol";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useNotes } from "./notes.ts";
 import { createReactionThrottle, useReactions } from "./reactions.ts";
 import { bindRoom, memberById, useRoom } from "./room.ts";
 import { type ConnectionStatus, SyncClient } from "./SyncClient.ts";
@@ -238,6 +239,18 @@ describe("room store", () => {
 
     vi.advanceTimersByTime(3000);
     expect(useReactions.getState().reactions).toEqual([]);
+    unbind();
+  });
+
+  it("shows the pause's notes with their sender, and lets them go when the film starts again", () => {
+    const unbind = bindRoom(client);
+    client.connect();
+    socket().open();
+    socket().receive({ type: "welcome", you: "m1", room, serverTime: 0 });
+    socket().receive({ type: "note", by: "m2", text: "pause thé ?" });
+    expect(useNotes.getState().notes).toMatchObject([{ text: "pause thé ?", name: "Anna", mine: false }]);
+    socket().receive({ type: "playback", action: "play", playback: { status: "playing", position: 0, at: 0 } });
+    expect(useNotes.getState().notes).toEqual([]);
     unbind();
   });
 

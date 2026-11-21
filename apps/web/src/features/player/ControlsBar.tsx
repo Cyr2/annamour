@@ -9,6 +9,7 @@ import { useTv } from "../tv/tv-context.ts";
 import { EndClock } from "./EndClock.tsx";
 import { useQueueTitle } from "./EpisodeLayer.tsx";
 import { LiveRow } from "./LiveRow.tsx";
+import { NoteComposer } from "./NoteComposer.tsx";
 import { ReactionPicker } from "./ReactionPicker.tsx";
 import { Scrubber } from "./Scrubber.tsx";
 import { SEEK_STEP } from "./seek.ts";
@@ -23,6 +24,8 @@ interface ControlsBarProps {
   reactionsOpen: boolean;
   onReactionsOpenChange: (open: boolean) => void;
   onReact: (emoji: Reaction) => void;
+  /** « Un petit mot », offered during a pause, never on a TV (nothing to type with). */
+  onNote: (text: string) => void;
   /** Absent when there is nothing to choose (a YouTube video). */
   onOpenTracks: (() => void) | undefined;
   /** Absent during a live stream: it is a séance of its own. */
@@ -41,6 +44,7 @@ interface ControlsBarProps {
  * clocks, then play, ±10 s and volume on the left; reactions, tracks and full
  * screen on the right, with « Épisode suivant » and « Épisodes » before it. On a
  * phone held upright, one row only: play, ±10 s, reactions and « ⋯ » for the rest.
+ * During a pause, « Un petit mot » comes before the reactions.
  * On a TV (always full screen, volume on the remote) there is no full-screen
  * button, leaving the film is the top bar's back arrow (or Retour), and
  * play/pause is where the remote lands.
@@ -68,8 +72,8 @@ export function ControlsBar(props: ControlsBarProps) {
           <EndClock clock={clock} />
         </div>
       )}
-      {/* A phone held upright keeps five buttons in one row; everything else waits behind « ⋯ ». */}
-      <div className={"grid grid-cols-5 justify-items-center sm:flex sm:items-center sm:justify-start sm:gap-1"}>
+      {/* A phone held upright keeps five buttons in one row (six during a pause); everything else waits behind « ⋯ ». */}
+      <div className="grid auto-cols-fr grid-flow-col justify-items-center sm:flex sm:items-center sm:justify-start sm:gap-1">
         <IconButton
           label={playing ? "Pause" : "Lecture"}
           icon={playing ? <Pause /> : <Play />}
@@ -87,6 +91,7 @@ export function ControlsBar(props: ControlsBarProps) {
           <VolumeControl />
         </div>
         <span className="hidden flex-1 sm:block" />
+        {tv || playing ? null : <NoteComposer onSend={props.onNote} />}
         <ReactionPicker open={props.reactionsOpen} onOpenChange={props.onReactionsOpenChange} onReact={props.onReact} />
         {props.onOpenTracks ? (
           <IconButton

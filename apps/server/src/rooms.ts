@@ -1,4 +1,5 @@
 import {
+  acceptNote,
   atCredits,
   awaitedLeads,
   type BubbleColor,
@@ -93,6 +94,7 @@ interface Participant extends Member {
   accountId: string | undefined;
   connection: Connection;
   lastReactionAt: number;
+  lastNoteAt: number;
   /** What this device last said of its lead; undefined for an app that never reports it. */
   deviceLead?: DeviceLead | undefined;
   /** Its link dropped without a goodbye; it stays listed for a while, but nothing waits for it. */
@@ -283,6 +285,7 @@ export class Room {
         buffering: false,
         connection,
         lastReactionAt: -Infinity,
+        lastNoteAt: -Infinity,
         linkDown: false,
       };
       this.participants.set(id, member);
@@ -374,9 +377,26 @@ export class Room {
         participant.lastReactionAt = now;
         this.broadcast({ type: "reaction", by: memberId, emoji: message.emoji });
         return;
+      case "note":
+        this.onNote(participant, message.text, now);
+        return;
       default:
         this.handleEpisodeMessage(memberId, message, now);
     }
+  }
+
+  /** « Un petit mot »: only while paused, cleaned, and not too often; nothing of it is kept. */
+  private onNote(participant: Participant, text: string, now: number): void {
+    const { status } = this.playback;
+    const note = acceptNote(text, {
+      status,
+      readying: this.readying !== null,
+      lastNoteAt: participant.lastNoteAt,
+      now,
+    });
+    if (note === null) return;
+    participant.lastNoteAt = now;
+    this.broadcast({ type: "note", by: participant.id, text: note });
   }
 
   private handlePlayback(

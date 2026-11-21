@@ -11,6 +11,7 @@ import { useTv } from "../tv/tv-context.ts";
 import { ControlsBar } from "./ControlsBar.tsx";
 import { EpisodeLayer, useEpisodeOver, useSkipNext } from "./EpisodeLayer.tsx";
 import { FilmSurface } from "./FilmSurface.tsx";
+import { FloatingNotes } from "./FloatingNotes.tsx";
 import { FloatingReactions } from "./FloatingReactions.tsx";
 import { leaveFullscreen, toggleFullscreen } from "./fullscreen.ts";
 import { PlayerMoreSheet } from "./PlayerMoreSheet.tsx";
@@ -77,6 +78,7 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
   const toggle = () => (playing ? controls.pause() : controls.play());
   const seek = (position: number) => controls.seek(position);
   const react = (emoji: Reaction) => client?.send({ type: "react", emoji });
+  const sendNote = (text: string) => client?.send({ type: "note", text });
   const fullscreen = () => toggleFullscreen(video);
   // The position is read when the key is pressed, not subscribed to: no re-render per frame here.
   const seekBy = (delta: number) => seek(Math.max(0, (video?.currentTime ?? 0) + delta));
@@ -114,6 +116,7 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
       {/* Not a glisse backdrop: bending a playing film costs a full-screen filter every frame. */}
       <FilmSurface media={media} onVideo={onVideo} />
       <FloatingReactions />
+      <FloatingNotes />
       {/* The film's surface: tapping it plays or pauses (Space and K do it from the keyboard). With the controls hidden, a tap only brings them back. */}
       <div
         ref={controlsLayer}
@@ -143,6 +146,7 @@ export function PlayerView({ code, active, video, onVideo, player, client }: Pla
           reactionsOpen={reactionsOpen}
           onReactionsOpenChange={setReactionsOpen}
           onReact={react}
+          onNote={sendNote}
           onOpenTracks={openTracks}
           onOpenUpNext={openUpNext}
           live={live}

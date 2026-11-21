@@ -150,6 +150,26 @@ describe("Room", () => {
     expect(b.last()).toEqual({ type: "reaction", by: idA, emoji: "💀" });
   });
 
+  it("shows a note to everyone while paused, cleaned, and not twice in two seconds", () => {
+    const { room, a, b, idA } = setup();
+    room.handle(idA, { type: "note", text: "  pause thé\n ?" }, 1000);
+    expect(a.last()).toEqual({ type: "note", by: idA, text: "pause thé ?" });
+    expect(b.last()).toEqual({ type: "note", by: idA, text: "pause thé ?" });
+    const before = b.inbox.length;
+    room.handle(idA, { type: "note", text: "encore" }, 2500);
+    expect(b.inbox.length).toBe(before);
+    room.handle(idA, { type: "note", text: "encore" }, 3000);
+    expect(b.last()).toEqual({ type: "note", by: idA, text: "encore" });
+  });
+
+  it("drops a note sent while the film plays", () => {
+    const { room, b, idA, idB } = setup();
+    room.handle(idA, { type: "play", position: 0 }, 1000);
+    const before = b.inbox.length;
+    room.handle(idB, { type: "note", text: "chut" }, 2000);
+    expect(b.inbox.length).toBe(before);
+  });
+
   it("refuses members beyond the limit", () => {
     const { store } = testStore();
     const room = store.create("Film", media, 0);
