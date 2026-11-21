@@ -5,6 +5,7 @@
  */
 import { z } from "zod/mini";
 import { CatalogRef, PlayCatalogRequest } from "./catalog.ts";
+import { NOTE_MAX_LENGTH } from "./notes.ts";
 import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "./room-code.ts";
 import { YouTubeVideo } from "./youtube.ts";
 
@@ -114,6 +115,9 @@ export type Reaction = z.infer<typeof Reaction>;
 /** Minimum delay between two reactions from the same person, in ms. */
 export const REACTION_COOLDOWN_MS = 300;
 
+/** « Un petit mot »: longer than the limit is refused, cleaned by the server (see notes.ts). */
+export const NoteText = z.string().check(z.maxLength(NOTE_MAX_LENGTH));
+
 /* ---------- client → server ---------- */
 
 export const ClientMessage = z.discriminatedUnion("type", [
@@ -132,6 +136,8 @@ export const ClientMessage = z.discriminatedUnion("type", [
   /** While paused: how many seconds this device has downloaded ahead (to start together, see readying.ts). */
   z.object({ type: z.literal("lead"), seconds: z.number().check(z.gte(0), z.lte(60 * 60)) }),
   z.object({ type: z.literal("react"), emoji: Reaction }),
+  /** A short sentence while the film is paused. */
+  z.object({ type: z.literal("note"), text: NoteText }),
   /** This device reached the end of `episode`. */
   z.object({ type: z.literal("ended"), episode: EpisodeIndex }),
   /** This device reached the end credits of `episode`: the next one's countdown starts for everyone. */
@@ -202,6 +208,8 @@ export const ServerMessage = z.discriminatedUnion("type", [
   }),
   /** Shown to everyone in the room, the sender included. */
   z.object({ type: z.literal("reaction"), by: z.string(), emoji: Reaction }),
+  /** A note, already cleaned, shown to everyone in the room, the sender included. */
+  z.object({ type: z.literal("note"), by: z.string(), text: NoteText }),
   z.object({ type: z.literal("error"), code: ErrorCode, message: z.string() }),
 ]);
 export type ServerMessage = z.infer<typeof ServerMessage>;
