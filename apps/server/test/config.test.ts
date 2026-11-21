@@ -80,6 +80,21 @@ describe("server configuration", () => {
     expect(config.port).toBe(9000);
     expect(config.dataDir).toMatch(/annamour$/);
   });
+
+  it("sends notifications only with all three VAPID settings", () => {
+    expect(loadConfig({}).vapid).toBeUndefined();
+    const keys = { VAPID_PUBLIC_KEY: "pub", VAPID_PRIVATE_KEY: "priv", VAPID_SUBJECT: "mailto:a@example.org" };
+    expect(loadConfig(keys).vapid).toEqual({ publicKey: "pub", privateKey: "priv", subject: "mailto:a@example.org" });
+    expect(() => loadConfig({ VAPID_PUBLIC_KEY: "pub" })).toThrow(/VAPID/);
+  });
+
+  it("alerts only the accounts listed, from 19 h in Paris unless told otherwise", () => {
+    expect(loadConfig({}).alertAccounts).toEqual([]);
+    expect(loadConfig({ ALERT_ACCOUNTS: " a1, ,b2 " }).alertAccounts).toEqual(["a1", "b2"]);
+    expect(loadConfig({}).healthCheckHour).toBe(19);
+    expect(loadConfig({ HEALTH_CHECK_HOUR: "18" }).healthCheckHour).toBe(18);
+    expect(() => loadConfig({ HEALTH_CHECK_HOUR: "25" })).toThrow(/HEALTH_CHECK_HOUR/);
+  });
 });
 
 describe("rate limiter", () => {

@@ -150,6 +150,12 @@ export class NotTwinCirclesError extends UserFacingError {
   }
 }
 
+export class PushUnavailableError extends UserFacingError {
+  constructor() {
+    super("Les notifications ne sont pas activées sur ce serveur : l'heure prévue reste visible sur la séance.", 503);
+  }
+}
+
 export class NameNotFromCirclesError extends UserFacingError {
   constructor() {
     super("Garde le nom de l'un des deux cercles.", 400);

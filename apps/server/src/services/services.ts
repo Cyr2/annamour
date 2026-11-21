@@ -10,10 +10,13 @@ import { createRepositories } from "../storage/repositories.ts";
 import { AccountService } from "./account-service.ts";
 import { CatalogService } from "./catalog-service.ts";
 import { CircleService } from "./circle-service.ts";
+import { HealthService } from "./health-service.ts";
 import { HistoryService } from "./history-service.ts";
 import { LowQualityService } from "./low-quality-service.ts";
 import { PasskeyService, type RelyingParty, type WebAuthn } from "./passkey-service.ts";
+import { PlanService } from "./plan-service.ts";
 import { PlaybackStatsService } from "./playback-stats-service.ts";
+import { type PushSender, PushService } from "./push-service.ts";
 import { RatingService } from "./rating-service.ts";
 import { RoomService } from "./room-service.ts";
 import type { RandomInt } from "./secrets.ts";
@@ -49,6 +52,15 @@ export interface ServiceOptions {
   skipFetch?: SkipFetch;
   /** Naka's own intro and credits times, through naka-bridge. */
   nakaSkipFetch?: SkipFetch;
+  /** Delivers Web Push notifications (VAPID keys set); absent, nothing is sent (tests stay offline). */
+  pushSender?: PushSender;
+  vapidPublicKey?: string;
+  /** naka-bridge's /health, for the evening check. */
+  bridgeHealthy?: () => Promise<boolean>;
+  /** Accounts alerted when the catalog fails (ALERT_ACCOUNTS). */
+  alertAccounts?: readonly string[];
+  /** Paris hour of the evening check (HEALTH_CHECK_HOUR). */
+  healthCheckHour?: number;
 }
 
 export interface Services {
@@ -66,8 +78,14 @@ export interface Services {
   ratings: RatingService;
   taste: TasteService;
   skips: SkipService;
+  push: PushService;
+  plans: PlanService;
+  health: HealthService;
   now: () => number;
 }
+
+/** 19 h in Paris: before the evening's séances, early enough to fix things. */
+const DEFAULT_HEALTH_CHECK_HOUR = 19;
 
 /** Without the skip databases: every lookup answers « not found ». */
 const noSkipFetch: SkipFetch = async () => ({ status: 404, body: "" });
@@ -130,7 +148,19 @@ export function createServices(options: ServiceOptions): Services {
   });
   const catalog = new CatalogService({ catalog: options.catalog, rooms, now, cache: repositories.catalogCache });
   const ratings = new RatingService({ repositories, now });
+  const push = new PushService({ repositories, sender: options.pushSender, publicKey: options.vapidPublicKey, now });
   return {
+    push,
+    plans: new PlanService({ repositories, push, now }),
+    health: new HealthService({
+      repositories,
+      push,
+      search: options.catalog ? (query) => catalog.search(query) : undefined,
+      bridgeHealthy: options.bridgeHealthy ?? (async () => true),
+      alertAccounts: options.alertAccounts ?? [],
+      checkHour: options.healthCheckHour ?? DEFAULT_HEALTH_CHECK_HOUR,
+      now,
+    }),
     skips,
     store,
     history,

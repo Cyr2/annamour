@@ -9,6 +9,7 @@ import { accountRoutes } from "./routes/account.ts";
 import { catalogRoutes } from "./routes/catalog.ts";
 import { circleRoutes } from "./routes/circles.ts";
 import { passkeyRoutes } from "./routes/passkey.ts";
+import { pushRoutes } from "./routes/push.ts";
 import { ratingRoutes } from "./routes/ratings.ts";
 import { roomRoutes } from "./routes/rooms.ts";
 import { sessionRoutes } from "./routes/sessions.ts";
@@ -70,6 +71,7 @@ export function createApp(services: Services, { webDist, production = false }: A
   app.route("/", statsRoutes(deps));
   app.route("/", ratingRoutes(deps));
   app.route("/", suggestionRoutes(deps));
+  app.route("/", pushRoutes(deps));
   app.all("/api/*", (c) => c.json({ error: "Not found" }, 404));
 
   if (webDist) serveWebApp(app, webDist);

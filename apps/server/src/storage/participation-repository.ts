@@ -19,6 +19,8 @@ export interface JoinedRoom {
   posterUrl: string | undefined;
   /** The catalog title the current episode comes from (the series, for an episode). */
   catalog: { id: number; type: "movie" | "tv" } | undefined;
+  /** When its evening is planned. */
+  plannedAt: number | undefined;
 }
 
 const JoinedRoomRow = z.object({
@@ -33,6 +35,7 @@ const JoinedRoomRow = z.object({
   episode_catalog: z.string().nullable(),
   circle_id: z.string().nullable(),
   created_by: z.string().nullable(),
+  planned_at: z.number().nullable(),
 });
 
 const CompanionRow = z.object({
@@ -123,7 +126,7 @@ export class ParticipationRepository {
   visibleRooms(accountId: string): JoinedRoom[] {
     const rows = this.db
       .prepare(
-        `SELECT r.code, r.title, r.duration, r.position, r.last_used_at, r.current_episode, r.circle_id, r.created_by,
+        `SELECT r.code, r.title, r.duration, r.position, r.last_used_at, r.current_episode, r.circle_id, r.created_by, r.planned_at,
            (SELECT COUNT(*) FROM room_episodes e WHERE e.room_code = r.code) AS episode_count,
            (SELECT e.label FROM room_episodes e
             WHERE e.room_code = r.code
@@ -147,6 +150,7 @@ export class ParticipationRepository {
       episode: { index: row.current_episode, count: row.episode_count, label: row.episode_label ?? undefined },
       circleId: row.circle_id ?? undefined,
       createdBy: row.created_by ?? undefined,
+      plannedAt: row.planned_at ?? undefined,
       ...catalogOf(parseCatalog(row.episode_catalog)),
     }));
   }

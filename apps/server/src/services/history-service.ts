@@ -98,6 +98,7 @@ export class HistoryService {
       ...(room.catalog === undefined ? {} : { catalog: room.catalog }),
       ...(room.createdBy === accountId ? { createdByMe: true } : {}),
       ...hereOf(this.store.presentBesides(room.code, accountId)),
+      ...(room.plannedAt === undefined ? {} : { plannedAt: room.plannedAt }),
     }));
   }
 
