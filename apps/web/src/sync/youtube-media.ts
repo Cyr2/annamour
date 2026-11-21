@@ -34,7 +34,11 @@ interface YTPlayer {
   /** Undocumented too: the captions module ("tracklist" to read, "track" to pick one, {} for none). */
   loadModule?: (module: "captions") => void;
   getOption?: (module: "captions", option: "tracklist") => unknown;
-  setOption?: (module: "captions", option: "track", value: { languageCode?: string }) => void;
+  setOption?: {
+    (module: "captions", option: "track", value: { languageCode?: string }): void;
+    /** -1 (smaller) to 3 (largest), 0 YouTube's default. */
+    (module: "captions", option: "fontSize", value: number): void;
+  };
   destroy(): void;
 }
 
@@ -103,6 +107,7 @@ export class YouTubeMedia extends EventTarget implements SyncMedia {
   private silent = false;
   /** Language code of the captions shown, null for none. */
   private captions: string | null = null;
+  private captionsFontSize = 0;
   /** A start was asked and no pause since: a start that never comes is the browser's refusal. */
   private wantsPlay = false;
   private readonly poll: ReturnType<typeof setInterval>;
@@ -164,10 +169,17 @@ export class YouTubeMedia extends EventTarget implements SyncMedia {
     this.applyCaptions();
   }
 
+  /** This person's caption size, on YouTube's scale (-1 to 3). */
+  setCaptionsFontSize(size: number): void {
+    this.captionsFontSize = size;
+    this.applyCaptions();
+  }
+
   private applyCaptions(): void {
     // The module stays loaded even with none shown: its list is what « Audio et sous-titres » offers.
     this.player?.loadModule?.("captions");
     this.player?.setOption?.("captions", "track", this.captions ? { languageCode: this.captions } : {});
+    this.player?.setOption?.("captions", "fontSize", this.captionsFontSize);
   }
 
   get currentTime(): number {

@@ -7,6 +7,7 @@ import { YouTubeMedia } from "../../sync/youtube-media.ts";
 import { toast } from "../../ui/toast.ts";
 import { memberChanges } from "./member-changes.ts";
 import { describePlaybackEvent } from "./playback-notice.ts";
+import { type CueTimes, shiftCues, useSubtitleSize, YOUTUBE_FONT_SIZE } from "./subtitle-settings.ts";
 import { choiceFor, useTrackChoices } from "./track-choice.ts";
 import { audibleLevel, useVolume } from "./volume.ts";
 
@@ -169,6 +170,38 @@ export function useTrackChoice(
     video.textTracks.addEventListener("addtrack", apply);
     return () => video.textTracks.removeEventListener("addtrack", apply);
   }, [video, subtitlesId]);
+
+  useSubtitleOffset(video, media ? choiceFor(byRoom, code, media).subtitleOffset : 0);
+  useYouTubeCaptionsSize(video);
+}
+
+/** Kept across offsets, so each one is applied from the subtitles' own timing. */
+const originalCueTimes = new WeakMap<CueTimes, CueTimes>();
+
+/** Moves our <video>'s subtitles earlier or later; YouTube's captions cannot be moved. */
+function useSubtitleOffset(video: SyncMedia | null, offset: number): void {
+  useEffect(() => {
+    if (!isVideoElement(video)) return;
+    const apply = () => {
+      for (const track of Array.from(video.textTracks)) shiftCues(track.cues, offset, originalCueTimes);
+    };
+    apply();
+    // A track's cues arrive when it is first shown (its <track> fires "load", which does not bubble).
+    video.addEventListener("load", apply, true);
+    video.textTracks.addEventListener("change", apply);
+    return () => {
+      video.removeEventListener("load", apply, true);
+      video.textTracks.removeEventListener("change", apply);
+    };
+  }, [video, offset]);
+}
+
+/** Our <video> takes the size from CSS (`data-cue-size`); YouTube's player is told. */
+function useYouTubeCaptionsSize(video: SyncMedia | null): void {
+  const size = useSubtitleSize((s) => s.size);
+  useEffect(() => {
+    if (video instanceof YouTubeMedia) video.setCaptionsFontSize(YOUTUBE_FONT_SIZE[size]);
+  }, [video, size]);
 }
 
 /** Personal volume: never sent to the room. */

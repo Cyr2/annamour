@@ -11,6 +11,8 @@ export interface TrackChoice {
   audio: string | null;
   /** Subtitle track id; null shows none. */
   subtitles: string | null;
+  /** Seconds the subtitles are moved by (+ later), for this séance's film. */
+  subtitleOffset: number;
 }
 
 interface TrackChoiceStore {
@@ -25,7 +27,7 @@ export function defaultSubtitles(subtitles: readonly SubtitleTrack[]): string | 
 }
 
 export function defaultChoice(media: Pick<Media, "audio" | "subtitles">): TrackChoice {
-  return { audio: media.audio[0]?.id ?? null, subtitles: defaultSubtitles(media.subtitles) };
+  return { audio: media.audio[0]?.id ?? null, subtitles: defaultSubtitles(media.subtitles), subtitleOffset: 0 };
 }
 
 export function choiceFor(
