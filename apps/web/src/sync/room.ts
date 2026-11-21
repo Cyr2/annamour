@@ -10,6 +10,7 @@ import type {
 import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { currentIdentity } from "./identity.ts";
+import { clearNotes, showNote } from "./notes.ts";
 import { clearReactions, showReaction } from "./reactions.ts";
 import { type ConnectionStatus, SyncClient } from "./SyncClient.ts";
 
@@ -79,6 +80,8 @@ export function bindRoom(client: SyncClient): () => void {
           playback: message.playback,
           lastEvent: { action: message.action, by: message.by, seq: ++seq },
         });
+        // The pause is over: its notes go with it.
+        if (message.playback.status === "playing") clearNotes();
         break;
       case "members":
         useRoom.setState({ members: message.members });
@@ -103,6 +106,11 @@ export function bindRoom(client: SyncClient): () => void {
         showReaction(message, you, members);
         break;
       }
+      case "note": {
+        const { you, members } = useRoom.getState();
+        showNote(message, you, members);
+        break;
+      }
       case "pong":
         break;
     }
@@ -112,6 +120,7 @@ export function bindRoom(client: SyncClient): () => void {
     offStatus();
     offMessage();
     clearReactions();
+    clearNotes();
   };
 }
 
