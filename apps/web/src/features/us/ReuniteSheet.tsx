@@ -1,8 +1,7 @@
 import { type Circle, circleTitle } from "@annamour/protocol";
-import { Check } from "lucide-react";
 import { type FormEvent, useState } from "react";
+import { ChoiceRow } from "../../ui/ChoiceRow.tsx";
 import { Button } from "../../ui/controls.tsx";
-import { cx } from "../../ui/cx.ts";
 import { Sheet } from "../../ui/Sheet.tsx";
 import { toast } from "../../ui/toast.ts";
 import { reuniteCircles } from "../circles/circles.ts";
@@ -51,8 +50,9 @@ function ReuniteForm({ pair, me, onDone }: { pair: readonly [Circle, Circle]; me
       <fieldset className="grid gap-2">
         <legend className="sr-only">Nom à garder</legend>
         {pair.map((circle) => (
-          <NameChoice
+          <ChoiceRow
             key={circle.id}
+            name="kept-name"
             label={circleTitle(circle, me)}
             checked={kept === circle.id}
             onSelect={() => setKept(circle.id)}
@@ -68,30 +68,5 @@ function ReuniteForm({ pair, me, onDone }: { pair: readonly [Circle, Circle]; me
         </Button>
       </Sheet.Actions>
     </form>
-  );
-}
-
-/** One name to keep: a native radio, so arrows and screen readers work as anywhere else. */
-function NameChoice({ label, checked, onSelect }: { label: string; checked: boolean; onSelect: () => void }) {
-  return (
-    <label
-      className={cx(
-        "flex min-h-14 cursor-pointer items-center gap-3 rounded-control px-4 transition-colors duration-200",
-        "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--am-focus)]",
-        checked ? "bg-accent-soft text-fg" : "bg-fill-soft text-fg hover:bg-fill-hover",
-      )}
-    >
-      <input type="radio" name="kept-name" checked={checked} onChange={onSelect} className="sr-only" />
-      <span className="min-w-0 flex-1 truncate font-rounded-tight font-extrabold">{label}</span>
-      <span
-        aria-hidden
-        className={cx(
-          "grid size-6 shrink-0 place-items-center rounded-full border-2 transition-colors duration-200",
-          checked ? "border-accent bg-accent text-on-accent" : "border-line-strong",
-        )}
-      >
-        {checked ? <Check className="size-4" strokeWidth={3} /> : null}
-      </span>
-    </label>
   );
 }
