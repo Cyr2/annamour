@@ -1,4 +1,4 @@
-import type { WatchlistItem } from "@annamour/protocol";
+import { plannedLabel, type WatchlistItem } from "@annamour/protocol";
 import { Play, Plus } from "lucide-react";
 import { m } from "motion/react";
 import { spring } from "../../lib/motion.ts";
@@ -53,7 +53,9 @@ function ResumeBody({ pick }: { pick: Extract<TonightPick, { kind: "resume" }> }
       <SeancePoster session={session} className="w-24 shrink-0" />
       <div className="grid min-w-0 flex-1 gap-1">
         <span className="flex items-center justify-between gap-2">
-          <span className="text-xs font-semibold text-accent">On reprend ?</span>
+          <span className="text-xs font-semibold text-accent">
+            {session.plannedAt === undefined ? "On reprend ?" : plannedLabel(session.plannedAt, Date.now())}
+          </span>
           <SeanceOptions session={session} className="-my-2 -mr-2" />
         </span>
         <strong className="truncate font-rounded-tight text-lg font-extrabold text-fg">{sessionTitle(session)}</strong>

@@ -114,6 +114,20 @@ describe("« Ce soir » for a circle", () => {
     expect(pick).toEqual({ kind: "resume", session: expect.objectContaining({ code: "A" }) });
   });
 
+  it("offers the séance planned soonest before any other", () => {
+    const pick = tonightPick(
+      [
+        session("Récente", { circleId: "duo", lastUsedAt: 9 }),
+        session("Samedi", { circleId: "duo", lastUsedAt: 1, plannedAt: 5000 }),
+        session("Ce soir", { circleId: "duo", lastUsedAt: 2, plannedAt: 3000 }),
+      ],
+      [],
+      duo,
+      "darius",
+    );
+    expect(pick).toEqual({ kind: "resume", session: expect.objectContaining({ code: "Ce soir" }) });
+  });
+
   it("offers the most wanted title of its list when nothing is under way", () => {
     const pick = tonightPick(
       [session("Fini", { circleId: "duo", position: 6000 })],

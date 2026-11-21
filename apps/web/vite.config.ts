@@ -34,6 +34,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+        // Notifications (push, notificationclick) live in public/push-sw.js, beside Workbox's own code.
+        importScripts: ["push-sw.js"],
         // The API, the socket and the video stream must always hit the network.
         navigateFallbackDenylist: [/^\/api/, /^\/ws/, /^\/media/],
         runtimeCaching: [

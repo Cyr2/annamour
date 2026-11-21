@@ -9,6 +9,7 @@ export * from "./episodes.ts";
 export * from "./hls-files.ts";
 export * from "./messages.ts";
 export * from "./notes.ts";
+export * from "./notifications.ts";
 export * from "./playback.ts";
 export * from "./playback-stats.ts";
 export * from "./ratings.ts";

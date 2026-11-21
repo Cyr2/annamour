@@ -47,6 +47,32 @@ export interface ServerConfig {
   mediaMaxGb: number;
   /** TMDB's read access token (TMDB_TOKEN): synopses, ratings and taste-based suggestions; absent, none of those. */
   tmdbToken: string | undefined;
+  /** Web Push's VAPID keys (VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT); absent, no notifications. */
+  vapid: { publicKey: string; privateKey: string; subject: string } | undefined;
+  /** Account ids alerted when the catalog fails (ALERT_ACCOUNTS, comma-separated); empty, no alert. */
+  alertAccounts: string[];
+  /** Paris hour of the daily catalog check (HEALTH_CHECK_HOUR, 0 to 23). */
+  healthCheckHour: number;
+}
+
+function vapid(env: NodeJS.ProcessEnv): ServerConfig["vapid"] {
+  const publicKey = env.VAPID_PUBLIC_KEY?.trim();
+  const privateKey = env.VAPID_PRIVATE_KEY?.trim();
+  const subject = env.VAPID_SUBJECT?.trim();
+  if (!publicKey && !privateKey && !subject) return undefined;
+  if (!publicKey || !privateKey || !subject)
+    throw new ConfigError("VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT go together: set all three or none.");
+  return { publicKey, privateKey, subject };
+}
+
+const DEFAULT_HEALTH_CHECK_HOUR = 19;
+
+function healthCheckHour(value: string | undefined): number {
+  if (value === undefined || value.trim() === "") return DEFAULT_HEALTH_CHECK_HOUR;
+  const hour = Number(value);
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23)
+    throw new ConfigError("HEALTH_CHECK_HOUR is a whole hour from 0 to 23 (Paris time).");
+  return hour;
 }
 
 const DEFAULT_TRANSCODE_WORKERS = 2;
@@ -109,6 +135,12 @@ export function loadConfig(env: NodeJS.ProcessEnv): ServerConfig {
     hevcFull: switchedOn(env.HEVC) && switchedOn(env.HEVC_FULL),
     mediaMaxGb: mediaMaxGb(env.MEDIA_MAX_GB),
     tmdbToken: env.TMDB_TOKEN?.trim() || undefined,
+    vapid: vapid(env),
+    alertAccounts: (env.ALERT_ACCOUNTS ?? "")
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0),
+    healthCheckHour: healthCheckHour(env.HEALTH_CHECK_HOUR),
   };
 }
 

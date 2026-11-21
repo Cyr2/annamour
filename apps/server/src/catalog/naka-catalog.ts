@@ -244,6 +244,11 @@ export class NakaCatalog implements Catalog {
   }
 }
 
+/** Whether the bridge can serve calls (its /health needs no secret). */
+export function bridgeHealth(baseUrl: string): () => Promise<boolean> {
+  return async () => (await fetch(new URL("/health", baseUrl), { signal: AbortSignal.timeout(15_000) })).ok;
+}
+
 /** The bridge over HTTP, on the Docker network, with its shared secret. */
 export function bridgeFetcher(baseUrl: string, secret: string, timeoutMs = 95_000): BridgeFetcher {
   return async (apiPath) => {

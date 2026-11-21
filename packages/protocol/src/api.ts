@@ -100,6 +100,8 @@ export const SessionSummary = z.object({
   posterUrl: z.optional(z.url({ protocol: /^https$/ })),
   /** Who is in its salon right now, me left out: « Darius vous attend, Rejoindre ». */
   here: z.optional(z.array(z.object({ name: Name, color: BubbleColor }))),
+  /** When its evening is planned (« Ce soir à 21 h »), until a while after that time. */
+  plannedAt: z.optional(z.number()),
 });
 export type SessionSummary = z.infer<typeof SessionSummary>;
 export const SessionList = z.object({ sessions: z.array(SessionSummary) });

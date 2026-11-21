@@ -10,6 +10,7 @@ import { useLoadSessions } from "../sessions/useLoadSessions.ts";
 import { useTv } from "../tv/tv-context.ts";
 import { AccountCard } from "./AccountCard.tsx";
 import { MeCard } from "./MeCard.tsx";
+import { NotificationsCard } from "./NotificationsCard.tsx";
 import { PeopleRow } from "./PeopleRow.tsx";
 import { PlayerChoiceCard } from "./PlayerChoiceCard.tsx";
 import { SessionHistory } from "./SessionHistory.tsx";
@@ -60,6 +61,8 @@ export function ProfileScreen() {
           </div>
           <div className={cx("grid gap-4 sm:gap-6", layout.account)}>
             <AccountCard />
+            {/* A TV is never told: it has no notifications to show. */}
+            {tv ? null : <NotificationsCard />}
             {/* Only on an iPhone or iPad (it renders nothing elsewhere, and a TV never shows it). */}
             {tv ? null : <PlayerChoiceCard />}
           </div>

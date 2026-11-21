@@ -202,6 +202,25 @@ const MIGRATIONS: readonly string[] = [
     PRIMARY KEY (circle_id, title_key)
   );
   `,
+  // Notifications: each device's push subscription; the evening planned for a séance and how many of its
+  // reminders went out (read again after a restart); what the evening check of the catalog last found.
+  `
+  CREATE TABLE push_subscriptions (
+    endpoint TEXT PRIMARY KEY,
+    account_id TEXT NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX push_subscriptions_account_id ON push_subscriptions (account_id);
+  ALTER TABLE rooms ADD COLUMN planned_at INTEGER;
+  ALTER TABLE rooms ADD COLUMN reminders_sent INTEGER NOT NULL DEFAULT 0;
+  CREATE TABLE health_checks (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    health TEXT NOT NULL,
+    checked_at INTEGER NOT NULL
+  );
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

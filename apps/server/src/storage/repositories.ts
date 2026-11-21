@@ -4,9 +4,12 @@ import { AuthSessionRepository, LinkTokenRepository } from "./auth-repository.ts
 import { CatalogCacheRepository } from "./catalog-cache-repository.ts";
 import { CircleRepository } from "./circle-repository.ts";
 import { DismissalRepository } from "./dismissal-repository.ts";
+import { HealthRepository } from "./health-repository.ts";
 import { ParticipationRepository } from "./participation-repository.ts";
 import { PasskeyRepository } from "./passkey-repository.ts";
+import { PlanRepository } from "./plan-repository.ts";
 import { PlaybackReportRepository } from "./playback-report-repository.ts";
+import { PushRepository } from "./push-repository.ts";
 import { RatingRepository } from "./rating-repository.ts";
 import { RoomRepository } from "./room-repository.ts";
 import { TvPairingRepository } from "./tv-pairing-repository.ts";
@@ -27,6 +30,9 @@ export interface Repositories {
   ratings: RatingRepository;
   catalogCache: CatalogCacheRepository;
   dismissals: DismissalRepository;
+  push: PushRepository;
+  plans: PlanRepository;
+  health: HealthRepository;
 }
 
 export function createRepositories(db: DatabaseSync): Repositories {
@@ -44,5 +50,8 @@ export function createRepositories(db: DatabaseSync): Repositories {
     ratings: new RatingRepository(db),
     catalogCache: new CatalogCacheRepository(db),
     dismissals: new DismissalRepository(db),
+    push: new PushRepository(db),
+    plans: new PlanRepository(db),
+    health: new HealthRepository(db),
   };
 }

@@ -1,8 +1,9 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { serve } from "@hono/node-server";
+import { sendNotification } from "web-push";
 import { createApp } from "./app.ts";
-import { bridgeFetcher, NakaCatalog } from "./catalog/naka-catalog.ts";
+import { bridgeFetcher, bridgeHealth, NakaCatalog } from "./catalog/naka-catalog.ts";
 import { skipFetcher } from "./catalog/skip-sources.ts";
 import { tmdbFetcher } from "./catalog/tmdb.ts";
 import { loadConfig } from "./config.ts";
@@ -24,8 +25,13 @@ import { createServices } from "./services/services.ts";
 import { openDatabase } from "./storage/database.ts";
 
 const SWEEP_INTERVAL_MS = 10 * 60 * 1000;
+/** Reminders and the evening check are read from the database every minute: a restart loses none. */
+const NOTIFY_INTERVAL_MS = 60 * 1000;
+/** A reminder unread for an hour is no use any more: the push service may drop it. */
+const PUSH_TTL_S = 60 * 60;
 
 const config = loadConfig(process.env);
+const { vapid } = config;
 mkdirSync(config.dataDir, { recursive: true });
 const db = openDatabase(join(config.dataDir, "annamour.db"));
 const { nakaBridge } = config;
@@ -39,10 +45,20 @@ const services = createServices({
   fetchText,
   relyingParty: config.relyingParty,
   mediaMaxBytes: config.mediaMaxGb * BYTES_PER_GB,
+  alertAccounts: config.alertAccounts,
+  healthCheckHour: config.healthCheckHour,
+  ...(vapid
+    ? {
+        vapidPublicKey: vapid.publicKey,
+        pushSender: (subscription, payload) =>
+          sendNotification(subscription, payload, { vapidDetails: vapid, TTL: PUSH_TTL_S }),
+      }
+    : {}),
   ...(nakaBridge
     ? {
         catalog: new NakaCatalog(bridgeFetcher(nakaBridge.url, nakaBridge.secret)),
         nakaSkipFetch: bridgeFetcher(nakaBridge.url, nakaBridge.secret, 15_000),
+        bridgeHealthy: bridgeHealth(nakaBridge.url),
       }
     : {}),
   ...(config.tmdbToken ? { tmdbFetch: tmdbFetcher(config.tmdbToken), skipFetch: skipFetcher } : {}),
@@ -100,12 +116,18 @@ const sweeper = setInterval(() => {
   services.playbackStats.sweep();
   void services.lowQualities.sweep().catch((error: unknown) => console.warn("Media sweep failed", error));
 }, SWEEP_INTERVAL_MS);
+const notifier = setInterval(() => {
+  void services.plans.remind().catch((error: unknown) => console.warn("Reminders failed", error));
+  void services.health.checkIfDue().catch((error: unknown) => console.warn("Catalog check failed", error));
+}, NOTIFY_INTERVAL_MS);
+if (!vapid) console.info("Notifications off (no VAPID keys)");
 // Encodes left from before a restart are not tracked any more: free their space.
 void services.lowQualities.sweep().catch((error: unknown) => console.warn("Media sweep failed", error));
 
 function shutdown(): void {
   clearInterval(checkpoint);
   clearInterval(sweeper);
+  clearInterval(notifier);
   // Keep where every running session was, so it resumes there after the restart.
   services.store.checkpoint(Date.now());
   wss.close();
