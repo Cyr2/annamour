@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   firstDecodeTime,
@@ -14,6 +15,7 @@ import {
   Mp4Error,
   splitMp4,
   withHevc,
+  withoutBitrates,
 } from "../src/media/hevc.ts";
 import { hevcArguments } from "../src/media/hevc-ffmpeg.ts";
 import { box, fragment, hevcInit, hevcMp4 } from "./mp4-fixtures.ts";
@@ -45,6 +47,29 @@ describe("who gets the HEVC rungs", () => {
 
   it("are never checked for a browser that plays through hls.js, nor the Android TV app", () => {
     for (const ua of [CHROME_IOS, CHROME_MAC, ANDROID_TV, undefined, ""]) expect(isAppleDevice(ua)).toBe(false);
+  });
+});
+
+describe("an audio init from one segment's encode", () => {
+  // Tonight's real init (DDFE, episode 6): AAC 48 kHz stereo in fMP4, as ffmpeg wrote it.
+  const real = new Uint8Array(readFileSync(new URL("./fixtures/aac-init.mp4", import.meta.url)));
+  const at = (bytes: Uint8Array, text: string) => Buffer.from(bytes).indexOf(text);
+
+  it("is the same sound when only the bitrates ffmpeg measured on the segment differ", () => {
+    const other = real.slice();
+    const esds = at(other, "esds");
+    // After "esds": version and flags (4), ES descriptor header (5), ES_ID and flags (3), decoder config header (5), types (2), buffer size (3).
+    other.set([0, 0, 0x91, 0x2c, 0, 0, 0x91, 0x2c], esds + 4 + 4 + 5 + 3 + 5 + 2 + 3); // max and average bitrate
+    other.set([0, 0, 0x91, 0x2c], at(other, "btrt") + 8);
+    expect(Buffer.compare(other, real)).not.toBe(0);
+    expect([...withoutBitrates(other)]).toEqual([...withoutBitrates(real)]);
+  });
+
+  it("is another sound when its sample rate changes", () => {
+    const other = real.slice();
+    other[at(other, "mp4a") + 4 + 24] = 0xac; // 48 000 → 44 100 Hz (0xbb80 → 0xac44)
+    other[at(other, "mp4a") + 4 + 25] = 0x44;
+    expect([...withoutBitrates(other)]).not.toEqual([...withoutBitrates(real)]);
   });
 });
 
