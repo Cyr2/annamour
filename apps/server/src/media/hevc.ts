@@ -149,6 +149,7 @@ function findBox(bytes: Uint8Array, path: readonly string[], from = 0, to = byte
 function containerSkip(type: string): number {
   if (type === "stsd") return 8; // version, flags, entry count
   if (type === "hvc1" || type === "hev1") return 78; // visual sample entry fields
+  if (type === "mp4a") return 28; // audio sample entry fields
   return 0;
 }
 
@@ -178,6 +179,42 @@ export function hevcCodecs(init: Uint8Array): string {
     `${tier}${level}`,
     ...constraints.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")),
   ].join(".");
+}
+
+const AUDIO_ENTRY = ["moov", "trak", "mdia", "minf", "stbl", "stsd", "mp4a"];
+
+/** An MPEG-4 descriptor's size: up to four bytes, seven bits each, the high bit saying another follows. */
+function descriptorSize(bytes: Uint8Array, at: number): { size: number; next: number } {
+  let size = 0;
+  let next = at;
+  for (let read = 0; read < 4; read++) {
+    const byte = bytes[next++] ?? 0;
+    size = (size << 7) | (byte & 0x7f);
+    if (!(byte & 0x80)) break;
+  }
+  return { size, next };
+}
+
+/**
+ * The init without the audio bitrates ffmpeg measures on each segment (`btrt`,
+ * and the buffer size and bitrates of the `esds` decoder config): they change
+ * from one segment to the next while the sound's format, all a player decodes
+ * with, stays the same.
+ */
+export function withoutBitrates(init: Uint8Array): Uint8Array {
+  const copy = init.slice();
+  const btrt = findBox(copy, [...AUDIO_ENTRY, "btrt"]);
+  if (btrt) copy.fill(0, btrt.start + 8, btrt.end);
+  const esds = findBox(copy, [...AUDIO_ENTRY, "esds"]);
+  if (!esds) return copy;
+  // esds: version and flags, then ES_Descriptor (tag 3: ES_ID, flags), then DecoderConfigDescriptor (tag 4).
+  let at = esds.start + 12;
+  if (copy[at] !== 0x03) return copy;
+  at = descriptorSize(copy, at + 1).next + 3;
+  if (copy[at] !== 0x04) return copy;
+  at = descriptorSize(copy, at + 1).next + 2; // past object type and stream type
+  copy.fill(0, at, Math.min(at + 11, esds.end)); // buffer size (3), max bitrate (4), average bitrate (4)
+  return copy;
 }
 
 /** The first fragment's `tfdt` (its decode time, in its track's timescale); undefined without one. */

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { bytesByFolder } from "./disk-usage.ts";
 import type { AudioSegmentEncoder, SegmentEncoder } from "./ffmpeg.ts";
-import { type HevcRung, Mp4Error, splitMp4 } from "./hevc.ts";
+import { type HevcRung, Mp4Error, splitMp4, withoutBitrates } from "./hevc.ts";
 import type { HevcChecker, HevcEncoder } from "./hevc-ffmpeg.ts";
 import { type Rung, segmentFile } from "./ladder.ts";
 import type { SegmentSource } from "./segment-source.ts";
@@ -389,7 +389,9 @@ export class Transcoder {
     const { init, segment } = splitMp4(mp4);
     const initPath = join(dirname(path), INIT_FILE);
     if (await exists(initPath)) {
-      if (!sameBytes(new Uint8Array(await readFile(initPath)), init)) throw new Mp4Error(`Init changed in ${initPath}`);
+      // The first init is kept: one that differs only by its measured audio bitrates decodes the same.
+      const kept = new Uint8Array(await readFile(initPath));
+      if (!sameBytes(withoutBitrates(kept), withoutBitrates(init))) throw new Mp4Error(`Init changed in ${initPath}`);
     } else {
       await writeFile(`${initPath}.part`, init);
       await rename(`${initPath}.part`, initPath);
